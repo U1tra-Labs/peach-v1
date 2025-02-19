@@ -5,14 +5,17 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-peach_v1 = "ATSXNT29EextctdVyhULT3kaHixp7eNbmwy5gH5pttwr"
+peach_v1 = "EKrZVNcqcS4uJLAq9DuAPP5ewX45XnfaYVy9367uzK2K"
+
+[programs.devnet]
+peach_v1 = "EKrZVNcqcS4uJLAq9DuAPP5ewX45XnfaYVy9367uzK2K"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
-wallet = "/Users/anamansari/.config/solana/id.json"
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
