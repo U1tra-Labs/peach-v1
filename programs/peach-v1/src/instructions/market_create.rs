@@ -27,7 +27,7 @@ pub struct MarketCreate<'info> {
         seeds = [b"Market".as_ref(), creator.key().as_ref(), &market_num.to_le_bytes()],
         bump,
         payer = payer,
-        space = Market::SIZE,
+        space = 8 + std::mem::size_of::<Market>(),
     )]
     pub market: AccountLoader<'info, Market>,
 

@@ -19,4 +19,15 @@ default = []
 anchor-lang = "0.29.0"
 anchor-spl = "0.29.0"
 bytemuck = { version = "^1.7.2", features = ["min_const_generics"] }
+derivative = "2.2.0"
+fixed = { git = "https://github.com/blockworks-foundation/fixed.git", branch = "v1.11.0-borsh0_10-mango", features = [
+    "serde",
+    "borsh",
+    "debug-assert-in-release",
+] }
+static_assertions = "1.1"
+arrayref = "0.3.6"
 
+[dev-dependencies]
+num = "0.4.0"
+rand = "0.8.4"

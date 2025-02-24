@@ -5,5 +5,5 @@ pub enum PeachError {
     #[msg("")]
     SomeError,
     #[msg("instruction is disabled")]
-    IxIsDisabled,
+    IxIsDisabled
 }

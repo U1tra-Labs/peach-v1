@@ -16,8 +16,6 @@ pub struct Market {
 }
 
 impl Market {
-    pub const SIZE: usize = 8 + 32 + 4 + 32 + 32 + 32 + 1 + 1 + 1+ 1+ 8 + 16 + 8;
-
     pub fn is_ix_enabled(&self, ix: IxGate) -> bool {
         self.ix_gate & (1 << ix as u128) == 0
     }
@@ -27,4 +25,6 @@ impl Market {
 pub enum IxGate {
     AccountCreate = 0,
     GroupCreate = 1,
+    TokenRegister = 2,
+    StubOracleCreate = 3,
 }
