@@ -112,6 +112,14 @@ pub mod peach_v1 {
         Ok(())
     }
 
+    pub fn token_vault_create(
+        ctx: Context<TokenVaultCreate>,
+        token_index: TokenIndex,
+    ) -> Result<()> {
+        instructions::token_vault_create(ctx, token_index)?;
+        Ok(())
+    }
+
     pub fn stub_oracle_create(ctx: Context<StubOracleCreate>, price: I80F48) -> Result<()> {
         instructions::stub_oracle_create(ctx, price)?;
         Ok(())

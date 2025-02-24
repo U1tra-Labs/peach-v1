@@ -15,7 +15,6 @@ use crate::util::fill_from_str;
 
 pub const INDEX_START: I80F48 = I80F48::from_bits(1_000_000 * I80F48::ONE.to_bits());
 
-
 #[allow(clippy::too_many_arguments)]
 pub fn token_register(
     ctx: Context<TokenRegister>,
@@ -53,6 +52,7 @@ pub fn token_register(
 
     let now_ts: u64 = Clock::get()?.unix_timestamp.try_into().unwrap();
 
+    msg!("Initializing bank account");
     let mut bank = ctx.accounts.bank.load_init()?;
     *bank = Bank {
         market: ctx.accounts.market.key(),
@@ -127,20 +127,7 @@ pub fn token_register(
         _padding3: Default::default(),
     };
 
-    // let oracle_ref = &AccountInfoRef::borrow(ctx.accounts.oracle.as_ref())?;
-    // if let Ok(oracle_price) = bank.oracle_price(&OracleAccountInfos::from_reader(oracle_ref), None)
-    // {
-    //     bank.stable_price_model
-    //         .reset_to_price(oracle_price.to_num(), now_ts);
-    // } else {
-    //     bank.stable_price_model.reset_on_nonzero_price = 1;
-    // }
-
-    // bank.verify()?;
-    // check_is_valid_fallback_oracle(&AccountInfoRef::borrow(
-    //     ctx.accounts.fallback_oracle.as_ref(),
-    // )?)?;
-
+    msg!("Initializing mint_info account");
     let mut mint_info = ctx.accounts.mint_info.load_init()?;
     *mint_info = MintInfo {
         market: ctx.accounts.market.key(),
@@ -152,7 +139,7 @@ pub fn token_register(
         vaults: Default::default(),
         oracle: ctx.accounts.oracle.key(),
         fallback_oracle: ctx.accounts.fallback_oracle.key(),
-        registration_time: Clock::get()?.unix_timestamp.try_into().unwrap()
+        registration_time: Clock::get()?.unix_timestamp.try_into().unwrap(),
     };
 
     mint_info.banks[0] = ctx.accounts.bank.key();
@@ -170,7 +157,6 @@ pub fn token_register(
 
     Ok(())
 }
-
 
 #[derive(Accounts)]
 #[instruction(token_index: TokenIndex)]
@@ -195,12 +181,10 @@ pub struct TokenRegister<'info> {
     pub bank: AccountLoader<'info, Bank>,
 
     #[account(
-        init,
         seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
         bump,
         token::authority = market,
         token::mint = mint,
-        payer = payer
     )]
     pub vault: Account<'info, TokenAccount>,
 
