@@ -13,8 +13,10 @@ pub mod error;
 pub mod i80f48;
 pub mod types;
 pub mod logs;
+pub mod accounts_zerocopy;
+pub mod health;
 
-declare_id!("EKrZVNcqcS4uJLAq9DuAPP5ewX45XnfaYVy9367uzK2K");
+declare_id!("ALBzpjn7Q8T2oiTQc4wgpmFNBr89xtXWcWaGQCpZBzbp");
 
 #[program]
 pub mod peach_v1 {
@@ -30,18 +32,24 @@ pub mod peach_v1 {
         instructions::market_create(ctx, market_num, testing, version)
     }
 
-        pub fn account_create(
+    pub fn account_create(
         ctx: Context<AccountCreate>,
         account_num: u32,
         token_count: u8,
+        // token_conditional_swap_count: u8,
         name: String,
     ) -> Result<()> {
         instructions::account_create(
-            ctx,
+            &ctx.accounts.account,
+            ctx.bumps.account,
+            ctx.accounts.market.key(),
+            ctx.accounts.owner.key(),
             account_num,
             token_count,
+            // token_conditional_swap_count,
             name,
-        )
+        )?;
+        Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -69,7 +77,7 @@ pub mod peach_v1 {
         reduce_only: u8,
         interest_curve_scaling: f32,
         interest_target_utilization: f32,
-        group_insurance_fund: bool,
+        market_insurance_fund: bool,
         deposit_limit: u64,
         zero_util_rate: f32,
         platform_liquidation_fee: f32,
@@ -101,7 +109,7 @@ pub mod peach_v1 {
             reduce_only,
             interest_curve_scaling,
             interest_target_utilization,
-            group_insurance_fund,
+            market_insurance_fund,
             deposit_limit,
             zero_util_rate,
             platform_liquidation_fee,
@@ -122,6 +130,20 @@ pub mod peach_v1 {
 
     pub fn stub_oracle_create(ctx: Context<StubOracleCreate>, price: I80F48) -> Result<()> {
         instructions::stub_oracle_create(ctx, price)?;
+        Ok(())
+    }
+
+    pub fn token_deposit(ctx: Context<TokenDeposit>, amount: u64, reduce_only: bool) -> Result<()> {
+        instructions::token_deposit(ctx, amount, reduce_only)?;
+        Ok(())
+    }
+
+    pub fn token_deposit_into_existing(
+        ctx: Context<TokenDepositIntoExisting>,
+        amount: u64,
+        reduce_only: bool,
+    ) -> Result<()> {
+        instructions::token_deposit_into_existing(ctx, amount, reduce_only)?;
         Ok(())
     }
 }

@@ -5,10 +5,10 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-peach_v1 = "EKrZVNcqcS4uJLAq9DuAPP5ewX45XnfaYVy9367uzK2K"
+peach_v1 = "ALBzpjn7Q8T2oiTQc4wgpmFNBr89xtXWcWaGQCpZBzbp"
 
 [programs.devnet]
-peach_v1 = "EKrZVNcqcS4uJLAq9DuAPP5ewX45XnfaYVy9367uzK2K"
+peach_v1 = "ALBzpjn7Q8T2oiTQc4wgpmFNBr89xtXWcWaGQCpZBzbp"
 
 [registry]
 url = "https://api.apr.dev"

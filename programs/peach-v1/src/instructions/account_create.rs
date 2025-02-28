@@ -1,25 +1,42 @@
 use anchor_lang::prelude::*;
 
 use crate::error::PeachError;
-use crate::state::{IxGate, Market, PeachAccountFixed};
+use crate::state::*;
 
 use crate::util::fill_from_str;
 
 pub fn account_create(
-    ctx: Context<AccountCreate>,
+    account_ai: &AccountLoader<PeachAccountFixed>,
+    account_bump: u8,
+    market: Pubkey,
+    owner: Pubkey,
     account_num: u32,
-    _token_count: u8,
+    token_count: u8,
     name: String,
 ) -> Result<()> {
-    let mut account = ctx.accounts.account.load_init()?;
+    let mut account = account_ai.load_full_init()?;
 
-    account.name = fill_from_str(&name)?;
-    account.market = ctx.accounts.market.key();
-    account.owner = ctx.accounts.owner.key();
-    account.account_num = account_num;
-    account.bump = ctx.bumps.account;
-    account.delegate = Pubkey::default();
-    account.set_being_liquidated(false);
+    let header = PeachAccountDynamicHeader {
+        token_count,
+    };
+    header.check_resize_from(&PeachAccountDynamicHeader::zero())?;
+
+    msg!(
+        "Initialized account with header version {}",
+        account.header_version()
+    );
+
+    account.fixed.name = fill_from_str(&name)?;
+    account.fixed.market = market;
+    account.fixed.owner = owner;
+    account.fixed.account_num = account_num;
+    account.fixed.bump = account_bump;
+    account.fixed.delegate = Pubkey::default();
+    account.fixed.set_being_liquidated(false);
+
+    account.resize_dynamic_content(
+        token_count,
+    )?;
 
     Ok(())
 }
@@ -38,7 +55,7 @@ pub struct AccountCreate<'info> {
         seeds = [b"PeachAccount".as_ref(), market.key().as_ref(), owner.key().as_ref(), &account_num.to_le_bytes()],
         bump,
         payer = payer,
-        space = PeachAccountFixed::SIZE,
+        space = PeachAccount::space(token_count),
     )]
     pub account: AccountLoader<'info, PeachAccountFixed>,
     pub owner: Signer<'info>,

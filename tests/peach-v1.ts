@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { assert } from "chai";
 import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import { provider, createTokenMint, derivePDAs, envProviderPayer } from "./helpers/setup";
+import { provider, createTokenMint, derivePDAs, envProviderPayer, createTokenAccount, getFundedWallet, transferToken } from "./helpers/setup";
 import { createMarket, createPeachAccount, createStubOracle } from "./helpers/transactions";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
@@ -9,18 +9,25 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 describe("peach-v1", () => {
   const program = anchor.workspace.PeachV1;
   const stubOracle = Keypair.generate();
+  let owner: Keypair;
   let marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, mintInfoPDA: PublicKey;
   let mint: PublicKey;
+  let tokenAccount: PublicKey;
 
   // Update these values as needed
-  let marketNum = 7, accountNum = 0, tokenIndex = 3, price = 1.0;
+  let marketNum = 3, accountNum = 0, tokenIndex = 1, price = 1.0;
 
   before(async () => {
+    owner = await getFundedWallet();
+
     // Create mint
-    mint = await createTokenMint(10);
+    mint = await createTokenMint(10, owner);
+    console.log("Mint created: ", mint.toBase58());
+    tokenAccount = await createTokenAccount(mint, owner);
+    transferToken(mint, owner, 100);
 
     // Derive PDAs
-    ({ marketPDA, peachAccountPDA, bankPDA, vaultPDA, mintInfoPDA } = derivePDAs(marketNum, accountNum, tokenIndex, mint));
+    ({ marketPDA, peachAccountPDA, bankPDA, vaultPDA, mintInfoPDA } = derivePDAs(marketNum, accountNum, tokenIndex, mint, owner.publicKey));
 
     console.log("Market PDA:", marketPDA.toBase58());
     console.log("Peach Account PDA:", peachAccountPDA.toBase58());
@@ -30,7 +37,7 @@ describe("peach-v1", () => {
   });
 
   it("Creates a market", async () => {
-    const tx = await createMarket(marketPDA, marketNum);
+    const tx = await createMarket(marketPDA, marketNum, owner);
     console.log("Market Created: ", tx);
 
     const market = await program.account.market.fetch(marketPDA);
@@ -41,12 +48,12 @@ describe("peach-v1", () => {
     const tx = await createPeachAccount(peachAccountPDA, marketPDA, accountNum);
     console.log("Peach Account Created: ", tx);
 
-    const account = await program.account.peachAccountFixed.fetch(peachAccountPDA);
+    const account = await program.account.peachAccount.fetch(peachAccountPDA);
     assert.equal(account.accountNum, accountNum);
   });
 
   it("Creates a stub oracle", async () => {
-    const tx = await createStubOracle(stubOracle, marketPDA, mint, price);
+    const tx = await createStubOracle(stubOracle, marketPDA, mint, price, owner);
     console.log("Stub Oracle Created: ", tx);
 
     const oracle = await program.account.stubOracle.fetch(stubOracle.publicKey);
@@ -57,11 +64,11 @@ describe("peach-v1", () => {
     const ix1 = await program.methods.tokenVaultCreate(tokenIndex)
       .accounts({
         market: marketPDA,
-        admin: provider.wallet.publicKey,
+        admin: owner.publicKey,
         mint,
         vault: vaultPDA,
         mintInfo: mintInfoPDA,
-        payer: provider.wallet.publicKey, // This is the payer
+        payer: owner.publicKey, // This is the payer
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -100,7 +107,7 @@ describe("peach-v1", () => {
       50000,
       50000,
       0,
-      0.5,
+      1,
       0.8,
       true,
       new anchor.BN(1000000),
@@ -112,14 +119,14 @@ describe("peach-v1", () => {
     )
       .accounts({
         market: marketPDA,
-        admin: provider.wallet.publicKey,
+        admin: owner.publicKey,
         mint,
         bank: bankPDA,
         vault: vaultPDA,
         mintInfo: mintInfoPDA,
         oracle: stubOracle.publicKey,
         fallbackOracle: stubOracle.publicKey,
-        payer: provider.wallet.publicKey,
+        payer: owner.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -129,21 +136,42 @@ describe("peach-v1", () => {
     tx.add(ix1);
     tx.add(ix2);
 
-    const connection = new Connection("https://api.devnet.solana.com", "confirmed");
-
     const sig = await anchor.web3.sendAndConfirmTransaction(
-      connection, tx, [envProviderPayer]
+      provider.connection, tx, [owner]
     );
-
 
     console.log("Token registered: ", sig);
 
     const mintInfoAccount = await program.account.mintInfo.fetch(mintInfoPDA);
     const bankAccount = await program.account.bank.fetch(bankPDA);
-    console.log("Mint Info Account: ", mintInfoAccount);
-    console.log("Bank Account: ", bankAccount);
+    // console.log("Mint Info Account: ", mintInfoAccount);
+    // console.log("Bank Account: ", bankAccount);
     assert.ok(mintInfoAccount.mint.equals(mint));
     assert.ok(mintInfoAccount.oracle.equals(stubOracle.publicKey));
+  });
+
+  it("Deposits a token", async () => {
+    const deposit_amount = new anchor.BN(10);
+    const tx = await program.methods
+      .tokenDeposit(deposit_amount, false)
+      .accounts({
+        market: marketPDA,
+        account: peachAccountPDA,
+        owner: provider.wallet.publicKey,
+        bank: bankPDA,
+        vault: vaultPDA,
+        oracle: stubOracle.publicKey,
+        tokenAccount: tokenAccount,
+        tokenAuthority: owner.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([owner, envProviderPayer])
+      .rpc();
+
+    const vaultBalance = await program.provider.connection.getTokenAccountBalance(vaultPDA);
+    assert.equal(vaultBalance.value.amount, deposit_amount);
+
+    console.log("Token deposited: ", tx);
   });
 
 });

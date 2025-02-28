@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
+use crate::accounts_zerocopy::AccountInfoRef;
 use crate::error::*;
 use crate::logs::{emit_stack, TokenMetaDataLogV2};
 use crate::state::*;
@@ -40,7 +41,7 @@ pub fn token_register(
     reduce_only: u8,
     interest_curve_scaling: f32,
     interest_target_utilization: f32,
-    group_insurance_fund: bool,
+    market_insurance_fund: bool,
     deposit_limit: u64,
     zero_util_rate: f32,
     platform_liquidation_fee: f32,
@@ -127,12 +128,26 @@ pub fn token_register(
         _padding3: Default::default(),
     };
 
+    let oracle_ref = &AccountInfoRef::borrow(ctx.accounts.oracle.as_ref())?;
+    if let Ok(oracle_price) = bank.oracle_price(&OracleAccountInfos::from_reader(oracle_ref), None)
+    {
+        bank.stable_price_model
+            .reset_to_price(oracle_price.to_num(), now_ts);
+    } else {
+        bank.stable_price_model.reset_on_nonzero_price = 1;
+    }
+
+    bank.verify()?;
+    check_is_valid_fallback_oracle(&AccountInfoRef::borrow(
+        ctx.accounts.fallback_oracle.as_ref(),
+    )?)?;
+
     msg!("Initializing mint_info account");
     let mut mint_info = ctx.accounts.mint_info.load_init()?;
     *mint_info = MintInfo {
         market: ctx.accounts.market.key(),
         token_index,
-        group_insurance_fund: if group_insurance_fund { 1 } else { 0 },
+        market_insurance_fund: if market_insurance_fund { 1 } else { 0 },
         padding1: Default::default(),
         mint: ctx.accounts.mint.key(),
         banks: Default::default(),

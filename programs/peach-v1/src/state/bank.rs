@@ -1,10 +1,13 @@
 use anchor_lang::prelude::*;
 use derivative::Derivative;
 use fixed::types::I80F48;
+use crate::state::*;
+use crate::error::*;
+use crate::{accounts_zerocopy::KeyedAccountReader, i80f48::ClampToInt};
 
 use crate::util;
 
-use super::{OracleConfig, StablePriceModel};
+use super::{OracleAccountInfos, OracleConfig, StablePriceModel, TokenPosition};
 
 pub type TokenIndex = u16;
 
@@ -100,7 +103,7 @@ pub struct Bank{
     // Collection of all fractions-of-native-tokens that got rounded away
     pub dust: I80F48,
 
-    // Index into TokenInfo on the group
+    // Index into TokenInfo on the market
     pub token_index: TokenIndex,
 
     pub bump: u8,
@@ -198,7 +201,7 @@ pub struct Bank{
     /// See util0, rate0, util1, rate1, max_rate
     pub zero_util_rate: I80F48,
 
-    /// Additional to liquidation_fee, but goes to the group owner instead of the liqor
+    /// Additional to liquidation_fee, but goes to the market owner instead of the liqor
     pub platform_liquidation_fee: I80F48,
 
     /// Platform fees that were collected during liquidation (in native tokens)
@@ -240,5 +243,338 @@ impl Bank{
         std::str::from_utf8(&self.name)
             .unwrap()
             .trim_matches(char::from(0))
+    }
+
+    pub fn verify(&self) -> Result<()> {
+        require_gte!(self.oracle_config.conf_filter, 0.0);
+        require_gte!(self.util0, I80F48::ZERO);
+        require_gte!(self.util1, self.util0);
+        require_gte!(I80F48::ONE, self.util1);
+        require_gte!(self.rate0, I80F48::ZERO);
+        require_gte!(self.rate1, I80F48::ZERO);
+        require_gte!(self.max_rate, I80F48::ZERO);
+        require_gte!(self.adjustment_factor, 0.0);
+        require_gte!(self.loan_fee_rate, 0.0);
+        require_gte!(self.loan_origination_fee_rate, 0.0);
+        require_gte!(self.stable_price_model.delay_growth_limit, 0.0);
+        require_gte!(self.stable_price_model.stable_growth_limit, 0.0);
+        require_gte!(self.init_asset_weight, 0.0);
+        require_gte!(self.maint_asset_weight, self.init_asset_weight);
+        require_gte!(self.maint_liab_weight, 0.0);
+        require_gte!(self.init_liab_weight, self.maint_liab_weight);
+        require_gte!(self.liquidation_fee, 0.0);
+        require_gte!(self.min_vault_to_deposits_ratio, 0.0);
+        require_gte!(1.0, self.min_vault_to_deposits_ratio);
+        require_gte!(self.net_borrow_limit_per_window_quote, -1);
+        require_gt!(self.borrow_weight_scale_start_quote, 0.0);
+        require_gt!(self.deposit_weight_scale_start_quote, 0.0);
+        require_gte!(2, self.reduce_only);
+        require_gte!(self.interest_curve_scaling, 1.0);
+        require_gte!(self.interest_target_utilization, 0.0);
+        require_gte!(1.0, self.interest_target_utilization);
+        require_gte!(self.maint_weight_shift_duration_inv, 0.0);
+        require_gte!(self.maint_weight_shift_asset_target, 0.0);
+        require_gte!(self.maint_weight_shift_liab_target, 0.0);
+        require_gte!(self.zero_util_rate, I80F48::ZERO);
+        require_gte!(self.platform_liquidation_fee, 0.0);
+        if !self.allows_asset_liquidation() {
+            require!(self.are_borrows_reduce_only(), PeachError::SomeError);
+            require_eq!(self.maint_asset_weight, I80F48::ZERO);
+        }
+        require_gte!(self.collateral_fee_per_day, 0.0);
+        if self.is_force_withdraw() {
+            require!(self.are_deposits_reduce_only(), PeachError::SomeError);
+            require!(!self.allows_asset_liquidation(), PeachError::SomeError);
+            require_eq!(self.maint_asset_weight, I80F48::ZERO);
+        }
+        Ok(())
+    }
+
+    pub fn are_borrows_reduce_only(&self) -> bool {
+        self.reduce_only == 1 || self.reduce_only == 2
+    }
+
+    pub fn is_force_withdraw(&self) -> bool {
+        self.force_withdraw == 1
+    }
+
+    pub fn are_deposits_reduce_only(&self) -> bool {
+        self.reduce_only == 1
+    }
+
+    pub fn stable_price(&self) -> I80F48 {
+        I80F48::from_num(self.stable_price_model.stable_price)
+    }
+
+    pub fn check_deposit_and_oo_limit(&self) -> Result<()> {
+        if self.deposit_limit == 0 {
+            return Ok(());
+        }
+
+        // Intentionally does not use remaining_deposits_until_limit(): That function
+        // returns slightly less than the true limit to make sure depositing that amount
+        // will not cause a limit overrun.
+        let deposits = self.native_deposits();
+        // let serum = I80F48::from(self.potential_serum_tokens);
+        let total = deposits; // + serum;
+        let remaining = I80F48::from(self.deposit_limit) - total;
+        if remaining < 0 {
+            return Err(error_msg_typed!(
+                PeachError::BankDepositLimit,
+                "deposit limit exceeded: remaining: {}, total: {}, limit: {}, deposits: {}", //, serum: {}",
+                remaining,
+                total,
+                self.deposit_limit,
+                deposits,
+                // serum,
+            ));
+        }
+
+        Ok(())
+    }
+    
+    /// Returns the init asset weight, adjusted for the number of deposits on the bank.
+    ///
+    /// If max_collateral is 0, then the scaled init weight will be 0.
+    /// Otherwise the weight is unadjusted until max_collateral and then scaled down
+    /// such that scaled_init_weight * deposits remains constant.
+    #[inline(always)]
+    pub fn scaled_init_asset_weight(&self, price: I80F48) -> I80F48 {
+        if self.deposit_weight_scale_start_quote == f64::MAX {
+            return self.init_asset_weight;
+        }
+        let all_deposits =
+            self.native_deposits().to_num::<f64>(); // + self.potential_serum_tokens as f64;
+        let deposits_quote = all_deposits * price.to_num::<f64>();
+        if deposits_quote <= self.deposit_weight_scale_start_quote {
+            self.init_asset_weight
+        } else {
+            // The next line is around 500 CU
+            let scale = self.deposit_weight_scale_start_quote / deposits_quote;
+            self.init_asset_weight * I80F48::from_num(scale)
+        }
+    }
+
+    #[inline(always)]
+    pub fn scaled_init_liab_weight(&self, price: I80F48) -> I80F48 {
+        if self.borrow_weight_scale_start_quote == f64::MAX {
+            return self.init_liab_weight;
+        }
+        let borrows_quote = self.native_borrows().to_num::<f64>() * price.to_num::<f64>();
+        if borrows_quote <= self.borrow_weight_scale_start_quote {
+            self.init_liab_weight
+        } else if self.borrow_weight_scale_start_quote == 0.0 {
+            // TODO: will certainly cause overflow, so it's not exactly what is needed; health should be -MAX?
+            // maybe handling this case isn't super helpful?
+            I80F48::MAX
+        } else {
+            // The next line is around 500 CU
+            let scale = borrows_quote / self.borrow_weight_scale_start_quote;
+            self.init_liab_weight * I80F48::from_num(scale)
+        }
+    }
+
+    pub fn allows_asset_liquidation(&self) -> bool {
+        self.disable_asset_liquidation == 0
+    }
+
+    #[inline(always)]
+    pub fn native_borrows(&self) -> I80F48 {
+        self.borrow_index * self.indexed_borrows
+    }
+
+    #[inline(always)]
+    pub fn native_deposits(&self) -> I80F48 {
+        self.deposit_index * self.indexed_deposits
+    }
+
+    pub fn maint_weights(&self, now_ts: u64) -> (I80F48, I80F48) {
+        if self.maint_weight_shift_duration_inv.is_zero() || now_ts <= self.maint_weight_shift_start
+        {
+            (self.maint_asset_weight, self.maint_liab_weight)
+        } else if now_ts >= self.maint_weight_shift_end {
+            (
+                self.maint_weight_shift_asset_target,
+                self.maint_weight_shift_liab_target,
+            )
+        } else {
+            let scale = I80F48::from(now_ts - self.maint_weight_shift_start)
+                * self.maint_weight_shift_duration_inv;
+            let asset = self.maint_asset_weight
+                + scale * (self.maint_weight_shift_asset_target - self.maint_asset_weight);
+            let liab = self.maint_liab_weight
+                + scale * (self.maint_weight_shift_liab_target - self.maint_liab_weight);
+            (asset, liab)
+        }
+    }
+
+    /// Update the bank's net_borrows fields.
+    ///
+    /// If oracle_price is set, also do a net borrows check and error if the threshold is exceeded.
+    pub fn update_net_borrows(&mut self, native_amount: I80F48, now_ts: u64) {
+        let in_new_window =
+            now_ts >= self.last_net_borrows_window_start_ts + self.net_borrow_limit_window_size_ts;
+
+        let amount = native_amount.ceil().clamp_to_i64();
+
+        self.net_borrows_in_window = if in_new_window {
+            // reset to latest window
+            self.last_net_borrows_window_start_ts = now_ts / self.net_borrow_limit_window_size_ts
+                * self.net_borrow_limit_window_size_ts;
+            amount
+        } else {
+            self.net_borrows_in_window + amount
+        };
+    }
+
+    pub fn update_cumulative_interest(
+        &self,
+        position: &mut TokenPosition,
+        opening_indexed_position: I80F48,
+    ) {
+        if opening_indexed_position.is_positive() {
+            let interest = ((self.deposit_index - position.previous_index)
+                * opening_indexed_position)
+                .to_num::<f64>();
+            position.cumulative_deposit_interest += interest;
+        } else {
+            let interest = ((self.borrow_index - position.previous_index)
+                * opening_indexed_position)
+                .to_num::<f64>();
+            position.cumulative_borrow_interest -= interest;
+        }
+
+        if position.indexed_position.is_positive() {
+            position.previous_index = self.deposit_index
+        } else {
+            position.previous_index = self.borrow_index
+        }
+    }
+
+    /// Tries to return the primary oracle price, and if there is a confidence or staleness issue returns the fallback oracle price if possible.
+    pub fn oracle_price<T: KeyedAccountReader>(
+        &self,
+        oracle_acc_infos: &OracleAccountInfos<T>,
+        now: Option<(u64, u64)>, // (now_ts, now_slot)
+    ) -> Result<I80F48> {
+        require_keys_eq!(self.oracle, *oracle_acc_infos.oracle.key());
+        let primary_state = oracle::oracle_state_unchecked(oracle_acc_infos, self.mint_decimals)?;
+        let primary_ok =
+            primary_state.check_confidence_and_maybe_staleness(&self.oracle_config, now);
+        if primary_ok.is_oracle_error() && oracle_acc_infos.fallback_opt.is_some() {
+            let fallback_oracle_acc = oracle_acc_infos.fallback_opt.unwrap();
+            require_keys_eq!(self.fallback_oracle, *fallback_oracle_acc.key());
+            let fallback_state =
+                oracle::fallback_oracle_state_unchecked(&oracle_acc_infos, self.mint_decimals)?;
+            let fallback_ok =
+                fallback_state.check_confidence_and_maybe_staleness(&self.oracle_config, now);
+            fallback_ok.with_context(|| {
+                format!(
+                    "{} {}",
+                    oracle_log_context(self.name(), &primary_state, &self.oracle_config, now),
+                    oracle_log_context(self.name(), &fallback_state, &self.oracle_config, now)
+                )
+            })?;
+            Ok(fallback_state.price)
+        } else {
+            primary_ok.with_context(|| {
+                oracle_log_context(self.name(), &primary_state, &self.oracle_config, now)
+            })?;
+            Ok(primary_state.price)
+        }
+    }
+
+    /// Deposits `native_amount`.
+    ///
+    /// If the token position ends up positive but below one native token and this token
+    /// position isn't marked as in-use, the token balance will be dusted, the position
+    /// will be set to zero and this function returns Ok(false).
+    ///
+    /// native_amount must be >= 0
+    /// fractional deposits can be relevant during liquidation, for example
+    pub fn deposit(
+        &mut self,
+        position: &mut TokenPosition,
+        native_amount: I80F48,
+        now_ts: u64,
+    ) -> Result<bool> {
+        self.deposit_internal_wrapper(position, native_amount, !position.is_in_use(), now_ts)
+    }
+
+    pub fn deposit_internal_wrapper(
+        &mut self,
+        position: &mut TokenPosition,
+        native_amount: I80F48,
+        allow_dusting: bool,
+        now_ts: u64,
+    ) -> Result<bool> {
+        let opening_indexed_position = position.indexed_position;
+        let result = self.deposit_internal(position, native_amount, allow_dusting, now_ts)?;
+        self.update_cumulative_interest(position, opening_indexed_position);
+        Ok(result)
+    }
+
+    /// Internal function to deposit funds
+    pub fn deposit_internal(
+        &mut self,
+        position: &mut TokenPosition,
+        mut native_amount: I80F48,
+        allow_dusting: bool,
+        now_ts: u64,
+    ) -> Result<bool> {
+        require_gte!(native_amount, 0);
+
+        let native_position = position.native(self);
+
+        // Adding DELTA to amount/index helps because (amount/index)*index <= amount, but
+        // we want to ensure that users can withdraw the same amount they have deposited, so
+        // (amount/index + delta)*index >= amount is a better guarantee.
+        // Additionally, we require that we don't adjust values if
+        // (native / index) * index == native, because we sometimes call this function with
+        // values that are products of index.
+        let div_rounding_up = |native: I80F48, index: I80F48| {
+            let indexed = native / index;
+            if (indexed * index) < native {
+                indexed + I80F48::DELTA
+            } else {
+                indexed
+            }
+        };
+
+        if native_position.is_negative() {
+            // Only account for the borrows we are repaying
+            self.update_net_borrows(native_position.max(-native_amount), now_ts);
+
+            let new_native_position = native_position + native_amount;
+            let indexed_change = div_rounding_up(native_amount, self.borrow_index);
+            // this is only correct if it's not positive, because it scales the whole amount by borrow_index
+            let new_indexed_value = position.indexed_position + indexed_change;
+            if new_indexed_value.is_negative() {
+                // pay back borrows only, leaving a negative position
+                self.indexed_borrows -= indexed_change;
+                position.indexed_position = new_indexed_value;
+                return Ok(true);
+            } else if new_native_position < I80F48::ONE && allow_dusting {
+                // if there's less than one token deposited, zero the position
+                self.dust += new_native_position;
+                self.indexed_borrows += position.indexed_position;
+                position.indexed_position = I80F48::ZERO;
+                return Ok(false);
+            }
+
+            // pay back all borrows
+            self.indexed_borrows += position.indexed_position; // position.value is negative
+            position.indexed_position = I80F48::ZERO;
+            // deposit the rest
+            // note: .max(0) because there's a scenario where new_indexed_value == 0 and new_native_position < 0
+            native_amount = new_native_position.max(I80F48::ZERO);
+        }
+
+        // add to deposits
+        let indexed_change = div_rounding_up(native_amount, self.deposit_index);
+        self.indexed_deposits += indexed_change;
+        position.indexed_position += indexed_change;
+
+        Ok(true)
     }
 }

@@ -24,7 +24,8 @@ impl Market {
 #[derive(Copy, Clone, Debug)]
 pub enum IxGate {
     AccountCreate = 0,
-    GroupCreate = 1,
+    MarketCreate = 1,
     TokenRegister = 2,
     StubOracleCreate = 3,
+    TokenDeposit = 4,
 }

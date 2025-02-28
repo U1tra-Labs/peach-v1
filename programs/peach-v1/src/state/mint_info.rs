@@ -19,7 +19,7 @@ pub struct MintInfo {
     // ABI: Clients rely on this being at offset 40
     pub token_index: TokenIndex,
 
-    pub group_insurance_fund: u8,
+    pub market_insurance_fund: u8,
     #[derivative(Debug = "ignore")]
     pub padding1: [u8; 5],
     pub mint: Pubkey,

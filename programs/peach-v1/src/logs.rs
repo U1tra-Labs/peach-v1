@@ -28,3 +28,31 @@ pub struct TokenMetaDataLogV2 {
     pub mint_info: Pubkey,
 }
 
+#[event]
+pub struct TokenBalanceLog {
+    pub peach_market: Pubkey,
+    pub peach_account: Pubkey,
+    pub token_index: u16,       // IDL doesn't support usize
+    pub indexed_position: i128, // on client convert i128 to I80F48 easily by passing in the BN to I80F48 ctor
+    pub deposit_index: i128,    // I80F48
+    pub borrow_index: i128,     // I80F48
+}
+
+#[event]
+pub struct DepositLog {
+    pub peach_market: Pubkey,
+    pub peach_account: Pubkey,
+    pub signer: Pubkey,
+    pub token_index: u16,
+    pub quantity: u64,
+    pub price: i128, // I80F48
+}
+
+#[event]
+pub struct DeactivateTokenPositionLog {
+    pub peach_market: Pubkey,
+    pub peach_account: Pubkey,
+    pub token_index: u16,
+    pub cumulative_deposit_interest: f64,
+    pub cumulative_borrow_interest: f64,
+}

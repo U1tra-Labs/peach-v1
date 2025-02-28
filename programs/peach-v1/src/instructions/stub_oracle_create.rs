@@ -6,7 +6,7 @@ use crate::{error::PeachError, state::{IxGate, Market, StubOracle}};
 
 pub fn stub_oracle_create(ctx: Context<StubOracleCreate>, price: I80F48) -> Result<()> {
     let mut oracle = ctx.accounts.oracle.load_init()?;
-    oracle.group = ctx.accounts.group.key();
+    oracle.market = ctx.accounts.market.key();
     oracle.mint = ctx.accounts.mint.key();
     oracle.price = price;
     oracle.last_update_ts = Clock::get()?.unix_timestamp;
@@ -18,9 +18,9 @@ pub fn stub_oracle_create(ctx: Context<StubOracleCreate>, price: I80F48) -> Resu
 pub struct StubOracleCreate<'info> {
     #[account(
         has_one = admin,
-        constraint = group.load()?.is_ix_enabled(IxGate::StubOracleCreate) @ PeachError::IxIsDisabled,
+        constraint = market.load()?.is_ix_enabled(IxGate::StubOracleCreate) @ PeachError::IxIsDisabled,
     )]
-    pub group: AccountLoader<'info, Market>,
+    pub market: AccountLoader<'info, Market>,
 
     #[account(
         init,

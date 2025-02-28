@@ -76,3 +76,14 @@ impl Default for StablePriceModel {
         }
     }
 }
+
+impl StablePriceModel {
+        pub fn reset_to_price(&mut self, oracle_price: f64, now_ts: u64) {
+        self.stable_price = oracle_price;
+        self.delay_prices = [oracle_price; 24];
+        self.delay_accumulator_price = 0.0;
+        self.delay_accumulator_time = 0;
+        self.last_update_timestamp = now_ts;
+        self.reset_on_nonzero_price = if oracle_price > 0.0 { 0 } else { 1 };
+    }
+}
