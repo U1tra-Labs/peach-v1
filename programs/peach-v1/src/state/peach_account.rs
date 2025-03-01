@@ -13,6 +13,8 @@ use static_assertions::const_assert_eq;
 use crate::error::Contextable;
 use crate::error::PeachError;
 use crate::error_msg_typed;
+use crate::health::HealthCache;
+use crate::health::HealthType;
 use crate::logs::emit_stack;
 use crate::util;
 use crate::logs::DeactivateTokenPositionLog;
@@ -641,6 +643,80 @@ impl<
         let offset = self.header().token_offset(0);
         let count = self.header().token_count;
         self.write_borsh_vec_length_and_padding(offset, count)
+    }
+
+    pub fn check_health_pre(&mut self, health_cache: &HealthCache) -> Result<I80F48> {
+        let pre_init_health = health_cache.health(HealthType::Init);
+        msg!("pre_init_health: {}", pre_init_health);
+        self.check_health_pre_checks(health_cache, pre_init_health)?;
+        Ok(pre_init_health)
+    }
+
+    pub fn check_health_pre_checks(
+        &mut self,
+        health_cache: &HealthCache,
+        pre_init_health: I80F48,
+    ) -> Result<()> {
+        // We can skip computing LiquidationEnd health if Init health > 0, because
+        // LiquidationEnd health >= Init health.
+        self.fixed_mut()
+            .maybe_recover_from_being_liquidated(pre_init_health);
+        if self.fixed().being_liquidated() {
+            let liq_end_health = health_cache.health(HealthType::LiquidationEnd);
+            self.fixed_mut()
+                .maybe_recover_from_being_liquidated(liq_end_health);
+        }
+        require!(
+            !self.fixed().being_liquidated(),
+            PeachError::BeingLiquidated
+        );
+        Ok(())
+    }
+
+    pub fn check_health_post(
+        &mut self,
+        health_cache: &HealthCache,
+        pre_init_health: I80F48,
+    ) -> Result<I80F48> {
+        let post_init_health = health_cache.health(HealthType::Init);
+        msg!("post_init_health: {}", post_init_health);
+        self.check_health_post_checks(pre_init_health, post_init_health)?;
+        Ok(post_init_health)
+    }
+
+    pub fn check_health_post_checks(
+        &mut self,
+        pre_init_health: I80F48,
+        post_init_health: I80F48,
+    ) -> Result<()> {
+        // Accounts that have negative init health may only take actions that don't further
+        // decrease their health.
+        // To avoid issues with rounding, we allow accounts to decrease their health by up to
+        // $1e-6. This is safe because the grace amount is way less than the cost of a transaction.
+        // And worst case, users can only use this to gradually drive their own account into
+        // liquidation.
+        // There is an exception for accounts with health between $0 and -$0.001 (-1000 native),
+        // because we don't want to allow empty accounts or accounts with extremely tiny deposits
+        // to immediately drive themselves into bankruptcy. (accounts with large deposits can also
+        // be in this health range, but it's really unlikely)
+        let health_does_not_decrease = if post_init_health < -1000 {
+            post_init_health.ceil() >= pre_init_health.ceil()
+        } else {
+            post_init_health >= pre_init_health
+        };
+
+        require!(
+            post_init_health >= 0 || health_does_not_decrease,
+            PeachError::HealthMustBePositiveOrIncrease
+        );
+        Ok(())
+    }
+
+    /// A stricter version of check_health_post_checks() that requires >=0 health, it not getting
+    /// worse is not sufficient
+    pub fn check_health_post_checks_strict(&mut self, post_init_health: I80F48) -> Result<()> {
+        require!(post_init_health >= 0, PeachError::HealthMustBePositive);
+        Ok(())
     }
 
     pub fn resize_dynamic_content(

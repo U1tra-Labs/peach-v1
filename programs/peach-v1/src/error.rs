@@ -35,6 +35,24 @@ pub enum PeachError {
     BankDepositLimit,
     #[msg("")]
     UnexpectedOracle,
+    #[msg("bank vault has insufficent funds")]
+    InsufficentBankVaultFunds,
+    #[msg("delegates can only withdraw to the owner's associated token account")]
+    DelegateWithdrawOnlyToOwnerAta,
+    #[msg("delegates can only withdraw if they close the token position")]
+    DelegateWithdrawMustClosePosition,
+    #[msg("for borrows the bank must be in the health account list")]
+    BorrowsRequireHealthAccountBank,
+    #[msg("account is currently being liquidated")]
+    BeingLiquidated,
+    #[msg("health must be positive or not decrease")]
+    HealthMustBePositiveOrIncrease, // outdated name is kept for backwards compatibility
+    #[msg("health must be positive")]
+    HealthMustBePositive,
+    #[msg("bank utilization has reached limit")]
+    BankBorrowLimitReached,
+    #[msg("bank net borrows has reached limit - this is an intermittent error - the limit will reset regularly")]
+    BankNetBorrowsLimitReached,
 }
 
 impl PeachError {

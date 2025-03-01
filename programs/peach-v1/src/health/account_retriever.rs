@@ -59,6 +59,26 @@ pub struct FixedOrderAccountRetriever<T: KeyedAccountReader> {
     pub sol_oracle_index: Option<usize>,
 }
 
+/// Creates a FixedOrderAccountRetriever where all banks are present
+///
+/// Note that this does not eagerly validate that the right accounts were passed. That
+/// validation happens only when banks, perps etc are requested.
+pub fn new_fixed_order_account_retriever<'a, 'info>(
+    ais: &'a [AccountInfo<'info>],
+    account: &PeachAccountRef,
+    now: (u64, u64),
+) -> Result<FixedOrderAccountRetriever<AccountInfoRef<'a, 'info>>> {
+    let active_token_len = account.active_token_positions().count();
+
+    // Load the banks early to verify them
+    for ai in &ais[0..active_token_len] {
+        ai.load::<Bank>()?;
+    }
+
+    new_fixed_order_account_retriever_inner(ais, account, now, active_token_len)
+}
+
+
 /// A FixedOrderAccountRetriever with n_banks <= active_token_positions().count(),
 /// depending on which banks were passed.
 ///

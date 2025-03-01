@@ -16,6 +16,7 @@ describe("peach-v1", () => {
 
   // Update these values as needed
   let marketNum = 3, accountNum = 0, tokenIndex = 1, price = 1.0;
+  let deposit_amount = new anchor.BN(100), withdraw_amount = new anchor.BN(5);
 
   before(async () => {
     owner = await getFundedWallet();
@@ -151,7 +152,6 @@ describe("peach-v1", () => {
   });
 
   it("Deposits a token", async () => {
-    const deposit_amount = new anchor.BN(10);
     const tx = await program.methods
       .tokenDeposit(deposit_amount, false)
       .accounts({
@@ -172,6 +172,39 @@ describe("peach-v1", () => {
     assert.equal(vaultBalance.value.amount, deposit_amount);
 
     console.log("Token deposited: ", tx);
+  });
+
+  it("Withdraws/Borrows a token", async () => {
+    const tx = await program.methods
+      .tokenWithdraw(withdraw_amount, true)
+      .accounts({
+        market: marketPDA,
+        account: peachAccountPDA,
+        owner: provider.wallet.publicKey,
+        bank: bankPDA,
+        vault: vaultPDA,
+        oracle: stubOracle.publicKey,
+        tokenAccount: tokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([envProviderPayer])
+      .rpc();
+
+    const vaultBalance = await program.provider.connection.getTokenAccountBalance(vaultPDA);
+    assert.equal(vaultBalance.value.amount, deposit_amount.sub(withdraw_amount));
+
+    console.log("Token withdrawn: ", tx);
+  });
+
+  it("Charges collateral fees", async () => {
+    const tx = await program.methods.tokenChargeCollateralFees()
+      .accounts({
+        market: marketPDA,
+        account: peachAccountPDA,
+      })
+      .rpc();
+
+    console.log("Collateral fee charged: ", tx);
   });
 
 });

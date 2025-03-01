@@ -146,4 +146,23 @@ pub mod peach_v1 {
         instructions::token_deposit_into_existing(ctx, amount, reduce_only)?;
         Ok(())
     }
+
+    pub fn token_withdraw(
+        ctx: Context<TokenWithdraw>,
+        amount: u64,
+        allow_borrow: bool,
+    ) -> Result<()> {
+        instructions::token_withdraw(ctx, amount, allow_borrow)?;
+        Ok(())
+    }
+
+    pub fn token_force_withdraw(ctx: Context<TokenForceWithdraw>) -> Result<()> {
+        instructions::token_force_withdraw(ctx)?;
+        Ok(())
+    }
+
+    pub fn token_charge_collateral_fees(ctx: Context<TokenChargeCollateralFees>) -> Result<()> {
+        instructions::token_charge_collateral_fees(ctx)?;
+        Ok(())
+    }
 }

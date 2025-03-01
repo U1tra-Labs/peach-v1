@@ -28,4 +28,21 @@ pub enum IxGate {
     TokenRegister = 2,
     StubOracleCreate = 3,
     TokenDeposit = 4,
+    TokenWithdraw = 5,
+    TokenForceWithdraw = 6,
 }
+
+// note: using creator instead of admin, since admin can be changed
+#[macro_export]
+macro_rules! market_seeds {
+    ( $market:expr ) => {
+        &[
+            b"Market".as_ref(),
+            $market.creator.as_ref(),
+            &$market.market_num.to_le_bytes(),
+            &[$market.bump],
+        ]
+    };
+}
+
+pub use market_seeds;

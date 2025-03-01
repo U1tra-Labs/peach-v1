@@ -223,6 +223,18 @@ pub struct Bank{
     // pub reserved: [u8; 1900],
 }
 
+pub struct WithdrawResult {
+    pub position_is_active: bool,
+    pub loan_origination_fee: I80F48,
+    pub loan_amount: I80F48,
+}
+
+impl WithdrawResult {
+    pub fn has_loan(&self) -> bool {
+        self.loan_amount.is_positive()
+    }
+}
+
 #[macro_export]
 macro_rules! bank_seeds {
     ( $bank:expr ) => {
@@ -372,6 +384,62 @@ impl Bank{
             let scale = borrows_quote / self.borrow_weight_scale_start_quote;
             self.init_liab_weight * I80F48::from_num(scale)
         }
+    }
+
+    /// Prevent borrowing away the full bank vault.
+    /// Keep some in reserve to satisfy non-borrow withdraws.
+    pub fn enforce_max_utilization_on_borrow(&self) -> Result<()> {
+        self.enforce_max_utilization(
+            I80F48::ONE - I80F48::from_num(self.min_vault_to_deposits_ratio),
+        )
+    }
+
+    /// Prevent borrowing away the full bank vault.
+    /// Keep some in reserve to satisfy non-borrow withdraws.
+    fn enforce_max_utilization(&self, max_utilization: I80F48) -> Result<()> {
+        let bank_native_deposits = self.native_deposits();
+        let bank_native_borrows = self.native_borrows();
+
+        if bank_native_borrows > max_utilization * bank_native_deposits {
+            return err!(PeachError::BankBorrowLimitReached).with_context(|| {
+                format!(
+                    "deposits {}, borrows {}, max utilization {}",
+                    bank_native_deposits, bank_native_borrows, max_utilization,
+                )
+            });
+        };
+
+        Ok(())
+    }
+
+    pub fn remaining_net_borrows_quote(&self, oracle_price: I80F48) -> I80F48 {
+        if self.net_borrows_in_window < 0 || self.net_borrow_limit_per_window_quote < 0 {
+            return I80F48::MAX;
+        }
+
+        let price = oracle_price.max(self.stable_price());
+        let net_borrows_quote = price
+            .checked_mul_int(self.net_borrows_in_window.into())
+            .unwrap();
+
+        I80F48::from(self.net_borrow_limit_per_window_quote) - net_borrows_quote
+    }
+
+    pub fn check_net_borrows(&self, oracle_price: I80F48) -> Result<()> {
+        let remaining_quote = self.remaining_net_borrows_quote(oracle_price);
+        if remaining_quote < 0 {
+            return Err(error_msg_typed!(PeachError::BankNetBorrowsLimitReached,
+                    "net_borrows_in_window: {:?}, remaining quote: {:?}, net_borrow_limit_per_window_quote: {:?}, last_net_borrows_window_start_ts: {:?}",
+                    self.net_borrows_in_window, remaining_quote, self.net_borrow_limit_per_window_quote, self.last_net_borrows_window_start_ts
+
+            ));
+        }
+
+        Ok(())
+    }
+
+    pub fn enforce_borrows_lte_deposits(&self) -> Result<()> {
+        self.enforce_max_utilization(I80F48::ONE)
     }
 
     pub fn allows_asset_liquidation(&self) -> bool {
@@ -577,4 +645,139 @@ impl Bank{
 
         Ok(true)
     }
+
+    /// Withdraws `native_amount` without applying the loan origination fee.
+    ///
+    /// If the token position ends up positive but below one native token and this token
+    /// position isn't marked as in-use, the token balance will be dusted, the position
+    /// will be set to zero and this function returns Ok(false).
+    ///
+    /// native_amount must be >= 0
+    /// fractional withdraws can be relevant during liquidation, for example
+    pub fn withdraw_without_fee(
+        &mut self,
+        position: &mut TokenPosition,
+        native_amount: I80F48,
+        now_ts: u64,
+    ) -> Result<bool> {
+        let position_is_active = self
+            .withdraw_internal_wrapper(
+                position,
+                native_amount,
+                false,
+                !position.is_in_use(),
+                now_ts,
+            )?
+            .position_is_active;
+
+        Ok(position_is_active)
+    }
+
+    /// Withdraws `native_amount` while applying the loan origination fee if a borrow is created.
+    ///
+    /// If the token position ends up positive but below one native token and this token
+    /// position isn't marked as in-use, the token balance will be dusted, the position
+    /// will be set to zero and this function returns Ok(false).
+    ///
+    /// native_amount must be >= 0
+    /// fractional withdraws can be relevant during liquidation, for example
+    pub fn withdraw_with_fee(
+        &mut self,
+        position: &mut TokenPosition,
+        native_amount: I80F48,
+        now_ts: u64,
+    ) -> Result<WithdrawResult> {
+        self.withdraw_internal_wrapper(position, native_amount, true, !position.is_in_use(), now_ts)
+    }
+
+    /// Internal function to withdraw funds
+    fn withdraw_internal_wrapper(
+        &mut self,
+        position: &mut TokenPosition,
+        native_amount: I80F48,
+        with_loan_origination_fee: bool,
+        allow_dusting: bool,
+        now_ts: u64,
+    ) -> Result<WithdrawResult> {
+        let opening_indexed_position = position.indexed_position;
+        let res = self.withdraw_internal(
+            position,
+            native_amount,
+            with_loan_origination_fee,
+            allow_dusting,
+            now_ts,
+        );
+        self.update_cumulative_interest(position, opening_indexed_position);
+        res
+    }
+
+        /// Internal function to withdraw funds
+    fn withdraw_internal(
+        &mut self,
+        position: &mut TokenPosition,
+        mut native_amount: I80F48,
+        with_loan_origination_fee: bool,
+        allow_dusting: bool,
+        now_ts: u64,
+    ) -> Result<WithdrawResult> {
+        require_gte!(native_amount, 0);
+        let native_position = position.native(self);
+
+        if !native_position.is_negative() {
+            let new_native_position = native_position - native_amount;
+            if !new_native_position.is_negative() {
+                // withdraw deposits only
+                if new_native_position < I80F48::ONE && allow_dusting {
+                    // zero the account collecting the leftovers in `dust`
+                    self.dust += new_native_position;
+                    self.indexed_deposits -= position.indexed_position;
+                    position.indexed_position = I80F48::ZERO;
+                    return Ok(WithdrawResult {
+                        position_is_active: false,
+                        loan_origination_fee: I80F48::ZERO,
+                        loan_amount: I80F48::ZERO,
+                    });
+                } else {
+                    // withdraw some deposits leaving a positive balance
+                    let indexed_change = native_amount / self.deposit_index;
+                    self.indexed_deposits -= indexed_change;
+                    position.indexed_position -= indexed_change;
+                    return Ok(WithdrawResult {
+                        position_is_active: true,
+                        loan_origination_fee: I80F48::ZERO,
+                        loan_amount: I80F48::ZERO,
+                    });
+                }
+            }
+
+            // withdraw all deposits
+            self.indexed_deposits -= position.indexed_position;
+            position.indexed_position = I80F48::ZERO;
+            // borrow the rest
+            native_amount = -new_native_position;
+        }
+
+        let mut loan_origination_fee = I80F48::ZERO;
+        if with_loan_origination_fee {
+            loan_origination_fee = self.loan_origination_fee_rate * native_amount;
+            self.collected_fees_native += loan_origination_fee;
+            native_amount += loan_origination_fee;
+        }
+
+        // add to borrows
+        let indexed_change = native_amount / self.borrow_index;
+        self.indexed_borrows += indexed_change;
+        position.indexed_position -= indexed_change;
+
+        // net borrows requires updating in only this case, since other branches of the method deal with
+        // withdraws and not borrows
+        self.update_net_borrows(native_amount, now_ts);
+
+        Ok(WithdrawResult {
+            position_is_active: true,
+            loan_origination_fee,
+            loan_amount: native_amount,
+        })
+    }
+
 }

@@ -19,7 +19,7 @@ use fixed::types::I80F48;
 use crate::health::account_retriever::AccountRetriever;
 use crate::error::*;
 use crate::state::{
-    PeachAccountRef, TokenIndex
+    Bank, PeachAccountRef, TokenIndex
 };
 
 /// Information about prices for a bank or perp market.
@@ -109,6 +109,15 @@ impl TokenInfo {
         self.liab_weight(health_type) * self.prices.liab(health_type)
     }
 
+    #[inline(always)]
+    pub fn health_contribution(&self, health_type: HealthType, balance: I80F48) -> I80F48 {
+        let weighted_price = if balance.is_negative() {
+            self.liab_weighted_price(health_type)
+        } else {
+            self.asset_weighted_price(health_type)
+        };
+        balance * weighted_price
+    }
 }
 
 /// Temporary value used during health computations
@@ -151,6 +160,49 @@ impl HealthCache {
         };
         self.health_sum(health_type, sum, &token_balances);
         health
+    }
+
+    pub fn token_info(&self, token_index: TokenIndex) -> Result<&TokenInfo> {
+        Ok(&self.token_infos[self.token_info_index(token_index)?])
+    }
+
+    pub fn token_info_index(&self, token_index: TokenIndex) -> Result<usize> {
+        self.token_infos
+            .iter()
+            .position(|t| t.token_index == token_index)
+            .ok_or_else(|| {
+                error_msg_typed!(
+                    PeachError::TokenPositionDoesNotExist,
+                    "token index {} not found",
+                    token_index
+                )
+            })
+    }
+
+    pub fn has_token_info(&self, token_index: TokenIndex) -> bool {
+        self.token_infos
+            .iter()
+            .any(|t| t.token_index == token_index)
+    }
+
+    /// Changes the cached user account token balance.
+    pub fn adjust_token_balance(&mut self, bank: &Bank, change: I80F48) -> Result<()> {
+        let entry_index = self.token_info_index(bank.token_index)?;
+        let entry = &mut self.token_infos[entry_index];
+
+        // Note: resetting the weights here assumes that the change has been applied to
+        // the passed in bank already
+        entry.init_scaled_asset_weight =
+            bank.scaled_init_asset_weight(entry.prices.asset(HealthType::Init));
+        entry.init_scaled_liab_weight =
+            bank.scaled_init_liab_weight(entry.prices.liab(HealthType::Init));
+
+        // Work around the fact that -((-x) * y) == x * y does not hold for I80F48:
+        // We need to make sure that if balance is before * price, then change = -before
+        // brings it to exactly zero.
+        let removed_contribution = -change;
+        entry.balance_spot -= removed_contribution;
+        Ok(())
     }
 
     /// Returns token balances that account for spot and perp contributions
@@ -224,11 +276,61 @@ impl HealthCache {
     ) -> (I80F48, I80F48) {
         self.health_assets_and_liabs(health_type, true)
     }
+
     pub fn health_assets_and_liabs_stable_liabs(
         &self,
         health_type: HealthType,
     ) -> (I80F48, I80F48) {
         self.health_assets_and_liabs(health_type, false)
+    }
+
+    /// Computes the account assets and liabilities marked to market.
+    ///
+    /// Contrary to health_assets_and_liabs, there's no health weighing or adjustment
+    /// for stable prices. It uses oracle prices directly.
+    ///
+    /// Returns (assets, liabilities)
+    pub fn assets_and_liabs(&self) -> (I80F48, I80F48) {
+        let mut assets = I80F48::ZERO;
+        let mut liabs = I80F48::ZERO;
+
+        for token_info in self.token_infos.iter() {
+            if token_info.balance_spot.is_negative() {
+                liabs -= token_info.balance_spot * token_info.prices.oracle;
+            } else {
+                assets += token_info.balance_spot * token_info.prices.oracle;
+            }
+        }
+
+        // for serum_info in self.serum3_infos.iter() {
+        //     let quote = &self.token_infos[serum_info.quote_info_index];
+        //     let base = &self.token_infos[serum_info.base_info_index];
+        //     assets += serum_info.reserved_base * base.prices.oracle;
+        //     assets += serum_info.reserved_quote * quote.prices.oracle;
+        // }
+
+        // for perp_info in self.perp_infos.iter() {
+        //     let quote_price = self.token_infos[perp_info.settle_token_index as usize]
+        //         .prices
+        //         .oracle;
+        //     let quote_position_value = perp_info.quote * quote_price;
+        //     if perp_info.quote.is_negative() {
+        //         liabs -= quote_position_value;
+        //     } else {
+        //         assets += quote_position_value;
+        //     }
+
+        //     let base_position_value = I80F48::from(perp_info.base_lots * perp_info.base_lot_size)
+        //         * perp_info.base_prices.oracle
+        //         * quote_price;
+        //     if base_position_value.is_negative() {
+        //         liabs -= base_position_value;
+        //     } else {
+        //         assets += base_position_value;
+        //     }
+        // }
+
+        return (assets, liabs);
     }
 
     /// Loop over the token, perp, serum contributions and add up all positive values into `assets`
@@ -453,3 +555,13 @@ fn new_health_cache_impl(
         being_liquidated: account.fixed.being_liquidated(),
     })
 }
+
+/// Generate a HealthCache for an account and its health accounts.
+pub fn new_health_cache(
+    account: &PeachAccountRef,
+    retriever: &impl AccountRetriever,
+    now_ts: u64,
+) -> Result<HealthCache> {
+    new_health_cache_impl(account, retriever, now_ts, false)
+}
+

@@ -56,3 +56,57 @@ pub struct DeactivateTokenPositionLog {
     pub cumulative_deposit_interest: f64,
     pub cumulative_borrow_interest: f64,
 }
+
+#[derive(PartialEq, Copy, Clone, Debug, AnchorSerialize, AnchorDeserialize)]
+#[repr(u8)]
+pub enum LoanOriginationFeeInstruction {
+    Unknown,
+    LiqTokenBankruptcy,
+    LiqTokenWithToken,
+    // Serum3LiqForceCancelOrders,
+    // Serum3PlaceOrder,
+    // Serum3SettleFunds,
+    TokenWithdraw,
+    // TokenConditionalSwapTrigger,
+}
+
+#[event]
+pub struct WithdrawLoanLog {
+    pub peach_market: Pubkey,
+    pub peach_account: Pubkey,
+    pub token_index: u16,
+    pub loan_amount: i128,
+    pub loan_origination_fee: i128,
+    pub instruction: LoanOriginationFeeInstruction,
+    pub price: Option<i128>, // Ideally would log price everywhere but in serum3_settle_funds oracle is not a passed in account
+}
+
+#[event]
+pub struct WithdrawLog {
+    pub peach_market: Pubkey,
+    pub peach_account: Pubkey,
+    pub signer: Pubkey,
+    pub token_index: u16,
+    pub quantity: u64,
+    pub price: i128, // I80F48
+}
+
+#[event]
+pub struct TokenCollateralFeeLog {
+    pub peach_market: Pubkey,
+    pub peach_account: Pubkey,
+    pub token_index: u16,
+    pub asset_usage_fraction: i128,
+    pub fee: i128,
+    pub price: i128,
+}
+
+#[event]
+pub struct ForceWithdrawLog {
+    pub peach_market: Pubkey,
+    pub peach_account: Pubkey,
+    pub token_index: u16,
+    pub quantity: u64,
+    pub price: i128, // I80F48
+    pub to_token_account: Pubkey,
+}
