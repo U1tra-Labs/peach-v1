@@ -38,7 +38,7 @@ pub struct Bank{
 
     /// deposits/borrows for this bank
     ///
-    /// Note that these may become negative. It's perfectly fine for users to borrow one one bank
+    /// Note that these may become negative. It's perfectly fine for users to borrow on one bank
     /// (increasing indexed_borrows there) and paying back on another (possibly decreasing indexed_borrows
     /// below zero).
     ///
@@ -189,7 +189,7 @@ pub struct Bank{
     pub maint_weight_shift_asset_target: I80F48,
     pub maint_weight_shift_liab_target: I80F48,
 
-    /// Oracle that may be used if the main oracle is stale or not confident enough.
+    /// Oracle that may be used if the main oracle is unstale or not confident enough.
     /// If this is Pubkey::default(), no fallback is available.
     pub fallback_oracle: Pubkey,
 

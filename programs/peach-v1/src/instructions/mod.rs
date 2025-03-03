@@ -7,6 +7,10 @@ pub use token_deposit::*;
 pub use token_withdraw::*;
 pub use token_force_withdraw::*;
 pub use token_charge_collateral_fees::*;
+pub use market_edit::*;
+pub use market_close::*;
+pub use stub_oracle_set::*;
+pub use stub_oracle_close::*;
 
 mod market_create;
 mod account_create;
@@ -17,3 +21,7 @@ mod token_deposit;
 mod token_withdraw;
 mod token_force_withdraw;
 mod token_charge_collateral_fees;
+mod market_edit;
+mod market_close;
+mod stub_oracle_set;
+mod stub_oracle_close;

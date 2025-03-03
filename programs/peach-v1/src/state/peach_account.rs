@@ -115,7 +115,7 @@ pub struct PeachAccount {
     pub net_deposits: i64,
     // (Display only)
     // Cumulative transfers from perp to spot positions
-    pub perp_spot_transfers: i64,
+    // pub perp_spot_transfers: i64,
 
     /// Init health as calculated during HealthReginBegin, rounded up.
     pub health_region_begin_init_health: i64,
@@ -131,7 +131,7 @@ pub struct PeachAccount {
     pub buyback_fees_expiry_timestamp: u64,
 
     /// Next id to use when adding a token condition swap
-    pub next_token_conditional_swap_id: u64,
+    // pub next_token_conditional_swap_id: u64,
 
     pub temporary_delegate: Pubkey,
     pub temporary_delegate_expiry: u64,

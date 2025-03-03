@@ -165,4 +165,38 @@ pub mod peach_v1 {
         instructions::token_charge_collateral_fees(ctx)?;
         Ok(())
     }
+
+    pub fn market_edit(
+        ctx: Context<MarketEdit>,
+        admin_opt: Option<Pubkey>,
+        testing_opt: Option<u8>,
+        version_opt: Option<u8>,
+        deposit_limit_quote_opt: Option<u64>,
+        collateral_fee_interval_opt: Option<u64>,
+    ) -> Result<()> {
+        instructions::market_edit(ctx, admin_opt, testing_opt, version_opt, deposit_limit_quote_opt, collateral_fee_interval_opt)?;
+        Ok(())
+    }
+
+    pub fn market_close(
+        ctx: Context<MarketClose>
+    ) -> Result<()> {
+        instructions::market_close(ctx)?;
+        Ok(())
+    }
+
+    pub fn stub_oracle_set(
+        ctx: Context<StubOracleSet>,
+        price: I80F48,
+    ) -> Result<()> {
+        instructions::stub_oracle_set(ctx, price)?;
+        Ok(())
+    }   
+
+    pub fn stub_oracle_close(
+        ctx: Context<StubOracleClose>
+    ) -> Result<()> {
+        instructions::stub_oracle_close(ctx)?;
+        Ok(())
+    }
 }

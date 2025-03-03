@@ -16,6 +16,10 @@ pub struct Market {
 }
 
 impl Market {
+    pub fn is_testing(&self) -> bool {
+        self.testing == 1
+    }
+
     pub fn is_ix_enabled(&self, ix: IxGate) -> bool {
         self.ix_gate & (1 << ix as u128) == 0
     }
@@ -30,6 +34,10 @@ pub enum IxGate {
     TokenDeposit = 4,
     TokenWithdraw = 5,
     TokenForceWithdraw = 6,
+    MarketEdit = 7,
+    MarketClose = 8,
+    StubOracleSet = 9,
+    StubOracleClose = 10,
 }
 
 // note: using creator instead of admin, since admin can be changed
