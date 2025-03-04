@@ -38,6 +38,11 @@ pub enum IxGate {
     MarketClose = 8,
     StubOracleSet = 9,
     StubOracleClose = 10,
+    AccountEdit = 11,
+    AccountExpand = 12,
+    AccountSizeMigration = 13,
+    AccountToggleFreeze = 14,
+    AccountClose = 15,
 }
 
 // note: using creator instead of admin, since admin can be changed

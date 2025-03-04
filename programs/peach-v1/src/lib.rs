@@ -199,4 +199,36 @@ pub mod peach_v1 {
         instructions::stub_oracle_close(ctx)?;
         Ok(())
     }
+
+    pub fn account_edit(
+        ctx: Context<AccountEdit>,
+        name_opt: Option<String>,
+        delegate_opt: Option<Pubkey>,
+    ) -> Result<()> {
+        instructions::account_edit(ctx, name_opt, delegate_opt)?;
+        Ok(())
+    }
+
+    pub fn account_expand(
+        ctx: Context<AccountExpand>,
+        token_count: u8
+    ) -> Result<()> {
+        instructions::account_expand(ctx, token_count)?;
+        Ok(())
+    }
+
+    pub fn account_size_migration(ctx: Context<AccountSizeMigration>) -> Result<()> {
+        instructions::account_size_migration(ctx)?;
+        Ok(())
+    }
+
+    pub fn account_toggle_freeze(ctx: Context<AccountToggleFreeze>, freeze: bool) -> Result<()> {
+        instructions::account_toggle_freeze(ctx, freeze)?;
+        Ok(())
+    }
+
+    pub fn account_close(ctx: Context<AccountClose>, force_close: bool) -> Result<()> {
+        instructions::account_close(ctx, force_close)?;
+        Ok(())
+    }
 }

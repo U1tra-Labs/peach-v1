@@ -17,7 +17,7 @@ pub struct StubOracleClose<'info> {
     pub market: AccountLoader<'info, Market>,
     pub admin: Signer<'info>,
 
-    // match stub oracle to group
+    // match stub oracle to market
     #[account(
         mut,
         has_one = market,
