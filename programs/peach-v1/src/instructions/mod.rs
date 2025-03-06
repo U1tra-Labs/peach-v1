@@ -21,6 +21,8 @@ pub use token_add_bank::*;
 pub use token_update_index_and_rate::*;
 pub use token_edit::*;
 pub use token_deregister::*;
+pub use admin_token_withdraw_fees::*;
+pub use ix_gate_set::*;
 
 mod market_create;
 mod account_create;
@@ -45,3 +47,5 @@ mod token_add_bank;
 mod token_update_index_and_rate;
 mod token_edit;
 mod token_deregister;
+mod admin_token_withdraw_fees;
+mod ix_gate_set;

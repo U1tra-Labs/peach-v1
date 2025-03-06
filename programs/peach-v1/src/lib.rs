@@ -345,4 +345,14 @@ pub mod peach_v1 {
         instructions::token_deregister(ctx)?;
         Ok(())
     }
+
+    pub fn admin_token_withdraw_fees(ctx: Context<AdminTokenWithdrawFees>) -> Result<()> {
+        instructions::admin_token_withdraw_fees(ctx)?;
+        Ok(())
+    }
+
+    pub fn ix_gate_set(ctx: Context<IxGateSet>, ix_gate: u128) -> Result<()> {
+        instructions::ix_gate_set(ctx, ix_gate)?;
+        Ok(())
+    }
 }

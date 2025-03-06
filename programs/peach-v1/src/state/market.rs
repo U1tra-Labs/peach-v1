@@ -59,6 +59,7 @@ pub enum IxGate {
     TokenUpdateIndexAndRate = 18,
     TokenEdit = 19,
     TokenDeregister = 20,
+    AdminTokenWithdrawFees = 21,
 }
 
 // note: using creator instead of admin, since admin can be changed
