@@ -29,7 +29,8 @@ pub mod peach_v1 {
         testing: u8,
         version: u8
     ) -> Result<()> {
-        instructions::market_create(ctx, market_num, testing, version)
+        instructions::market_create(ctx, market_num, testing, version)?;
+        Ok(())
     }
 
     pub fn account_create(
@@ -46,7 +47,6 @@ pub mod peach_v1 {
             ctx.accounts.owner.key(),
             account_num,
             token_count,
-            // token_conditional_swap_count,
             name,
         )?;
         Ok(())
@@ -229,6 +229,120 @@ pub mod peach_v1 {
 
     pub fn account_close(ctx: Context<AccountClose>, force_close: bool) -> Result<()> {
         instructions::account_close(ctx, force_close)?;
+        Ok(())
+    }
+
+    pub fn token_register_trustless(ctx: Context<TokenRegisterTrustless>, token_index: TokenIndex, name: String) -> Result<()> {    
+        instructions::token_register_trustless(ctx, token_index, name)?;
+        Ok(())    
+    }
+
+    pub fn token_add_bank(ctx: Context<TokenAddBank>, token_index: TokenIndex, bank_num: u32) -> Result<()> {
+        instructions::token_add_bank(ctx, token_index, bank_num)?;
+        Ok(())    
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn token_edit(
+        ctx: Context<TokenEdit>, 
+        oracle_opt: Option<Pubkey>,
+        oracle_config_opt: Option<OracleConfigParams>,
+        interest_rate_params_opt: Option<InterestRateParams>,
+        loan_fee_rate_opt: Option<f32>,
+        loan_origination_fee_rate_opt: Option<f32>,
+        maint_asset_weight_opt: Option<f32>,
+        init_asset_weight_opt: Option<f32>,
+        maint_liab_weight_opt: Option<f32>,
+        init_liab_weight_opt: Option<f32>,
+        liquidation_fee_opt: Option<f32>,
+        stable_price_delay_interval_seconds_opt: Option<u32>,
+        stable_price_delay_growth_limit_opt: Option<f32>,
+        stable_price_growth_limit_opt: Option<f32>,
+        min_vault_to_deposits_ratio_opt: Option<f64>,
+        net_borrow_limit_per_window_quote_opt: Option<i64>,
+        net_borrow_limit_window_size_ts_opt: Option<u64>,
+        borrow_weight_scale_start_quote_opt: Option<f64>,
+        deposit_weight_scale_start_quote_opt: Option<f64>,
+        reset_stable_price: bool,
+        reset_net_borrow_limit: bool,
+        reduce_only_opt: Option<u8>,
+        name_opt: Option<String>,
+        force_close_opt: Option<bool>,
+        token_conditional_swap_taker_fee_rate_opt: Option<f32>,
+        token_conditional_swap_maker_fee_rate_opt: Option<f32>,
+        flash_loan_swap_fee_rate_opt: Option<f32>,
+        interest_curve_scaling_opt: Option<f32>,
+        interest_target_utilization_opt: Option<f32>,
+        maint_weight_shift_start_opt: Option<u64>,
+        maint_weight_shift_end_opt: Option<u64>,
+        maint_weight_shift_asset_target_opt: Option<f32>,
+        maint_weight_shift_liab_target_opt: Option<f32>,
+        maint_weight_shift_abort: bool,
+        set_fallback_oracle: bool,
+        deposit_limit_opt: Option<u64>,
+        zero_util_rate: Option<f32>,
+        platform_liquidation_fee: Option<f32>,
+        disable_asset_liquidation_opt: Option<bool>,
+        collateral_fee_per_day: Option<f32>,
+        force_withdraw_opt: Option<bool>,
+        tier_opt: Option<String>,
+    ) -> Result<()> {
+        instructions::token_edit(
+            ctx, 
+            oracle_opt, 
+            oracle_config_opt, 
+            interest_rate_params_opt, 
+            loan_fee_rate_opt, 
+            loan_origination_fee_rate_opt, 
+            maint_asset_weight_opt, 
+            init_asset_weight_opt, 
+            maint_liab_weight_opt, 
+            init_liab_weight_opt, 
+            liquidation_fee_opt, 
+            stable_price_delay_interval_seconds_opt, 
+            stable_price_delay_growth_limit_opt, 
+            stable_price_growth_limit_opt, 
+            min_vault_to_deposits_ratio_opt, 
+            net_borrow_limit_per_window_quote_opt, 
+            net_borrow_limit_window_size_ts_opt, 
+            borrow_weight_scale_start_quote_opt, 
+            deposit_weight_scale_start_quote_opt, 
+            reset_stable_price, 
+            reset_net_borrow_limit, 
+            reduce_only_opt, 
+            name_opt, 
+            force_close_opt, 
+            token_conditional_swap_taker_fee_rate_opt, 
+            token_conditional_swap_maker_fee_rate_opt, 
+            flash_loan_swap_fee_rate_opt, 
+            interest_curve_scaling_opt, 
+            interest_target_utilization_opt, 
+            maint_weight_shift_start_opt, 
+            maint_weight_shift_end_opt, 
+            maint_weight_shift_asset_target_opt, 
+            maint_weight_shift_liab_target_opt, 
+            maint_weight_shift_abort, 
+            set_fallback_oracle, 
+            deposit_limit_opt, 
+            zero_util_rate, 
+            platform_liquidation_fee, 
+            disable_asset_liquidation_opt, 
+            collateral_fee_per_day, 
+            force_withdraw_opt, 
+            tier_opt
+        )?;
+        Ok(())
+    }
+
+    pub fn  token_update_index_and_rate(ctx: Context<TokenUpdateIndexAndRate>) -> Result<()> {
+        instructions::token_update_index_and_rate(ctx, false)?;
+        Ok(())    
+    }
+
+    pub fn token_deregister<'key, 'accounts, 'remaining: 'info, 'info>(
+        ctx: Context<'key, 'accounts, 'remaining, 'info, TokenDeregister<'info>>,
+    ) -> Result<()> {
+        instructions::token_deregister(ctx)?;
         Ok(())
     }
 }

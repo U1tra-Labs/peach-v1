@@ -110,3 +110,34 @@ pub struct ForceWithdrawLog {
     pub price: i128, // I80F48
     pub to_token_account: Pubkey,
 }
+
+#[event]
+pub struct UpdateIndexLog {
+    pub peach_market: Pubkey,
+    pub token_index: u16,
+    pub deposit_index: i128,   // I80F48
+    pub borrow_index: i128,    // I80F48
+    pub avg_utilization: i128, // I80F48
+    pub price: i128,           // I80F48
+    pub stable_price: i128,    // I80F48
+    pub collected_fees: i128,  // I80F48
+    pub loan_fee_rate: i128,   // I80F48
+    pub total_borrows: i128,
+    pub total_deposits: i128,
+    pub borrow_rate: i128,
+    pub deposit_rate: i128,
+}
+
+#[event]
+pub struct UpdateRateLog {
+    pub peach_market: Pubkey,
+    pub token_index: u16,
+    // contrary to v1 these do not have curve_scaling factored in!
+    pub rate0: i128,    // I80F48
+    pub util0: i128,    // I80F48
+    pub rate1: i128,    // I80F48
+    pub util1: i128,    // I80F48
+    pub max_rate: i128, // I80F48
+    pub curve_scaling: f64,
+    pub target_utilization: f32,
+}

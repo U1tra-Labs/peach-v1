@@ -9,6 +9,9 @@ use crate::util;
 
 use super::{OracleAccountInfos, OracleConfig, StablePriceModel, TokenPosition};
 
+pub const HOUR: i64 = 3600;
+pub const YEAR_I80F48: I80F48 = I80F48::from_bits(31_536_000 * I80F48::ONE.to_bits());
+
 pub type TokenIndex = u16;
 
 #[derive(Derivative)]
@@ -251,10 +254,251 @@ macro_rules! bank_seeds {
 pub use bank_seeds;
 
 impl Bank{
+    pub fn from_existing_bank(
+        existing_bank: &Bank,
+        vault: Pubkey,
+        bank_num: u32,
+        bump: u8,
+    ) -> Self {
+        Self {
+            // values that must be reset/changed
+            vault,
+            indexed_deposits: I80F48::ZERO,
+            indexed_borrows: I80F48::ZERO,
+            collected_fees_native: I80F48::ZERO,
+            collected_liquidation_fees: I80F48::ZERO,
+            collected_collateral_fees: I80F48::ZERO,
+            fees_withdrawn: 0,
+            dust: I80F48::ZERO,
+            net_borrows_in_window: 0,
+            bump,
+            bank_num,
+
+            // values that can be copied
+            // these are listed explicitly, so someone must make the decision when a
+            // new field is added!
+            name: existing_bank.name,
+            market: existing_bank.market,
+            mint: existing_bank.mint,
+            oracle: existing_bank.oracle,
+            deposit_index: existing_bank.deposit_index,
+            borrow_index: existing_bank.borrow_index,
+            index_last_updated: existing_bank.index_last_updated,
+            bank_rate_last_updated: existing_bank.bank_rate_last_updated,
+            avg_utilization: existing_bank.avg_utilization,
+            adjustment_factor: existing_bank.adjustment_factor,
+            util0: existing_bank.util0,
+            rate0: existing_bank.rate0,
+            util1: existing_bank.util1,
+            rate1: existing_bank.rate1,
+            max_rate: existing_bank.max_rate,
+            loan_origination_fee_rate: existing_bank.loan_origination_fee_rate,
+            loan_fee_rate: existing_bank.loan_fee_rate,
+            maint_asset_weight: existing_bank.maint_asset_weight,
+            init_asset_weight: existing_bank.init_asset_weight,
+            maint_liab_weight: existing_bank.maint_liab_weight,
+            init_liab_weight: existing_bank.init_liab_weight,
+            liquidation_fee: existing_bank.liquidation_fee,
+            token_index: existing_bank.token_index,
+            mint_decimals: existing_bank.mint_decimals,
+            oracle_config: existing_bank.oracle_config,
+            stable_price_model: existing_bank.stable_price_model,
+            min_vault_to_deposits_ratio: existing_bank.min_vault_to_deposits_ratio,
+            net_borrow_limit_per_window_quote: existing_bank.net_borrow_limit_per_window_quote,
+            net_borrow_limit_window_size_ts: existing_bank.net_borrow_limit_window_size_ts,
+            last_net_borrows_window_start_ts: existing_bank.last_net_borrows_window_start_ts,
+            borrow_weight_scale_start_quote: existing_bank.borrow_weight_scale_start_quote,
+            deposit_weight_scale_start_quote: existing_bank.deposit_weight_scale_start_quote,
+            reduce_only: existing_bank.reduce_only,
+            force_close: existing_bank.force_close,
+            disable_asset_liquidation: existing_bank.disable_asset_liquidation,
+            force_withdraw: existing_bank.force_withdraw,
+            tier: existing_bank.tier,
+            interest_target_utilization: existing_bank.interest_target_utilization,
+            interest_curve_scaling: existing_bank.interest_curve_scaling,
+            maint_weight_shift_start: existing_bank.maint_weight_shift_start,
+            maint_weight_shift_end: existing_bank.maint_weight_shift_end,
+            maint_weight_shift_duration_inv: existing_bank.maint_weight_shift_duration_inv,
+            maint_weight_shift_asset_target: existing_bank.maint_weight_shift_asset_target,
+            maint_weight_shift_liab_target: existing_bank.maint_weight_shift_liab_target,
+            fallback_oracle: existing_bank.oracle,
+            deposit_limit: existing_bank.deposit_limit,
+            zero_util_rate: existing_bank.zero_util_rate,
+            platform_liquidation_fee: existing_bank.platform_liquidation_fee,
+            collateral_fee_per_day: existing_bank.collateral_fee_per_day,
+            _padding1: [0; 16],
+            _padding2: [0; 4],
+            _padding3: [0; 4],
+        }
+    }
+
     pub fn name(&self) -> &str {
         std::str::from_utf8(&self.name)
             .unwrap()
             .trim_matches(char::from(0))
+    }
+
+    // compute new avg utilization
+    pub fn compute_new_avg_utilization(
+        &self,
+        indexed_total_deposits: I80F48,
+        indexed_total_borrows: I80F48,
+        now_ts: u64,
+    ) -> I80F48 {
+        if now_ts == 0 {
+            return I80F48::ZERO;
+        }
+
+        let native_total_deposits = self.deposit_index * indexed_total_deposits;
+        let native_total_borrows = self.borrow_index * indexed_total_borrows;
+        let instantaneous_utilization =
+            Self::instantaneous_utilization(native_total_deposits, native_total_borrows);
+
+        // Compute a time-weighted average since bank_rate_last_updated.
+        let previous_avg_time =
+            I80F48::from_num(self.index_last_updated - self.bank_rate_last_updated);
+        let diff_ts = I80F48::from_num(now_ts - self.index_last_updated);
+        let new_avg_time = I80F48::from_num(now_ts - self.bank_rate_last_updated);
+        if new_avg_time <= 0 {
+            return instantaneous_utilization;
+        }
+        (self.avg_utilization * previous_avg_time + instantaneous_utilization * diff_ts)
+            / new_avg_time
+    }
+
+    // computes new optimal rates and max rate
+    pub fn update_interest_rate_scaling(&mut self) {
+        // Interest increases above target_util, decreases below
+        let target_util = self.interest_target_utilization as f64;
+
+        // use avg_utilization and not instantaneous_utilization so that rates cannot be manipulated easily
+        // also clamp to avoid unusually quick interest rate curve changes
+        let avg_util = self.avg_utilization.to_num::<f64>().max(0.0).min(1.0);
+
+        // move rates up when utilization is above optimal utilization, and vice versa
+        // util factor is between -1 (avg util = 0) and +1 (avg util = 100%)
+        let util_factor = if avg_util > target_util {
+            (avg_util - target_util) / (1.0 - target_util)
+        } else {
+            (avg_util - target_util) / target_util
+        };
+        let adjustment = 1.0 + self.adjustment_factor.to_num::<f64>() * util_factor;
+
+        self.interest_curve_scaling = (self.interest_curve_scaling * adjustment).max(1.0)
+    }
+
+    pub fn compute_index(
+        &self,
+        indexed_total_deposits: I80F48,
+        indexed_total_borrows: I80F48,
+        diff_ts: I80F48,
+    ) -> Result<(I80F48, I80F48, I80F48, I80F48, I80F48)> {
+        // compute index based on utilization
+        let native_total_deposits = self.deposit_index * indexed_total_deposits;
+        let native_total_borrows = self.borrow_index * indexed_total_borrows;
+
+        let instantaneous_utilization =
+            Self::instantaneous_utilization(native_total_deposits, native_total_borrows);
+
+        let borrow_rate = self.compute_interest_rate(instantaneous_utilization);
+
+        // We want to grant depositors a rate that exactly matches the amount that is
+        // taken from borrowers. That means:
+        //   (new_deposit_index - old_deposit_index) * indexed_deposits
+        //      = (new_borrow_index - old_borrow_index) * indexed_borrows
+        // with
+        //   new_deposit_index = old_deposit_index * (1 + deposit_rate) and
+        //   new_borrow_index = old_borrow_index * (1 * borrow_rate)
+        // we have
+        //   deposit_rate = borrow_rate * (old_borrow_index * indexed_borrows) / (old_deposit_index * indexed_deposits)
+        // and the latter factor is exactly instantaneous_utilization.
+        let deposit_rate = borrow_rate * instantaneous_utilization;
+
+        // The loan fee rate is not distributed to depositors.
+        let borrow_rate_with_fees = borrow_rate + self.loan_fee_rate;
+        let borrow_fees = native_total_borrows * self.loan_fee_rate * diff_ts / YEAR_I80F48;
+
+        let borrow_index =
+            (self.borrow_index * borrow_rate_with_fees * diff_ts) / YEAR_I80F48 + self.borrow_index;
+        let deposit_index =
+            (self.deposit_index * deposit_rate * diff_ts) / YEAR_I80F48 + self.deposit_index;
+
+        Ok((
+            deposit_index,
+            borrow_index,
+            borrow_fees,
+            borrow_rate,
+            deposit_rate,
+        ))
+    }
+
+    /// Current utilization, clamped to 0..1
+    ///
+    /// Above 100% utilization can happen natually when utilization is 100% and interest is paid out,
+    /// increasing borrows more than deposits.
+    fn instantaneous_utilization(
+        native_total_deposits: I80F48,
+        native_total_borrows: I80F48,
+    ) -> I80F48 {
+        if native_total_deposits == I80F48::ZERO {
+            I80F48::ZERO
+        } else {
+            (native_total_borrows / native_total_deposits)
+                .max(I80F48::ZERO)
+                .min(I80F48::ONE)
+        }
+    }
+
+    /// returns the current interest rate in APR
+    #[inline(always)]
+    pub fn compute_interest_rate(&self, utilization: I80F48) -> I80F48 {
+        Bank::interest_rate_curve_calculator(
+            utilization,
+            self.zero_util_rate,
+            self.util0,
+            self.rate0,
+            self.util1,
+            self.rate1,
+            self.max_rate,
+            self.interest_curve_scaling,
+        )
+    }
+
+    /// calculator function that can be used to compute an interest
+    /// rate based on the given parameters
+    #[inline(always)]
+    pub fn interest_rate_curve_calculator(
+        utilization: I80F48,
+        zero_util_rate: I80F48,
+        util0: I80F48,
+        rate0: I80F48,
+        util1: I80F48,
+        rate1: I80F48,
+        max_rate: I80F48,
+        scaling: f64,
+    ) -> I80F48 {
+        // Clamp to avoid negative or extremely high interest
+        let utilization = utilization.max(I80F48::ZERO).min(I80F48::ONE);
+
+        let v = if utilization <= util0 {
+            let slope = (rate0 - zero_util_rate) / util0;
+            zero_util_rate + slope * utilization
+        } else if utilization <= util1 {
+            let extra_util = utilization - util0;
+            let slope = (rate1 - rate0) / (util1 - util0);
+            rate0 + slope * extra_util
+        } else {
+            let extra_util = utilization - util1;
+            let slope = (max_rate - rate1) / (I80F48::ONE - util1);
+            rate1 + slope * extra_util
+        };
+
+        // scaling will be 0 when it's introduced
+        if scaling == 0.0 {
+            v
+        } else {
+            v * I80F48::from_num(scaling)
+        }
     }
 
     pub fn verify(&self) -> Result<()> {

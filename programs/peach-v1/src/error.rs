@@ -53,6 +53,8 @@ pub enum PeachError {
     BankBorrowLimitReached,
     #[msg("bank net borrows has reached limit - this is an intermittent error - the limit will reset regularly")]
     BankNetBorrowsLimitReached,
+    #[msg("Init Asset Weight can't be negative")]
+    InitAssetWeightCantBeNegative,
 }
 
 impl PeachError {

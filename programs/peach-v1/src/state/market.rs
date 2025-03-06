@@ -1,5 +1,12 @@
 use anchor_lang::prelude::*;
 
+/// This token index is supposed to be the token that oracles quote in.
+///
+/// In practice this is set to the USDC token index, and that is wrong: actually
+/// oracles quote in USD. Any use of this constant points to a potentially
+/// incorrect assumption.
+pub const QUOTE_TOKEN_INDEX: TokenIndex = 0;
+
 #[account(zero_copy)]
 #[derive(Debug)]
 pub struct Market {
@@ -23,6 +30,10 @@ impl Market {
     pub fn is_ix_enabled(&self, ix: IxGate) -> bool {
         self.ix_gate & (1 << ix as u128) == 0
     }
+
+    pub fn multiple_banks_supported(&self) -> bool {
+        self.is_testing() || self.version > 1
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -43,6 +54,11 @@ pub enum IxGate {
     AccountSizeMigration = 13,
     AccountToggleFreeze = 14,
     AccountClose = 15,
+    TokenRegisterTrustless = 16,
+    TokenAddBank = 17,
+    TokenUpdateIndexAndRate = 18,
+    TokenEdit = 19,
+    TokenDeregister = 20,
 }
 
 // note: using creator instead of admin, since admin can be changed
@@ -59,3 +75,5 @@ macro_rules! market_seeds {
 }
 
 pub use market_seeds;
+
+use super::TokenIndex;

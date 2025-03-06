@@ -78,12 +78,102 @@ impl Default for StablePriceModel {
 }
 
 impl StablePriceModel {
-        pub fn reset_to_price(&mut self, oracle_price: f64, now_ts: u64) {
+    pub fn reset_to_price(&mut self, oracle_price: f64, now_ts: u64) {
         self.stable_price = oracle_price;
         self.delay_prices = [oracle_price; 24];
         self.delay_accumulator_price = 0.0;
         self.delay_accumulator_time = 0;
         self.last_update_timestamp = now_ts;
         self.reset_on_nonzero_price = if oracle_price > 0.0 { 0 } else { 1 };
+    }
+
+    pub fn delay_interval_index(&self, timestamp: u64) -> u8 {
+        ((timestamp / self.delay_interval_seconds as u64) % self.delay_prices.len() as u64) as u8
+    }
+
+    #[inline(always)]
+    fn growth_clamped(target: f64, prev: f64, growth_limit: f64) -> f64 {
+        let max = prev * (1.0 + growth_limit);
+        // for the lower bound, we technically should divide by (1 + growth_limit), but
+        // the error is small when growth_limit is small and this saves a division
+        let min = prev * (1.0 - growth_limit);
+        target.clamp(min, max)
+    }
+
+    pub fn update(&mut self, now_ts: u64, oracle_price: f64) {
+        // If a reset is requested (maybe there never was a non-zero price), jump to the current value
+        if self.reset_on_nonzero_price == 1 && oracle_price > 0.0 {
+            self.reset_to_price(oracle_price, now_ts);
+        }
+
+        let dt = now_ts.saturating_sub(self.last_update_timestamp);
+        // Hardcoded. Requiring a minimum time between updates reduces the possible difference
+        // between frequent updates and infrequent ones.
+        // Limiting the max dt prevents very strong updates if update() hasn't been
+        // called for hours.
+        let min_dt = 10;
+        let max_dt = 10 * 60; // 10 min
+        if dt < min_dt {
+            return;
+        }
+        // did we wrap around all delay intervals?
+        let full_delay_passed =
+            dt > self.delay_prices.len() as u64 * self.delay_interval_seconds as u64;
+        let dt_limited = dt.min(max_dt) as f64;
+        self.last_update_timestamp = now_ts;
+
+        //
+        // Update delay price
+        //
+        self.delay_accumulator_time += dt as u32;
+        self.delay_accumulator_price += oracle_price * dt_limited;
+
+        let delay_interval_index = self.delay_interval_index(now_ts);
+        if delay_interval_index != self.last_delay_interval_index {
+            // last_delay_interval_index points to the most delayed price, which we will
+            // overwrite with a new delay price
+            let new_delay_price = {
+                // Get the previous new delay_price.
+                let prev = if self.last_delay_interval_index == 0 {
+                    self.delay_prices[self.delay_prices.len() - 1]
+                } else {
+                    self.delay_prices[self.last_delay_interval_index as usize - 1]
+                };
+                let avg = self.delay_accumulator_price / (self.delay_accumulator_time as f64);
+                Self::growth_clamped(avg, prev, self.delay_growth_limit as f64)
+            };
+
+            // Store the new delay price, accounting for skipped intervals
+            if full_delay_passed {
+                self.delay_prices.fill(new_delay_price);
+            } else if delay_interval_index > self.last_delay_interval_index {
+                self.delay_prices
+                    [self.last_delay_interval_index as usize..delay_interval_index as usize]
+                    .fill(new_delay_price);
+            } else {
+                self.delay_prices[self.last_delay_interval_index as usize..].fill(new_delay_price);
+                self.delay_prices[..delay_interval_index as usize].fill(new_delay_price);
+            }
+
+            self.delay_accumulator_price = 0.0;
+            self.delay_accumulator_time = 0;
+            self.last_delay_interval_index = delay_interval_index;
+        }
+
+        let delay_price = self.delay_prices[delay_interval_index as usize];
+
+        //
+        // Update stable price
+        //
+        self.stable_price = {
+            let prev_stable_price = self.stable_price;
+            let fraction = if delay_price >= prev_stable_price {
+                prev_stable_price / delay_price
+            } else {
+                delay_price / prev_stable_price
+            };
+            let growth_limit = (self.stable_growth_limit as f64) * fraction * fraction * dt_limited;
+            Self::growth_clamped(oracle_price, prev_stable_price, growth_limit)
+        };
     }
 }
