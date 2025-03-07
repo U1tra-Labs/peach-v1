@@ -185,13 +185,20 @@ pub mod peach_v1 {
         Ok(())
     }
 
-    pub fn stub_oracle_set(
-        ctx: Context<StubOracleSet>,
-        price: I80F48,
-    ) -> Result<()> {
+    pub fn stub_oracle_set(ctx: Context<StubOracleSet>, price: I80F48) -> Result<()> {
         instructions::stub_oracle_set(ctx, price)?;
         Ok(())
-    }   
+    }
+
+    pub fn stub_oracle_set_test(
+        ctx: Context<StubOracleSet>,
+        price: I80F48,
+        last_update_slot: u64,
+        deviation: I80F48,
+    ) -> Result<()> {
+        instructions::stub_oracle_set_test(ctx, price, last_update_slot, deviation)?;
+        Ok(())
+    } 
 
     pub fn stub_oracle_close(
         ctx: Context<StubOracleClose>
@@ -337,6 +344,13 @@ pub mod peach_v1 {
     pub fn  token_update_index_and_rate(ctx: Context<TokenUpdateIndexAndRate>) -> Result<()> {
         instructions::token_update_index_and_rate(ctx, false)?;
         Ok(())    
+    }
+
+    pub fn token_update_index_and_rate_resilient(
+        ctx: Context<TokenUpdateIndexAndRate>,
+    ) -> Result<()> {
+        instructions::token_update_index_and_rate(ctx, true)?;
+        Ok(())
     }
 
     pub fn token_deregister<'key, 'accounts, 'remaining: 'info, 'info>(

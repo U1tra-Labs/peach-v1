@@ -1,4 +1,4 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, Discriminator};
 
 use crate::error::PeachError;
 use crate::logs::{emit_stack, UpdateIndexLog, UpdateRateLog};
@@ -27,7 +27,7 @@ pub fn token_update_index_and_rate(
 
         let mut index = 0;
         loop {
-            let _ix = match tx_instructions::load_instruction_at_checked(index, ixs) {
+            let ix = match tx_instructions::load_instruction_at_checked(index, ixs) {
                 Ok(ix) => ix,
                 Err(ProgramError::InvalidArgument) => break,
                 Err(e) => return Err(e.into()),
@@ -38,14 +38,15 @@ pub fn token_update_index_and_rate(
             // to be called in same tx as this ix to prevent index or rate manipulation,
             // for now we just whitelist to other token_update_index_and_rate ix
             // 2. we want to forbid cpi, since ix we would like to blacklist could just be called from cpi
-            // TODO: add the check
-            // require!(
-            //     (ix.program_id == crate::id()
-            //         && ix.data[0..8]
-            //             == crate::instruction::TokenUpdateIndexAndRate::discriminator()
-            //             ) || (ix.program_id == compute_budget::id()),
-            //     PeachError::SomeError
-            // );
+            require!(
+                (ix.program_id == crate::id()
+                    && (ix.data[0..8]
+                        == crate::instruction::TokenUpdateIndexAndRate::discriminator()
+                        || ix.data[0..8]
+                            == crate::instruction::TokenUpdateIndexAndRateResilient::discriminator(
+                            ))) || (ix.program_id == compute_budget::id()),
+                PeachError::SomeError
+            );
 
             index += 1;
         }
