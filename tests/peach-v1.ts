@@ -15,27 +15,26 @@ import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 describe("peach-v1", () => {
   const program = anchor.workspace.PeachV1;
   const programWallet = (program.provider.wallet as NodeWallet).payer;
-  const stubOracle = Keypair.generate();
-  let admin: Keypair;
-  let user1: Keypair;
-  // let user2: Keypair, user3: Keypair;
-  let market1: PublicKey, peachAccount1: PublicKey, bank1: PublicKey, vault1: PublicKey, mintInfo1: PublicKey;
-  let mint: PublicKey;
-  let programTokenAccount1: PublicKey, user1TokenAccount1: PublicKey;
-  let connection: anchor.web3.Connection = program.provider.connection;
 
-  // Update these values as needed
-  let marketNum = 1, accountNum = 0, tokenIndex = 1, price = 1.0;
-  let deposit_amount1 = new anchor.BN(100), deposit_amount2 = new anchor.BN(50);
-  let withdraw_amount = new anchor.BN(5);
+  describe("Basic happy tests", () => {
+    const stubOracle = Keypair.generate();
+    let admin: Keypair;
+    let user: Keypair;
+    let market: PublicKey, peachAccount: PublicKey, bank: PublicKey, vault: PublicKey, mintInfo: PublicKey;
+    let mint: PublicKey;
+    let programTokenAccount1: PublicKey, userTokenAccount1: PublicKey;
+    let connection: anchor.web3.Connection = program.provider.connection;
 
-  before(async () => {
+    // Update these values as needed
+    let marketNum = 0, accountNum = 0, tokenIndex = 0, price = 1.0;
+    let deposit_amount1 = new anchor.BN(100), deposit_amount2 = new anchor.BN(50);
+    let withdraw_amount = new anchor.BN(5);
+
+    before(async () => {
     console.log("Starting Test Setup");
 
     admin = await getFundedWallet();
-    user1 = await getFundedWallet();
-    // user2 = await getFundedWallet();
-    // user3 = await getFundedWallet();
+    user = await getFundedWallet();
 
     // Create mint from our program wallet
     mint = await createTokenMint(10, programWallet);
@@ -43,28 +42,27 @@ describe("peach-v1", () => {
     // Create token accounts
     programTokenAccount1 = await createTokenAccount(mint, programWallet);
 
-    // Transfer some tokens to user1
-    user1TokenAccount1 = await transferToken(mint, programWallet, user1, 200);
+    // Transfer some tokens to user
+    userTokenAccount1 = await transferToken(mint, programWallet, user, 200);
 
     // Derive PDAs
-    market1 = deriveMarketPDA(marketNum, admin.publicKey);
-    peachAccount1 = derivePeachAccountPDA(market1, accountNum, user1.publicKey);
-    bank1 = deriveBankPDA(market1, tokenIndex);
-    vault1 = deriveVaultPDA(market1, tokenIndex);
-    mintInfo1 = deriveMintInfoPDA(market1, mint);
+    market = deriveMarketPDA(marketNum, admin.publicKey);
+    peachAccount = derivePeachAccountPDA(market, accountNum, user.publicKey);
+    bank = deriveBankPDA(market, tokenIndex);
+    vault = deriveVaultPDA(market, tokenIndex);
+    mintInfo = deriveMintInfoPDA(market, mint);
 
-    console.log("Test setup complete\n Market: ", market1.toBase58(), "\n User Account: ", peachAccount1.toBase58(), "\n Bank: ", bank1.toBase58(), "\n Vault: ", vault1.toBase58(), "\n Mint Info: ", mintInfo1.toBase58());
-    console.log("Admin: ", admin.publicKey.toBase58(), "\n User1: ", user1.publicKey.toBase58());
-  });
-
-  describe("Basic Happy Tests", () => {
+    console.log("Test setup complete\n Market: ", market.toBase58(), "\n User Account: ", peachAccount.toBase58(), "\n Bank: ", bank.toBase58(), "\n Vault: ", vault.toBase58(), "\n Mint Info: ", mintInfo.toBase58());
+    console.log("Admin: ", admin.publicKey.toBase58(), "\n User1: ", user.publicKey.toBase58());
+    });
+    
     it("Creates a market", async () => {
       try {
-        await marketCreate(market1, marketNum, admin);
+        await marketCreate(market, marketNum, admin);
         
-        const market = await program.account.market.fetch(market1);
-        assert.equal(market.marketNum, marketNum);
-        assert(market.admin.equals(admin.publicKey));
+        const marketAccount = await program.account.market.fetch(market);
+        assert.equal(marketAccount.marketNum, marketNum);
+        assert(marketAccount.admin.equals(admin.publicKey));
       }
       catch (err) {
         assert.fail("Errow while creating market: " + err);
@@ -73,11 +71,11 @@ describe("peach-v1", () => {
 
     it("Creates a peach account", async () => {
       try {
-        await createPeachAccount(peachAccount1, market1, accountNum, user1);
+        await createPeachAccount(peachAccount, market, accountNum, user);
         
-        const account = await program.account.peachAccount.fetch(peachAccount1);
+        const account = await program.account.peachAccount.fetch(peachAccount);
         assert.equal(account.accountNum, accountNum);
-        assert(account.owner.equals(user1.publicKey));
+        assert(account.owner.equals(user.publicKey));
       }
       catch (err) {
         assert.fail("Error while creating peach account: " + err);
@@ -86,7 +84,7 @@ describe("peach-v1", () => {
 
     it("Creates a stub oracle", async () => {
       try {
-        await createStubOracle(stubOracle, market1, mint, price, admin);
+        await createStubOracle(stubOracle, market, mint, price, admin);
         
         const oracle = await program.account.stubOracle.fetch(stubOracle.publicKey);
         assert.equal(oracle.price.val.toNumber(), I80F48.fromNumber(price).getData().toNumber());
@@ -99,13 +97,13 @@ describe("peach-v1", () => {
 
     it("Registers a token", async () => {
       try {
-        await tokenRegister(tokenIndex, mint, market1, vault1, mintInfo1, bank1, stubOracle.publicKey, admin);
+        await tokenRegister(tokenIndex, mint, market, vault, mintInfo, bank, stubOracle.publicKey, admin);
         
-        const mintInfoAccount = await program.account.mintInfo.fetch(mintInfo1);
-        const bankAccount = await program.account.bank.fetch(bank1);
-        const vault = await connection.getParsedAccountInfo(vault1);
+        const mintInfoAccount = await program.account.mintInfo.fetch(mintInfo);
+        const bankAccount = await program.account.bank.fetch(bank);
+        const vaultAccount = await connection.getParsedAccountInfo(vault);
         // console.log("Bank: ", bankAccount, "\n Vault: ", vault.value.data);
-        assert.ok(vault.value.data.parsed.info.owner == market1.toBase58());
+        assert.ok(vaultAccount.value.data.parsed.info.owner == market.toBase58());
         assert.ok(mintInfoAccount.mint.equals(mint));
         assert.ok(mintInfoAccount.oracle.equals(stubOracle.publicKey));
         assert.ok(bankAccount.mint.equals(mint));
@@ -118,10 +116,10 @@ describe("peach-v1", () => {
 
     it("Deposits a token", async () => {
       try{
-        await tokenDeposit(deposit_amount1, market1, peachAccount1, bank1, vault1, stubOracle.publicKey, user1TokenAccount1, user1);
+        await tokenDeposit(deposit_amount1, market, peachAccount, bank, vault, stubOracle.publicKey, userTokenAccount1, user);
         
-        const vaultBalance = await program.provider.connection.getTokenAccountBalance(vault1);
-        const userAccount = await program.account.peachAccount.fetch(peachAccount1);
+        const vaultBalance = await program.provider.connection.getTokenAccountBalance(vault);
+        const userAccount = await program.account.peachAccount.fetch(peachAccount);
         assert.equal(userAccount.netDeposits.toNumber(), deposit_amount1);
         assert.equal(vaultBalance.value.amount, deposit_amount1);
       } catch (err)  {
@@ -131,11 +129,11 @@ describe("peach-v1", () => {
 
     it("Withdraws/Borrows a token", async () => {
       try {
-        await tokenWithdraw(withdraw_amount, market1, peachAccount1, bank1, vault1, stubOracle.publicKey, user1TokenAccount1);
+        await tokenWithdraw(withdraw_amount, market, peachAccount, bank, vault, stubOracle.publicKey, userTokenAccount1);
 
-        const vaultBalance = await program.provider.connection.getTokenAccountBalance(vault1);
-        const peachAccount = await program.account.peachAccount.fetch(peachAccount1);
-        assert.equal(peachAccount.netDeposits.toNumber(), deposit_amount1.sub(withdraw_amount));
+        const vaultBalance = await program.provider.connection.getTokenAccountBalance(vault);
+        const peachAccount1 = await program.account.peachAccount.fetch(peachAccount);
+        assert.equal(peachAccount1.netDeposits.toNumber(), deposit_amount1.sub(withdraw_amount));
         assert.equal(vaultBalance.value.amount, deposit_amount1.sub(withdraw_amount));
       } catch (err) {
         assert.fail("Error while withdrawing a token: " + err);
@@ -144,10 +142,10 @@ describe("peach-v1", () => {
 
     it("Deposits a token again", async () => {
       try{
-        await tokenDepositIntoExisting(deposit_amount2, market1, peachAccount1, bank1, vault1, stubOracle.publicKey, user1TokenAccount1, user1);
+        await tokenDepositIntoExisting(deposit_amount2, market, peachAccount, bank, vault, stubOracle.publicKey, userTokenAccount1, user);
         
-        const vaultBalance = await program.provider.connection.getTokenAccountBalance(vault1);
-        const userAccount = await program.account.peachAccount.fetch(peachAccount1);
+        const vaultBalance = await program.provider.connection.getTokenAccountBalance(vault);
+        const userAccount = await program.account.peachAccount.fetch(peachAccount);
         assert.equal(userAccount.netDeposits.toNumber(), deposit_amount2.add(deposit_amount1).sub(withdraw_amount).toNumber());
         assert.equal(vaultBalance.value.amount, deposit_amount2.add(deposit_amount1).sub(withdraw_amount).toNumber());
       } catch (err)  {
@@ -157,21 +155,61 @@ describe("peach-v1", () => {
 
     it("Charges collateral fees", async () => {
       try {
-        await tokenChargeCollateralFees(market1, peachAccount1);
+        await tokenChargeCollateralFees(market, peachAccount);
       }
       catch (err) {  
         assert.fail("Error while charging collateral fees: " + err);
       }
     });
 
+    it("Close stub oracle", async () => {
+      try {
+        await program.methods.stubOracleClose()
+        .accounts({
+            market: market,
+            admin: admin.publicKey,
+            oracle: stubOracle.publicKey,
+            solDestination: programWallet.publicKey,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          }
+        )
+        .signers([admin])
+        .rpc();
+        
+        assert.ok(await program.account.stubOracle.fetch(stubOracle.publicKey).then(() => false).catch(() => true));
+      } catch (err) {
+        assert.fail("Error while closing stub oracle: " + err);
+      }
+    });
+
+    it("Close peach account", async () => {
+      try {
+        await program.methods.accountClose(true)
+        .accounts({
+            market: market,
+            account: peachAccount,
+            owner: user.publicKey,
+            solDestination: programWallet.publicKey,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          }
+        )
+        .signers([user])
+        .rpc();
+        
+        assert.ok(await program.account.peachAccount.fetch(peachAccount).then(() => false).catch(() => true));
+      } catch (err) {
+        assert.fail("Error while closing stub oracle: " + err);
+      }
+    });
+
     it("Deregister a token", async () => {
       try {
-        await tokenDeregister(market1, admin, mintInfo1, programTokenAccount1, programWallet.publicKey, bank1, vault1);
+        await tokenDeregister(market, admin, mintInfo, programTokenAccount1, programWallet.publicKey, bank, vault);
 
-        const mintInfo = await program.account.mintInfo.fetch(mintInfo1).then(() => false).catch(() => true);
-        const bank = await program.account.bank.fetch(bank1).then(() => false).catch(() => true); 
-        assert.ok(mintInfo);
-        assert.ok(bank);
+        const mintInfoAccount = await program.account.mintInfo.fetch(mintInfo).then(() => false).catch(() => true);
+        const bankAccount = await program.account.bank.fetch(bank).then(() => false).catch(() => true); 
+        assert.ok(mintInfoAccount);
+        assert.ok(bankAccount);
 
       } catch (err) {
         assert.fail("Error while deregistering token: " + err);
@@ -180,23 +218,25 @@ describe("peach-v1", () => {
 
     it("Closes a market", async () => {
       try {
-        await marketClose(market1, admin);
-        assert(await program.account.market.fetch(market1).then(() => false).catch(() => true));
+        await marketClose(market, admin);
+        assert(await program.account.market.fetch(market).then(() => false).catch(() => true));
       } catch (err) {
         assert.fail("Error while closing market: " + err);
       }
       
     });
+
+    after(async () => {
+      console.log("Defunding wallets");
+      await defundWallet(admin);
+      await defundWallet(user);
+      console.log("Wallets defunded");
+    });
+
   });
 
-  after(async () => {
-    console.log("Defunding wallets");
-    await defundWallet(admin);
-    await defundWallet(user1);
-    // await defundWallet(user2);
-    // await defundWallet(user3);
-    console.log("Wallets defunded");
+  describe("Borrow limit tests", () => {
+    // TODO
   });
-
 });
 
