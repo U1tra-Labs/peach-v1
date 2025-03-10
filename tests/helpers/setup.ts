@@ -17,15 +17,6 @@ const BANK_SEED = "Bank";
 const VAULT_SEED = "Vault";
 const MINT_INFO_SEED = "MintInfo";
 
-export async function getFundedWallet() {
-  const wallet = new Keypair();
-  const signature = await provider.connection.requestAirdrop(wallet.publicKey, 2 * LAMPORTS_PER_SOL);
-  await provider.connection.confirmTransaction(signature);
-  console.log("Funded wallet:", wallet.publicKey.toBase58());
-  console.log("Signature:", signature);
-  return wallet;
-}
-
 // Function to create a mint
 export async function createTokenMint(decimals = 10, owner: Keypair): Promise<PublicKey> {
   return await createMint(
@@ -58,57 +49,67 @@ export async function createTokenAccount(mint: PublicKey, owner: Keypair): Promi
   return getAssociatedTokenAddress;
 }
 
-export async function transferToken(mint: PublicKey, owner: Keypair, amount: number) {
+export async function transferToken(mint: PublicKey, sender: Keypair, receiver: Keypair, amount: number) {
   const senderAssociatedTokenAddress = await getOrCreateAssociatedTokenAccount(
     program.provider.connection,
-    owner,
+    sender,
     mint,
-    owner.publicKey,
-  ); 
+    sender.publicKey,
+  );
 
   const receipientAssociatedTokenAddress = await createAssociatedTokenAccount(
     program.provider.connection,
-    envProviderPayer,
+    receiver,
     mint,
-    provider.wallet.publicKey,
-  ); 
+    receiver.publicKey,
+  );
 
   const transactionSignature = await transfer(
     program.provider.connection,
-    owner,
+    sender,
     senderAssociatedTokenAddress.address,
     receipientAssociatedTokenAddress,
-    owner,
+    sender,
     amount,
-  );   
+  );
 }
 
-// Function to derive PDAs
-export function derivePDAs(marketNum: number, accountNum: number, tokenIndex: number, mint: PublicKey, owner: PublicKey) {
-  const marketPDA = anchor.web3.PublicKey.findProgramAddressSync(
+// Function to derive market PDA
+export function deriveMarketPDA(marketNum: number, owner: PublicKey): PublicKey {
+  return anchor.web3.PublicKey.findProgramAddressSync(
     [Buffer.from(MARKET_SEED), owner.toBuffer(), new anchor.BN(marketNum).toArrayLike(Buffer, "le", 4)],
     program.programId
   )[0];
+}
 
-  const peachAccountPDA = anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from(PEACH_ACCOUNT_SEED), marketPDA.toBuffer(), provider.wallet.publicKey.toBuffer(), new anchor.BN(accountNum).toArrayLike(Buffer, "le", 4)],
+// Function to derive peach account PDA
+export function derivePeachAccountPDA(market: PublicKey, accountNum: number, user: PublicKey): PublicKey {
+  return anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from(PEACH_ACCOUNT_SEED), market.toBuffer(), user.toBuffer(), new anchor.BN(accountNum).toArrayLike(Buffer, "le", 4)],
     program.programId
   )[0];
+}
 
-  const bankPDA = anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from(BANK_SEED), marketPDA.toBuffer(), new anchor.BN(tokenIndex).toArrayLike(Buffer, "le", 2), new anchor.BN(0).toArrayLike(Buffer, "le", 4)],
+// Function to derive bank PDA
+export function deriveBankPDA(market: PublicKey, tokenIndex: number): PublicKey {
+  return anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from(BANK_SEED), market.toBuffer(), new anchor.BN(tokenIndex).toArrayLike(Buffer, "le", 2), new anchor.BN(0).toArrayLike(Buffer, "le", 4)],
     program.programId
   )[0];
+}
 
-  const vaultPDA = anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from(VAULT_SEED), marketPDA.toBuffer(), new anchor.BN(tokenIndex).toArrayLike(Buffer, "le", 2), new anchor.BN(0).toArrayLike(Buffer, "le", 4)],
+// Function to derive vault PDA
+export function deriveVaultPDA(market: PublicKey, tokenIndex: number): PublicKey {
+  return anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from(VAULT_SEED), market.toBuffer(), new anchor.BN(tokenIndex).toArrayLike(Buffer, "le", 2), new anchor.BN(0).toArrayLike(Buffer, "le", 4)],
     program.programId
   )[0];
+}
 
-  const mintInfoPDA = anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from(MINT_INFO_SEED), marketPDA.toBuffer(), mint.toBuffer()],
+// Function to derive mint info PDA
+export function deriveMintInfoPDA(market: PublicKey, mint: PublicKey): PublicKey {
+  return anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from(MINT_INFO_SEED), market.toBuffer(), mint.toBuffer()],
     program.programId
   )[0];
-
-  return { marketPDA, peachAccountPDA, bankPDA, vaultPDA, mintInfoPDA };
 }
