@@ -86,7 +86,7 @@ export async function tokenRegister(tokenIndex: number, mint: PublicKey, marketP
 
 }
 
-export async function tokenDeposit(deposit_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, stubOracle: PublicKey, tokenAccount: PublicKey, user: Keypair, admin: Keypair) {    
+export async function tokenDeposit(deposit_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, stubOracle: PublicKey, tokenAccount: PublicKey, user: Keypair) {    
     const tx = await program.methods
         .tokenDeposit(deposit_amount, false)
         .accounts({
@@ -97,16 +97,57 @@ export async function tokenDeposit(deposit_amount: anchor.BN, marketPDA: PublicK
         vault: vaultPDA,
         oracle: stubOracle,
         tokenAccount: tokenAccount,
-        tokenAuthority: admin.publicKey,
+        tokenAuthority: user.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
         })
-        .signers([user, admin])
+        .signers([user])
         .rpc();
     
     return tx;
 }
 
-export async function tokenWithdraw(withdraw_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, stubOracle: PublicKey, tokenAccount: PublicKey, userTokenAuthority: Keypair) {
+export async function tokenDepositIntoExisting(deposit_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, stubOracle: PublicKey, tokenAccount: PublicKey, user: Keypair) {    
+    const tx = await program.methods
+        .tokenDeposit(deposit_amount, false)
+        .accounts({
+        market: marketPDA,
+        account: peachAccountPDA,
+        owner: user.publicKey,
+        bank: bankPDA,
+        vault: vaultPDA,
+        oracle: stubOracle,
+        tokenAccount: tokenAccount,
+        tokenAuthority: user.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([user])
+        .rpc();
+    
+    return tx;
+}
+
+export async function tokenForceWithdraw(marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, stubOracle: PublicKey, tokenAccount: PublicKey) {
+    const envProviderPayer = (provider.wallet as NodeWallet).payer;
+
+    const tx = await program.methods
+        .tokenForceWithdraw()
+        .accounts({
+        market: marketPDA,
+        account: peachAccountPDA,
+        ownerAtaTokenAccount: tokenAccount,
+        alternateOwnerTokenAccount: tokenAccount,
+        bank: bankPDA,
+        vault: vaultPDA,
+        oracle: stubOracle,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([envProviderPayer])
+        .rpc();
+    
+    return tx;
+}
+
+export async function tokenWithdraw(withdraw_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, stubOracle: PublicKey, tokenAccount: PublicKey) {
     const envProviderPayer = (provider.wallet as NodeWallet).payer;
 
     const tx = await program.methods
@@ -136,4 +177,24 @@ export async function tokenChargeCollateralFees(marketPDA: PublicKey, peachAccou
         .rpc();
     
     return tx;
+}
+
+export async function tokenDeregister(market: PublicKey, admin: Keypair, mintInfo: PublicKey, dustVault: PublicKey, solDestination: PublicKey, bank: PublicKey, vault: PublicKey) {
+    const tx = await program.methods.tokenDeregister()
+    .accounts({
+      market: market,
+      admin: admin.publicKey,
+      mintInfo: mintInfo,
+      dustVault: dustVault,
+      solDestination: solDestination,
+      tokenProgram: TOKEN_PROGRAM_ID
+    })
+    .remainingAccounts([
+      { pubkey: bank, isWritable: true, isSigner: false },
+      { pubkey: vault, isWritable: true, isSigner: false },
+    ])
+    .signers([admin])
+      .rpc();
+  
+  return tx;
 }

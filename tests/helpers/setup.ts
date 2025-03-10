@@ -72,6 +72,8 @@ export async function transferToken(mint: PublicKey, sender: Keypair, receiver: 
     sender,
     amount,
   );
+
+  return receipientAssociatedTokenAddress;
 }
 
 // Function to derive market PDA
