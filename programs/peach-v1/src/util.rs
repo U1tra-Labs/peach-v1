@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::hash::hash;
 
 use crate::error::PeachError;
 
@@ -27,4 +28,21 @@ pub fn format_zero_terminated_utf8_bytes(
 pub fn clock_now() -> (u64, u64) {
     let clock = Clock::get().unwrap();
     (clock.unix_timestamp.try_into().unwrap(), clock.slot)
+}
+
+/// Generates an 8-byte sighash from a given namespace and function name.
+///
+/// # Arguments
+///
+/// * `namespace` - The namespace of the function (e.g., module name).
+/// * `name` - The function name.
+///
+/// # Returns
+///
+/// An 8-byte sighash derived from the hash of `"namespace:function"`.
+pub fn sighash(namespace: &str, name: &str) -> [u8; 8] {
+    let preimage = format!("{}:{}", namespace, name);
+    let mut sighash = [0u8; 8];
+    sighash.copy_from_slice(&hash(preimage.as_bytes()).to_bytes()[..8]);
+    sighash
 }

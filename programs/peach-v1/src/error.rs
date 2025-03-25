@@ -55,6 +55,8 @@ pub enum PeachError {
     BankNetBorrowsLimitReached,
     #[msg("Init Asset Weight can't be negative")]
     InitAssetWeightCantBeNegative,
+    #[msg("Invalid Kamino user metadata account provided.")]
+    InvalidKaminoUserMetadataAccount,
 }
 
 impl PeachError {

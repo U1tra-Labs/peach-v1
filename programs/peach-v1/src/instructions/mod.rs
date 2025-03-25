@@ -23,6 +23,7 @@ pub use token_edit::*;
 pub use token_deregister::*;
 pub use admin_token_withdraw_fees::*;
 pub use ix_gate_set::*;
+pub use kamino_cpi::*;
 
 mod market_create;
 mod account_create;
@@ -49,3 +50,4 @@ mod token_edit;
 mod token_deregister;
 mod admin_token_withdraw_fees;
 mod ix_gate_set;
+mod kamino_cpi;

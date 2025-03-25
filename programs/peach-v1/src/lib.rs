@@ -369,4 +369,26 @@ pub mod peach_v1 {
         instructions::ix_gate_set(ctx, ix_gate)?;
         Ok(())
     }
+        
+    pub fn kamino_init_user_metadata <'info> (
+        ctx: Context<KaminoInitUserMetaData>,
+        user_lookup_table_account: Pubkey
+    ) -> Result<()> {
+        kamino_init_user_metadata::process(ctx, user_lookup_table_account)
+    }
+
+    pub fn kamino_init_obligation <'info> (
+        ctx: Context<KaminoInitObligation>,
+        args: InitObligationArgs,
+    ) -> Result<()> {
+        kamino_init_obligation::process(ctx, args)
+    }
+
+    pub fn kamino_init_obligation_farm_for_reserve<'info> (
+        ctx: Context<KaminoInitObligationFarmsForReserve>,
+        mod_num: u8,
+    ) -> Result<()> {
+        kamino_init_obligation_farm_for_reserve::process(ctx, mod_num)
+    }
+
 }

@@ -151,7 +151,7 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
         // Market level deposit limit on account
         let market = self.market.load()?;
         if market.deposit_limit_quote > 0 {
-            // Requires that all banks were provided an all oracles are healthy, otherwise we
+            // Requires that all banks were provided and all oracles are healthy, otherwise we
             // can't know how much this account has deposited
             require_eq!(
                 cache.token_infos.len(),
