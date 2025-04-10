@@ -15,6 +15,7 @@ pub mod types;
 pub mod logs;
 pub mod accounts_zerocopy;
 pub mod health;
+pub mod constants;
 
 declare_id!("ALBzpjn7Q8T2oiTQc4wgpmFNBr89xtXWcWaGQCpZBzbp");
 
@@ -389,6 +390,24 @@ pub mod peach_v1 {
         mod_num: u8,
     ) -> Result<()> {
         kamino_init_obligation_farm_for_reserve::process(ctx, mod_num)
+    }
+
+    // Kamino Cpi Call - Init Obligation Farm for Reserve
+    pub fn kamino_deposit<'info> (
+        ctx: Context<'_, '_, '_, 'info, DepositKamino<'info>>,
+        deposit_amount: u64,
+        protocol_index: u8,
+    ) -> Result<()> {
+        instructions::kamino_deposit(ctx, deposit_amount, protocol_index)
+    }   
+
+    // Kamino Cpi Call - Withdraw
+    pub fn kamino_withdraw<'info> (
+        ctx: Context<'_, '_, '_, 'info, WithdrawKamino<'info>>,
+        withdraw_amount: u64,
+        // protocol_index: u16,
+    ) -> Result<()> {
+        instructions::kamino_withdraw(ctx, withdraw_amount)
     }
 
 }

@@ -2635,7 +2635,7 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "186d107c507e71a4528405eccefc6b3b7177a10ad6dd4bde531604debf87f091"
 dependencies = [
- "anchor-lang 0.29.0",
+ "anchor-lang 0.30.1",
  "hex",
  "pythnet-sdk",
  "solana-program",
@@ -2647,7 +2647,7 @@ version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "498d20fd330277697aaee92f341bdabdb4695b10e05f054157a18ad8b7746a17"
 dependencies = [
- "anchor-lang 0.29.0",
+ "anchor-lang 0.30.1",
  "bincode",
  "borsh 0.10.4",
  "bytemuck",

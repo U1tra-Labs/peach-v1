@@ -261,6 +261,28 @@ impl PeachAccountFixed {
         }
     }
 
+    // pub fn update_protocol_assignment(
+    //     &mut self,
+    //     mint: &Pubkey,
+    //     protocol: u8,
+    // ) -> Result<()> {
+    //     msg!("Updating protocol assignment for deposit");
+
+    //     let lending_account = &mut self.market;
+
+    //     if let Some(deposit_info) = lending_account.deposits.iter_mut()
+    //         .find(|deposit| deposit.mint_key == *mint && deposit.active)
+    //     {
+    //         msg!("DepositInfo found, updating protocol assignment");
+    //         deposit_info.protocol_assign = protocol;
+    //     } else {
+    //         msg!("DepositInfo not found, cannot update protocol assignment");
+    //         return Err(PeachError::DepositNotFound.into());
+    //     }
+
+    //     Ok(())
+    // }
+
 }
 
 impl Owner for PeachAccountFixed {

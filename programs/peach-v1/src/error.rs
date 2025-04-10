@@ -57,6 +57,14 @@ pub enum PeachError {
     InitAssetWeightCantBeNegative,
     #[msg("Invalid Kamino user metadata account provided.")]
     InvalidKaminoUserMetadataAccount,
+    #[msg("Invalid deposit amount: must be greater than zero.")]
+    InvalidAmount,
+    #[msg("Invalid Kamino reserve liquidity supply account provided.")]
+    InvalidKaminoReserveLiquiditySupplyAccount,
+    #[msg("Wrong Lending Protocol Index for this Instruction.")]
+    LendingProtocolMismatch,
+    #[msg("Deposit Information Not Found.")]
+    DepositNotFound
 }
 
 impl PeachError {

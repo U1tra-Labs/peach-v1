@@ -25,6 +25,10 @@ pub struct TokenPosition {
     /// incremented when a market requires this position to stay alive
     pub in_use_count: u16,
 
+    /// 0 = not a kamino position
+    /// 1 = kamino position
+    // pub is_kamino_position: u8,
+
     #[derivative(Debug = "ignore")]
     pub padding: [u8; 4],
 
@@ -70,6 +74,10 @@ impl TokenPosition {
 
     pub fn is_active_for_token(&self, token_index: TokenIndex) -> bool {
         self.token_index == token_index
+    }
+
+    pub fn is_kamino_position(&self) -> bool {
+        self.is_kamino_position == 1
     }
 
     pub fn native(&self, bank: &Bank) -> I80F48 {

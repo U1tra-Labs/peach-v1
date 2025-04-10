@@ -41,7 +41,7 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
         reduce_only: bool,
         allow_token_account_closure: bool,
     ) -> Result<()> {
-        require_msg!(amount > 0, "deposit amount must be positive");
+        require!(amount > 0, PeachError::InvalidAmount);
 
         let mut bank = self.bank.load_mut()?;
         let token_index = bank.token_index;
