@@ -375,30 +375,30 @@ pub mod peach_v1 {
         ctx: Context<KaminoInitUserMetaData>,
         user_lookup_table_account: Pubkey
     ) -> Result<()> {
-        kamino_init_user_metadata::process(ctx, user_lookup_table_account)
+        instructions::kamino_init_user_metadata(ctx, user_lookup_table_account)
     }
 
     pub fn kamino_init_obligation <'info> (
         ctx: Context<KaminoInitObligation>,
         args: InitObligationArgs,
     ) -> Result<()> {
-        kamino_init_obligation::process(ctx, args)
+        instructions::kamino_init_obligation(ctx, args)
     }
 
     pub fn kamino_init_obligation_farm_for_reserve<'info> (
         ctx: Context<KaminoInitObligationFarmsForReserve>,
         mod_num: u8,
     ) -> Result<()> {
-        kamino_init_obligation_farm_for_reserve::process(ctx, mod_num)
+        instructions::kamino_init_obligation_farm_for_reserve(ctx, mod_num)
     }
 
     // Kamino Cpi Call - Init Obligation Farm for Reserve
     pub fn kamino_deposit<'info> (
         ctx: Context<'_, '_, '_, 'info, DepositKamino<'info>>,
         deposit_amount: u64,
-        protocol_index: u8,
+        _protocol_index: u8,
     ) -> Result<()> {
-        instructions::kamino_deposit(ctx, deposit_amount, protocol_index)
+        instructions::kamino_deposit(ctx, deposit_amount)
     }   
 
     // Kamino Cpi Call - Withdraw

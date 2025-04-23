@@ -76,9 +76,9 @@ impl TokenPosition {
         self.token_index == token_index
     }
 
-    pub fn is_kamino_position(&self) -> bool {
-        self.is_kamino_position == 1
-    }
+    // pub fn is_kamino_position(&self) -> bool {
+    //     self.is_kamino_position == 1
+    // }
 
     pub fn native(&self, bank: &Bank) -> I80F48 {
         if self.indexed_position.is_positive() {

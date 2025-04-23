@@ -10,7 +10,7 @@ use crate::util::sighash;
 #[constant]
 pub const KAMINO_PROGRAM_ID_MAINNET: Pubkey = pubkey!("KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD");
 
-pub fn process(
+pub fn kamino_init_obligation_farm_for_reserve(
     ctx: Context<KaminoInitObligationFarmsForReserve>,
     mod_num: u8,
 ) -> Result<()> {

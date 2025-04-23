@@ -14,7 +14,7 @@ pub struct InitObligationArgs {
     pub id: u8,
 }
 
-pub fn process(
+pub fn kamino_init_obligation(
     ctx: Context<KaminoInitObligation>,
     args: InitObligationArgs,
 ) -> Result<()> {

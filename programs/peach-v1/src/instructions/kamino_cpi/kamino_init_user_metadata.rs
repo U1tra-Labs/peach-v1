@@ -6,7 +6,7 @@ use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::solana_program::instruction::Instruction;
 use crate::error::PeachError;    
 
-pub fn process(
+pub fn kamino_init_user_metadata(
     ctx: Context<KaminoInitUserMetaData>,
     user_lookup_table_account: Pubkey,
 ) -> Result<()> {
