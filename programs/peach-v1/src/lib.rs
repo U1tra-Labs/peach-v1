@@ -396,18 +396,18 @@ pub mod peach_v1 {
     pub fn kamino_deposit<'info> (
         ctx: Context<'_, '_, '_, 'info, DepositKamino<'info>>,
         deposit_amount: u64,
-        _protocol_index: u8,
+        reduce_only: bool,
     ) -> Result<()> {
-        instructions::kamino_deposit(ctx, deposit_amount)
+        instructions::kamino_deposit(ctx, deposit_amount, reduce_only)
     }   
 
     // Kamino Cpi Call - Withdraw
     pub fn kamino_withdraw<'info> (
         ctx: Context<'_, '_, '_, 'info, WithdrawKamino<'info>>,
         withdraw_amount: u64,
-        // protocol_index: u16,
+        allow_borrow: bool,
     ) -> Result<()> {
-        instructions::kamino_withdraw(ctx, withdraw_amount)
+        instructions::kamino_withdraw(ctx, withdraw_amount, allow_borrow)
     }
 
 }

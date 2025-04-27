@@ -27,10 +27,10 @@ pub struct TokenPosition {
 
     /// 0 = not a kamino position
     /// 1 = kamino position
-    // pub is_kamino_position: u8,
+    pub is_kamino_position: u8,
 
     #[derivative(Debug = "ignore")]
-    pub padding: [u8; 4],
+    pub padding: [u8; 3],
 
     // bookkeeping variable for onchain interest calculation
     // either deposit_index or borrow_index at last indexed_position change
@@ -57,6 +57,7 @@ impl Default for TokenPosition {
         TokenPosition {
             indexed_position: I80F48::ZERO,
             token_index: TokenIndex::MAX,
+            is_kamino_position: 0,
             in_use_count: 0,
             cumulative_deposit_interest: 0.0,
             cumulative_borrow_interest: 0.0,
@@ -76,9 +77,9 @@ impl TokenPosition {
         self.token_index == token_index
     }
 
-    // pub fn is_kamino_position(&self) -> bool {
-    //     self.is_kamino_position == 1
-    // }
+    pub fn is_kamino_position(&self) -> bool {
+        self.is_kamino_position == 1
+    }
 
     pub fn native(&self, bank: &Bank) -> I80F48 {
         if self.indexed_position.is_positive() {

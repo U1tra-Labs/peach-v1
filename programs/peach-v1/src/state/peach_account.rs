@@ -596,6 +596,7 @@ impl<
     pub fn ensure_token_position(
         &mut self,
         token_index: TokenIndex,
+        is_kamino_position: u8,
     ) -> Result<(&mut TokenPosition, usize, usize)> {
         let mut active_index = 0;
         let mut match_or_free = None;
@@ -617,6 +618,7 @@ impl<
                 *v = TokenPosition {
                     indexed_position: I80F48::ZERO,
                     token_index,
+                    is_kamino_position,
                     in_use_count: 0,
                     cumulative_deposit_interest: 0.0,
                     cumulative_borrow_interest: 0.0,

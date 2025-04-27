@@ -9,7 +9,7 @@ import { createStubOracle } from "./instructions/oracle";
 import { tokenChargeCollateralFees, tokenDeposit, tokenDepositIntoExisting, tokenDeregister, tokenForceWithdraw, tokenRegister, tokenWithdraw } from "./instructions/token";
 import { I80F48 } from "./helpers/I80F48";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
-import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 // Test suite
 describe("peach-v1", () => {
@@ -239,4 +239,3 @@ describe("peach-v1", () => {
     // TODO
   });
 });
-

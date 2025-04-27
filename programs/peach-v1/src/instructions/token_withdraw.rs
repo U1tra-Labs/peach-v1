@@ -24,7 +24,7 @@ pub fn token_withdraw(ctx: Context<TokenWithdraw>, amount: u64, allow_borrow: bo
 
     // Create the account's position for that token index
     let mut account = ctx.accounts.account.load_full_mut()?;
-    let (_, raw_token_index, _) = account.ensure_token_position(token_index)?;
+    let (_, raw_token_index, _) = account.ensure_token_position(token_index, 0)?;
 
     // Health check _after_ the token position is guaranteed to exist
     let pre_health_opt = if !account.fixed.is_in_health_region() {

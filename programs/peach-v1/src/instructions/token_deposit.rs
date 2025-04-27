@@ -40,6 +40,7 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
         amount: u64,
         reduce_only: bool,
         allow_token_account_closure: bool,
+        kamino_cpi: bool,
     ) -> Result<()> {
         require!(amount > 0, PeachError::InvalidAmount);
 
@@ -83,8 +84,11 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
             )?
         };
 
-        // Transfer the actual tokens
-        token::transfer(self.transfer_ctx(), amount_i80f48.to_num::<u64>())?;
+        if !kamino_cpi{
+            // Transfer the actual tokens to our vault. Incase of a kamino_cpi, the
+            // tokens are already transferred via the kamino cpi.
+            token::transfer(self.transfer_ctx(), amount_i80f48.to_num::<u64>())?;
+        }
 
         let indexed_position = position.indexed_position;
 
@@ -221,7 +225,7 @@ pub fn token_deposit(ctx: Context<TokenDeposit>, amount: u64, reduce_only: bool)
                 return Err(e);
             }
 
-            account.ensure_token_position(token_index)?;
+            account.ensure_token_position(token_index, 0)?;
         }
     }
 
@@ -235,7 +239,7 @@ pub fn token_deposit(ctx: Context<TokenDeposit>, amount: u64, reduce_only: bool)
         token_authority: &ctx.accounts.token_authority,
         token_program: &ctx.accounts.token_program,
     }
-    .deposit_into_existing(ctx.remaining_accounts, amount, reduce_only, true)
+    .deposit_into_existing(ctx.remaining_accounts, amount, reduce_only, true, false)
 }
 
 pub fn token_deposit_into_existing(
@@ -253,7 +257,7 @@ pub fn token_deposit_into_existing(
         token_authority: &ctx.accounts.token_authority,
         token_program: &ctx.accounts.token_program,
     }
-    .deposit_into_existing(ctx.remaining_accounts, amount, reduce_only, false)
+    .deposit_into_existing(ctx.remaining_accounts, amount, reduce_only, false, false) 
 }
 
 // Same as TokenDeposit, but without the owner signing
