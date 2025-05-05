@@ -1,8 +1,8 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { PeachV1 } from "../../target/types/peach_v1";
-import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { createAccount, createAssociatedTokenAccount, createMint, getOrCreateAssociatedTokenAccount, mintTo, transfer } from "@solana/spl-token";
+import { Keypair, PublicKey } from "@solana/web3.js";
+import { createAssociatedTokenAccount, createMint, getOrCreateAssociatedTokenAccount, mintTo, transfer } from "@solana/spl-token";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 
 export const provider = anchor.AnchorProvider.env();
@@ -36,26 +36,26 @@ export async function createTokenAccount(mint: PublicKey, owner: Keypair): Promi
     owner.publicKey,
   );
 
-  const transactionSignature = await mintTo(
-    program.provider.connection,
-    owner,
-    mint,
-    getAssociatedTokenAddress,
-    owner,
-    2000000,
-    [owner]
-  );
+  // const transactionSignature = await mintTo(
+  //   program.provider.connection,
+  //   owner,
+  //   mint,
+  //   getAssociatedTokenAddress,
+  //   owner,
+  //   2000000,
+  //   [owner]
+  // );
 
   return getAssociatedTokenAddress;
 }
 
-export async function transferToken(mint: PublicKey, sender: Keypair, receiver: Keypair, amount: number) {
-  const senderAssociatedTokenAddress = await getOrCreateAssociatedTokenAccount(
-    program.provider.connection,
-    sender,
-    mint,
-    sender.publicKey,
-  );
+export async function transferToken(mint: PublicKey, sender_ata: PublicKey, sender: Keypair, receiver: Keypair, amount: number) {
+  // const senderAssociatedTokenAddress = await getOrCreateAssociatedTokenAccount(
+  //   program.provider.connection,
+  //   sender,
+  //   mint,
+  //   sender.publicKey,
+  // );
 
   const receipientAssociatedTokenAddress = await createAssociatedTokenAccount(
     program.provider.connection,
@@ -63,11 +63,11 @@ export async function transferToken(mint: PublicKey, sender: Keypair, receiver: 
     mint,
     receiver.publicKey,
   );
-
+  
   const transactionSignature = await transfer(
     program.provider.connection,
     sender,
-    senderAssociatedTokenAddress.address,
+    sender_ata,
     receipientAssociatedTokenAddress,
     sender,
     amount,

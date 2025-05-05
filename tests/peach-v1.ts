@@ -55,20 +55,24 @@ describe("peach-v1", () => {
 
       console.log("Balance before testing: ", await connection.getBalance(programWallet.publicKey));
 
-      admin = await getFundedWallet(); 
+      admin = await getFundedWallet();
+      // Wait for the wallet to be funded
+      setTimeout(() => {}, 5000);
       user = await getFundedWallet();
 
       // Create mint from our program wallet for local/devnet testing
       // For mainnet, use USDC mint
-      usdc_mint = TEST_ENV === "mainnet"
-        ? USDC_MINT_MAINNET
-        : await createTokenMint(10, programWallet);      
+      setTimeout(() => {}, 5000);
+      usdc_mint = USDC_MINT_MAINNET;
       
       // Create token accounts
-      usdcATA = await createTokenAccount(usdc_mint, programWallet);
+      setTimeout(() => { }, 5000);
+      // usdcATA = await createTokenAccount(usdc_mint, programWallet);
+      usdcATA = new PublicKey("Dc22vGVRbk5dVucRLrwA5UJBuZFKufF4W4kf5pvjLDMZ"); // program wallet USDC token account
 
       // Transfer some tokens to user
-      user1ATA = await transferToken(usdc_mint, programWallet, user, 200);
+      setTimeout(() => {}, 5000);
+      user1ATA = await transferToken(usdc_mint, usdcATA, programWallet, user, 0.01 * 10 ** 6);
 
       // Derive PDAs
       market = deriveMarketPDA(marketNum, admin.publicKey);
@@ -133,24 +137,24 @@ describe("peach-v1", () => {
         }
       });
 
-    it("Registers a token", async () => {
-      try {
-        await tokenRegister(tokenIndex, usdc_mint, market, vault, mintInfo, bank, stubOracle.publicKey, admin);
-        
-        const mintInfoAccount = await program.account.mintInfo.fetch(mintInfo);
-        const bankAccount = await program.account.bank.fetch(bank);
-        const vaultAccount = await connection.getParsedAccountInfo(vault);
-        // console.log("Bank: ", bankAccount, "\n Vault: ", vault.value.data);
-        assert.ok(vaultAccount.value.data.parsed.info.owner == market.toBase58());
-        assert.ok(mintInfoAccount.mint.equals(usdc_mint));
-        assert.ok(mintInfoAccount.oracle.equals(stubOracle.publicKey));
-        assert.ok(bankAccount.mint.equals(usdc_mint));
-        assert.ok(bankAccount.tokenIndex == tokenIndex);
-      }
-      catch (err) {
-        assert.fail("Error while registering token: " + err);
-      }
-    });
+      it("Registers a token", async () => {
+        try {
+          await tokenRegister(tokenIndex, usdc_mint, market, vault, mintInfo, bank, stubOracle.publicKey, admin);
+          
+          const mintInfoAccount = await program.account.mintInfo.fetch(mintInfo);
+          const bankAccount = await program.account.bank.fetch(bank);
+          const vaultAccount = await connection.getParsedAccountInfo(vault);
+          // console.log("Bank: ", bankAccount, "\n Vault: ", vault.value.data);
+          assert.ok(vaultAccount.value.data.parsed.info.owner == market.toBase58());
+          assert.ok(mintInfoAccount.mint.equals(usdc_mint));
+          assert.ok(mintInfoAccount.oracle.equals(stubOracle.publicKey));
+          assert.ok(bankAccount.mint.equals(usdc_mint));
+          assert.ok(bankAccount.tokenIndex == tokenIndex);
+        }
+        catch (err) {
+          assert.fail("Error while registering token: " + err);
+        }
+      });
     });
 
     describe.skip("Native Token operations", () => {
@@ -206,7 +210,7 @@ describe("peach-v1", () => {
     });
 
     // This test suite is for testing Kamino instructions, to be done only on mainnet
-    (TEST_ENV === "mainnet" ? describe : describe.skip)("Kamino operations", () => {
+    describe("Kamino operations", () => {
       
       // Kamino instruction's specific variables
       let userMetaDataPDA: PublicKey;
@@ -218,7 +222,7 @@ describe("peach-v1", () => {
       let seed1Account: PublicKey, seed2Account: PublicKey;
       
 
-      const deposit_amount = new anchor.BN(100 * 10 ** 6);
+      const deposit_amount = new anchor.BN(0.01 * 10 ** 6);
       const mode = 0;
 
       // Instruction: InitObligation
@@ -333,13 +337,14 @@ describe("peach-v1", () => {
         .signers([user])
         .rpc();
 
+        console.log("Init User Metadata signature: ", signature);
         const data = await kaminoProgram.account.userMetadata.fetch(userMetaDataPDA);
         assert.equal(lookupTableAddress.toBase58(), data.userLookupTable.toBase58());
         assert.equal(peachAccount.toBase58(), data.owner.toBase58());
 
       });
 
-      it.skip("Init Obligation", async () => {
+      it("Init Obligation", async () => {
 
         const signature = await program.methods.kaminoInitObligation(args)
             .accounts({
@@ -365,9 +370,9 @@ describe("peach-v1", () => {
         assert.equal(obligationAccount.tag, args.tag);
       });
 
-      it.skip("Init User Obligation Farm for Reserve", async () => {
+      it("Init User Obligation Farm for Reserve", async () => {
         
-        const signature = await program.methods.initObligationFarmsForReserve(mode)
+        const signature = await program.methods.kaminoInitObligationFarmForReserve(mode)
           .accounts({
             payer: user.publicKey,
             market: market,
@@ -427,7 +432,7 @@ describe("peach-v1", () => {
           
       });
 
-      it.skip("Withdraw from kamino", async() => {
+      it("Withdraw from kamino", async() => {
 
         const signature = await program.methods.kaminoWithdraw(
             deposit_amount,
@@ -436,7 +441,9 @@ describe("peach-v1", () => {
             signer: user.publicKey,
             obligation: obligationPDA,
             peachAccount: peachAccount,
-            lendingHub: market,
+            bank: bank,
+            oracle: stubOracle.publicKey,
+            market: market,
             kaminoCollateralMint: KAMINO_RESERVED_USDC_MINT,
             mint: USDC_MINT_MAINNET,
             userKaminoReserveUsdcTokenAccount: user_kamino_usdc_token_account,

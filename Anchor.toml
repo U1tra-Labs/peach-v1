@@ -4,17 +4,20 @@
 seeds = false
 skip-lint = false
 
+[programs.devnet]
+peach_v1 = "ALBzpjn7Q8T2oiTQc4wgpmFNBr89xtXWcWaGQCpZBzbp"
+
 [programs.localnet]
 peach_v1 = "ALBzpjn7Q8T2oiTQc4wgpmFNBr89xtXWcWaGQCpZBzbp"
 
-[programs.devnet]
-peach_v1 = "ALBzpjn7Q8T2oiTQc4wgpmFNBr89xtXWcWaGQCpZBzbp"
+[programs.mainnet]
+peach_v1 = "HpPVs6mWxJvYUUTQEKvek79C5Hou2VaJJjSVzF9N1KHd"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "https://mainnet.helius-rpc.com/?api-key=API_KEY" 
 wallet = "~/.config/solana/id.json"
 
 [scripts]

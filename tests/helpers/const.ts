@@ -1,12 +1,12 @@
 import { PublicKey } from "@solana/web3.js";
 
-export const LAMPORTS_PER_SOL_FOR_TEST_WALLETS = 0.2; // 0.2 SOL for each wallet
+export const LAMPORTS_PER_SOL_FOR_TEST_WALLETS = 0.1; // 0.1 SOL for each wallet
 
 export const TEST_ENV = "localhost"; // "devnet" | "localhost" | "mainnet"
 
 export const KAMINO_LENDING = new PublicKey(
-    // "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD" // Kamino mainnet
-    "DrbgiNhrmpd3FhWCiQUXce3YkJQ6DcfUp49qmoCFYe2r" // Kamino localhost
+    "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD" // Kamino mainnet
+    // "DrbgiNhrmpd3FhWCiQUXce3YkJQ6DcfUp49qmoCFYe2r" // Kamino localhost
 );
 
 export const KAMINO_LENDING_MAIN_MARKET = new PublicKey(
