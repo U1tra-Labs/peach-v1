@@ -18,7 +18,7 @@ use crate::logs::{emit_stack, DepositLog, TokenBalanceLog};
 use crate::require_msg_typed;
 use crate::util::{clock_now, sighash};
 use crate::state::{oracle_state_unchecked, Bank, Market, OracleAccountInfos, PeachAccountFixed, PeachAccountLoader};
-use crate::constants::KAMINO_PROGRAM_ID_MAINNET;
+use crate::constants::KAMINO_PROGRAM_ID;
 use crate::error::*;
 
 struct DepositCommon<'a, 'info> {
@@ -206,7 +206,7 @@ pub fn kamino_deposit<'info>(
     // Creating/Updating Token Position in our Peach program
     {
         let token_index = ctx.accounts.bank.load()?.token_index;
-        let mut account = ctx.accounts.user_account.load_full_mut()?;
+        let mut account = ctx.accounts.peach_account.load_full_mut()?;
 
         let token_position_exists = account
             .all_token_positions()
@@ -235,7 +235,7 @@ pub fn kamino_deposit<'info>(
         // Update the token position with the new deposit amount
         DepositCommon {
             market: &ctx.accounts.market,
-            account: &ctx.accounts.user_account,
+            account: &ctx.accounts.peach_account,
             bank: &ctx.accounts.bank,
             // vault: &ctx.accounts.vault,
             oracle: &ctx.accounts.oracle,
@@ -250,7 +250,7 @@ pub fn kamino_deposit<'info>(
             ctx.accounts.lending_market.key().as_ref(),
             ctx.accounts.mint.key().as_ref(),
         ],
-        &KAMINO_PROGRAM_ID_MAINNET,  // Kamino program ID here!
+        &KAMINO_PROGRAM_ID,  // Kamino program ID here!
     );
 
     require_keys_eq!(
@@ -260,12 +260,12 @@ pub fn kamino_deposit<'info>(
     );
 
     let accounts = vec![
-        AccountMeta::new(ctx.accounts.user_account.key(), true), 
+        AccountMeta::new(ctx.accounts.peach_account.key(), true), 
         AccountMeta::new(ctx.accounts.obligation.key(), false), 
         AccountMeta::new_readonly(ctx.accounts.lending_market.key(), false), 
         AccountMeta::new_readonly(ctx.accounts.lending_market_authority.key(), false), 
         AccountMeta::new(ctx.accounts.kamino_reserve.key(), false),     
-        AccountMeta::new(ctx.accounts.mint.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.mint.key(), false),
         AccountMeta::new(ctx.accounts.kamino_reserve_liquidity_usdc_supply.key(), false),
         AccountMeta::new(ctx.accounts.kamino_collateral_mint.key(), false),
         AccountMeta::new(ctx.accounts.kamino_destination_deposit_collateral.key(), false),
@@ -274,7 +274,7 @@ pub fn kamino_deposit<'info>(
         AccountMeta::new_readonly(ctx.accounts.collateral_token_program.key(), false),
         AccountMeta::new_readonly(ctx.accounts.liquidity_token_program.key(), false),
         AccountMeta::new_readonly(ctx.accounts.instructions_sysvar.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false), // not needed for kamino program
         AccountMeta::new(ctx.accounts.kamino_reserve_farm_state.key(), false),
         AccountMeta::new_readonly(ctx.accounts.farms_program.key(), false),
     ];
@@ -292,17 +292,14 @@ pub fn kamino_deposit<'info>(
     };
 
 
-    let lending_hub_key = ctx.accounts.market.key();
-    let signer_seeds = &[
-        ctx.accounts.signer.key.as_ref(), 
-        lending_hub_key.as_ref(),
-        &[ctx.bumps.user_account],
-    ];
+    let _lending_hub_key = ctx.accounts.market.key();
+    let account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
+
     
     invoke_signed(
         &kamino_deposit_ix,
         &[
-            ctx.accounts.user_account.to_account_info(),
+            ctx.accounts.peach_account.to_account_info(),
             ctx.accounts.obligation.clone(),
             ctx.accounts.lending_market.clone(),
             ctx.accounts.lending_market_authority.clone(),
@@ -320,18 +317,8 @@ pub fn kamino_deposit<'info>(
             ctx.accounts.kamino_reserve_farm_state.clone(),
             ctx.accounts.farms_program.clone(),
         ],
-        &[signer_seeds],
+        &[&account_seeds.signer_seeds()],
     )?;
-
-    // TODO: Update PeachAccountFixed with the new protocol assignment
-    
-    // let mut user_account = ctx.accounts.user_account.load_mut()?;  
-    // require!(
-    //     PROTOCOL_KAMINO == protocol_index,
-    //     PeachError::LendingProtocolMismatch
-    // ); 
-    // user_account.update_protocol_assignment(&ctx.accounts.mint.key(), PROTOCOL_KAMINO)?;
-
 
     Ok(())
 }
@@ -342,7 +329,7 @@ pub struct DepositKamino<'info> {
 
     #[account(
         mut,
-        address = user_account.load()?.owner,
+        address = peach_account.load()?.owner,
     )]
     pub signer: Signer<'info>,
 
@@ -352,10 +339,9 @@ pub struct DepositKamino<'info> {
 
     #[account(
         mut,
-        seeds = [signer.key().as_ref(), market.key().as_ref()],
-        bump,
+        has_one = market
     )]
-    pub user_account: AccountLoader<'info, PeachAccountFixed>,
+    pub peach_account: AccountLoader<'info, PeachAccountFixed>,
 
     #[account(
         mut,
@@ -385,7 +371,7 @@ pub struct DepositKamino<'info> {
         init_if_needed,
         payer = signer,
         associated_token::mint = kamino_collateral_mint,
-        associated_token::authority = user_account,
+        associated_token::authority = peach_account,
         associated_token::token_program = collateral_token_program,
     )]
     pub user_kamino_reserve_usdc_token_account: InterfaceAccount<'info, TokenAccount>,
@@ -393,7 +379,7 @@ pub struct DepositKamino<'info> {
     #[account(
         mut,
         token::mint = mint,
-        token::authority = user_account,
+        token::authority = peach_account,
     )]
     pub user_token_account: InterfaceAccount<'info, TokenAccount>,
 
@@ -412,7 +398,7 @@ pub struct DepositKamino<'info> {
     pub kamino_reserve_liquidity_usdc_supply: AccountInfo<'info>,
 
 
-    #[account(address = KAMINO_PROGRAM_ID_MAINNET)]
+    #[account(address = KAMINO_PROGRAM_ID)]
     /// CHECK: Kamino program ID
     pub kamino_program: AccountInfo<'info>, 
     /// Kamino Farms program

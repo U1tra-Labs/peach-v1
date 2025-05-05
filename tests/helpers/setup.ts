@@ -92,6 +92,14 @@ export function derivePeachAccountPDA(market: PublicKey, accountNum: number, use
   )[0];
 }
 
+// Function to derive peach account PDA
+export function testDerivePeachAccountPDA(market: PublicKey, accountNum: number, user: PublicKey): PublicKey {
+  return anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from(PEACH_ACCOUNT_SEED), market.toBuffer(), user.toBuffer(), new anchor.BN(accountNum).toArrayLike(Buffer, "le", 4)],
+    program.programId
+  )[0];
+}
+
 // Function to derive bank PDA
 export function deriveBankPDA(market: PublicKey, tokenIndex: number): PublicKey {
   return anchor.web3.PublicKey.findProgramAddressSync(

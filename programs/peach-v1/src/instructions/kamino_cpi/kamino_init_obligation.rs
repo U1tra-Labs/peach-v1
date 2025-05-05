@@ -4,8 +4,8 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::solana_program::instruction::Instruction;
 
+use crate::constants::KAMINO_PROGRAM_ID;
 use crate::state::{Market, PeachAccountFixed};
-use crate::KAMINO_PROGRAM_ID_MAINNET;
 use crate::util::sighash;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
@@ -20,15 +20,16 @@ pub fn kamino_init_obligation(
 ) -> Result<()> {
 
      // it's crucial to always verify the program_id, accounts, and data passed into the CPI
-     let market = ctx.accounts.market.key();
-     let signer_seeds = &[
-         ctx.accounts.payer.key.as_ref(), 
-         market.as_ref(),
-         &[ctx.bumps.account],
-     ];
+    //  let market = ctx.accounts.market.key();
+    //  let signer_seeds = &[
+    //      ctx.accounts.payer.key.as_ref(), 
+    //      market.as_ref(),
+    //      &[ctx.bumps.account],
+    //  ];
+    let account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
  
     let accounts = vec![
-        AccountMeta::new_readonly(ctx.accounts.account.key(), true), 
+        AccountMeta::new_readonly(ctx.accounts.peach_account.key(), true), 
         AccountMeta::new(ctx.accounts.payer.key(), true), 
         AccountMeta::new(ctx.accounts.obligation.key(), false), 
         AccountMeta::new_readonly(ctx.accounts.lending_market.key(), false), 
@@ -37,7 +38,7 @@ pub fn kamino_init_obligation(
         AccountMeta::new_readonly(ctx.accounts.owner_user_metadata.key(), false),
         AccountMeta::new_readonly(ctx.accounts.rent.key(), false), 
         AccountMeta::new_readonly(ctx.accounts.system_program.key(), false), 
-        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false), // Not sure if this is needed
     ];
 
     let discriminator = sighash("global", "init_obligation");
@@ -47,7 +48,7 @@ pub fn kamino_init_obligation(
 
 
     let instruction = Instruction {
-        program_id: KAMINO_PROGRAM_ID_MAINNET,
+        program_id: KAMINO_PROGRAM_ID,
         accounts,
         data,
     };
@@ -55,7 +56,7 @@ pub fn kamino_init_obligation(
     invoke_signed(
         &instruction,
         &[
-            ctx.accounts.account.to_account_info(),
+            ctx.accounts.peach_account.to_account_info(),
             ctx.accounts.payer.to_account_info(),
             ctx.accounts.obligation.clone(),
             ctx.accounts.lending_market.clone(),
@@ -66,7 +67,7 @@ pub fn kamino_init_obligation(
             ctx.accounts.system_program.to_account_info(),
             ctx.accounts.kamino_program.clone(), 
         ],
-        &[signer_seeds],
+        &[&account_seeds.signer_seeds()],
     )?;
 
     Ok(())
@@ -83,10 +84,9 @@ pub struct KaminoInitObligation<'info> {
 
     #[account(
         mut,
-        seeds = [payer.key().as_ref(), market.key().as_ref()],
-        bump,
+        has_one = market,
     )]
-    pub account: AccountLoader<'info, PeachAccountFixed>, 
+    pub peach_account: AccountLoader<'info, PeachAccountFixed>, 
         
     /// CHECK: Verified by Kamino program
     #[account(mut)]

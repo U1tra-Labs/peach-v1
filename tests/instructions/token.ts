@@ -4,12 +4,12 @@ import * as anchor from "@coral-xyz/anchor";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 
-export async function tokenRegister(tokenIndex: number, mint: PublicKey, marketPDA: PublicKey, vaultPDA: PublicKey, mintInfoPDA: PublicKey, bankPDA: PublicKey, stubOracle: PublicKey, admin: Keypair) {
+export async function tokenRegister(tokenIndex: number, usdc_mint: PublicKey, marketPDA: PublicKey, vaultPDA: PublicKey, mintInfoPDA: PublicKey, bankPDA: PublicKey, stubOracle: PublicKey, admin: Keypair) {
     const ix1 = await program.methods.tokenVaultCreate(tokenIndex)
       .accounts({
         market: marketPDA,
         admin: admin.publicKey,
-        mint,
+        mint: usdc_mint,
         vault: vaultPDA,
         payer: admin.publicKey, // This is the payer
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -62,7 +62,7 @@ export async function tokenRegister(tokenIndex: number, mint: PublicKey, marketP
       .accounts({
         market: marketPDA,
         admin: admin.publicKey,
-        mint,
+        mint: usdc_mint,
         bank: bankPDA,
         vault: vaultPDA,
         mintInfo: mintInfoPDA,

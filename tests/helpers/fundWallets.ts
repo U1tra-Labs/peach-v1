@@ -3,21 +3,12 @@ import { Program } from "@coral-xyz/anchor";
 import { PeachV1 } from "../../target/types/peach_v1";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey, Transaction } from "@solana/web3.js";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
+import { LAMPORTS_PER_SOL_FOR_TEST_WALLETS } from "./const";
 
 export const provider = anchor.AnchorProvider.env();
 anchor.setProvider(provider);
 export const program = anchor.workspace.PeachV1 as Program<PeachV1>;
 export const envProviderPayer = (provider.wallet as NodeWallet).payer;
-
-export async function airdrop(wallet: PublicKey) {
-    try {
-        const signature = await provider.connection.requestAirdrop(wallet, 2 * LAMPORTS_PER_SOL);
-        await provider.connection.confirmTransaction(signature);
-    } catch (e) {   
-        return false;
-    }
-    return true;
-}
 
 export async function transferSol(sender: Keypair, receiver: PublicKey, amount: number) {
     try {
@@ -37,8 +28,7 @@ export async function transferSol(sender: Keypair, receiver: PublicKey, amount: 
 
 export async function getFundedWallet() {
     const wallet = new Keypair();
-    // const airdropSuccess = airdrop(wallet.publicKey);
-    const transferSuccess = await transferSol(envProviderPayer, wallet.publicKey, 0.2 * LAMPORTS_PER_SOL);
+    const transferSuccess = await transferSol(envProviderPayer, wallet.publicKey, LAMPORTS_PER_SOL_FOR_TEST_WALLETS * LAMPORTS_PER_SOL);
     return transferSuccess ? wallet : null;
 }
 
