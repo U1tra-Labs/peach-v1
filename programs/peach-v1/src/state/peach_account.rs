@@ -8,7 +8,7 @@ use anchor_lang::Discriminator;
 use arrayref::array_ref;
 use derivative::Derivative;
 use fixed::types::I80F48;
-use solana_program::program_memory::sol_memmove;
+use anchor_lang::solana_program::program_memory::sol_memmove;
 use static_assertions::const_assert_eq;
 use crate::error::Contextable;
 use crate::error::PeachError;
@@ -292,7 +292,7 @@ impl Owner for PeachAccountFixed {
 }
 
 impl Discriminator for PeachAccountFixed {
-    const DISCRIMINATOR: [u8; 8] = PeachAccount::DISCRIMINATOR;
+    const DISCRIMINATOR: &'static [u8] = PeachAccount::DISCRIMINATOR;
 }
 
 impl anchor_lang::ZeroCopy for PeachAccountFixed {}
@@ -624,7 +624,7 @@ impl<
                     cumulative_borrow_interest: 0.0,
                     previous_index: I80F48::ZERO,
                     padding: Default::default(),
-                    reserved: [0; 128],
+                    // reserved: [0; 128],
                 };
             }
             Ok((v, raw_index, bank_index))
@@ -1089,8 +1089,8 @@ impl<'a, 'info: 'a> PeachAccountLoader<'a> for &'a AccountLoader<'info, PeachAcc
             let mut data = self.as_ref().try_borrow_mut_data()?;
 
             let disc_bytes: &mut [u8] = &mut data[0..8];
-            disc_bytes.copy_from_slice(bytemuck::bytes_of(&(PeachAccount::discriminator())));
-
+            // disc_bytes.copy_from_slice(bytemuck::bytes_of(PeachAccount::DISCRIMINATOR));
+            disc_bytes.copy_from_slice(&PeachAccount::DISCRIMINATOR);
             PeachAccountDynamicHeader::initialize(&mut data[8 + size_of::<PeachAccountFixed>()..])?;
         }
 

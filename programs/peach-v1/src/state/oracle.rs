@@ -3,14 +3,14 @@ use anchor_lang::{AnchorDeserialize, Discriminator};
 use static_assertions::const_assert_eq;
 use std::mem::size_of;
 use pyth_solana_receiver_sdk::price_update::VerificationLevel;
-use switchboard_on_demand::PullFeedAccountData;
-use switchboard_program::FastRoundResultAccountData;
-use switchboard_v2::AggregatorAccountData;
+// use switchboard_on_demand::PullFeedAccountData;
+// use switchboard_program::FastRoundResultAccountData;
+// use switchboard_v2::AggregatorAccountData;
 
 use crate::accounts_zerocopy::*;
 use crate::error::PeachError;
-use crate::error_msg;
-use crate::error::Contextable;
+// use crate::error_msg;
+// use crate::error::Contextable;
 
 use fixed::types::I80F48;
 use derivative::Derivative;
@@ -52,45 +52,45 @@ pub const SOL_DECIMALS: i8 = 9;
 pub const QUOTE_NATIVE_TO_UI: I80F48 = power_of_ten(-QUOTE_DECIMALS);
 
 pub mod switchboard_v1_devnet_oracle {
-    use solana_program::declare_id;
+    use anchor_lang::solana_program::declare_id;
     declare_id!("7azgmy1pFXHikv36q1zZASvFq5vFa39TT9NweVugKKTU");
 }
 pub mod switchboard_v2_mainnet_oracle {
-    use solana_program::declare_id;
+    use anchor_lang::solana_program::declare_id;
     declare_id!("DtmE9D2CSB4L5D6A15mraeEjrGMm6auWVzgaD8hK2tZM");
 }
 
 pub mod switchboard_on_demand_devnet_oracle {
-    use solana_program::declare_id;
+    use anchor_lang::solana_program::declare_id;
     declare_id!("SBondMDrcV3K4kxZR1HNVT7osZxAHVHgYXL5Ze1oMUv");
 }
 pub mod switchboard_on_demand_mainnet_oracle {
-    use solana_program::declare_id;
+    use anchor_lang::solana_program::declare_id;
     declare_id!("SBondMDrcV3K4kxZR1HNVT7osZxAHVHgYXL5Ze1oMUv");
 }
 
 pub mod pyth_mainnet_usdc_oracle {
-    use solana_program::declare_id;
+    use anchor_lang::solana_program::declare_id;
     declare_id!("Gnt27xtC473ZT2Mw5u8wZ68Z3gULkSTb5DuxJy7eJotD");
 }
 
 pub mod pyth_mainnet_sol_oracle {
-    use solana_program::declare_id;
+    use anchor_lang::solana_program::declare_id;
     declare_id!("H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG");
 }
 
 pub mod usdc_mint_mainnet {
-    use solana_program::declare_id;
+    use anchor_lang::solana_program::declare_id;
     declare_id!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 }
 
 pub mod sol_mint_mainnet {
-    use solana_program::declare_id;
+    use anchor_lang::solana_program::declare_id;
     declare_id!("So11111111111111111111111111111111111111112");
 }
 
 #[zero_copy]
-#[derive(AnchorDeserialize, AnchorSerialize, Derivative, PartialEq, Eq)]
+#[derive(Derivative, PartialEq, Eq)]
 #[derivative(Debug)]
 pub struct OracleConfig {
     pub conf_filter: I80F48,
@@ -119,11 +119,11 @@ impl OracleConfigParams {
 pub enum OracleType {
     Pyth,
     Stub,
-    SwitchboardV1, // Obsolete
-    SwitchboardV2,
+    // SwitchboardV1, // Obsolete
+    // SwitchboardV2,
     // OrcaCLMM,
     // RaydiumCLMM,
-    SwitchboardOnDemand,
+    // SwitchboardOnDemand,
     PythV2,
 }
 
@@ -196,7 +196,7 @@ pub struct StubOracle {
     pub last_update_ts: i64,
     pub last_update_slot: u64,
     pub deviation: I80F48,
-    pub reserved: [u8; 104],
+    pub reserved: [u8; 16],
 }
 // const_assert_eq!(size_of::<StubOracle>(), 32 + 32 + 16 + 8 + 8 + 16 + 104);
 // const_assert_eq!(size_of::<StubOracle>(), 216);
@@ -228,28 +228,29 @@ pub fn determine_oracle_type(acc_info: &impl KeyedAccountReader) -> Result<Oracl
 
     if u32::from_le_bytes(data[0..4].try_into().unwrap()) == pyth_sdk_solana::state::MAGIC {
         return Ok(OracleType::Pyth);
-    } else if data[0..8] == StubOracle::discriminator() {
+    } else if &data[0..8] == StubOracle::DISCRIMINATOR {
         return Ok(OracleType::Stub);
     }
     // https://github.com/switchboard-xyz/switchboard-v2/blob/main/libraries/rs/src/aggregator.rs#L114
     // note: disc is not public, hence the copy pasta
-    else if data[0..8] == [217, 230, 65, 101, 201, 162, 27, 125] {
-        return Ok(OracleType::SwitchboardV2);
-    }
+    // else if data[0..8] == [217, 230, 65, 101, 201, 162, 27, 125] {
+    //     return Ok(OracleType::SwitchboardV2);
+    // }
     // note: this is the only known way of checking this
-    else if acc_info.owner() == &switchboard_v1_devnet_oracle::ID
-        || acc_info.owner() == &switchboard_v2_mainnet_oracle::ID
-    {
-        return Ok(OracleType::SwitchboardV1);
-    } else if acc_info.owner() == &switchboard_on_demand_devnet_oracle::ID
-        || acc_info.owner() == &switchboard_on_demand_mainnet_oracle::ID
-    {
-        return Ok(OracleType::SwitchboardOnDemand);
+    // else if acc_info.owner() == &switchboard_v1_devnet_oracle::ID
+    //     || acc_info.owner() == &switchboard_v2_mainnet_oracle::ID
+    // {
+    //     return Ok(OracleType::SwitchboardV1);
+    // } else if acc_info.owner() == &switchboard_on_demand_devnet_oracle::ID
+    //     || acc_info.owner() == &switchboard_on_demand_mainnet_oracle::ID
+    // {
+    //     return Ok(OracleType::SwitchboardOnDemand);
     // } else if acc_info.owner() == &orca_mainnet_whirlpool::ID {
     //     return Ok(OracleType::OrcaCLMM);
     // } else if acc_info.owner() == &raydium_mainnet::ID {
     //     return Ok(OracleType::RaydiumCLMM);
-    } else if acc_info.owner() == &pyth_solana_receiver_sdk::ID {
+    // } 
+    else if acc_info.owner() == &pyth_solana_receiver_sdk::ID {
         return Ok(OracleType::PythV2);
     }
 
@@ -302,7 +303,7 @@ fn oracle_state_unchecked_inner<T: KeyedAccountReader>(
     } else {
         acc_infos.oracle
     };
-    let data = &oracle_info.data();
+    let _data = &oracle_info.data();
     let oracle_type = determine_oracle_type(oracle_info)?;
 
     Ok(match oracle_type {
@@ -330,88 +331,88 @@ fn oracle_state_unchecked_inner<T: KeyedAccountReader>(
         }
         OracleType::Pyth => get_pyth_state(oracle_info, base_decimals)?,
         OracleType::PythV2 => get_pyth_on_demand_state(oracle_info, base_decimals)?,
-        OracleType::SwitchboardV2 => {
-            fn from_foreign_error(e: impl std::fmt::Display) -> Error {
-                error_msg!("{}", e)
-            }
+        // OracleType::SwitchboardV2 => {
+        //     fn from_foreign_error(e: impl std::fmt::Display) -> Error {
+        //         error_msg!("{}", e)
+        //     }
 
-            let feed = bytemuck::from_bytes::<AggregatorAccountData>(&data[8..]);
-            let feed_result = feed.get_result().map_err(from_foreign_error)?;
-            let ui_price: f64 = feed_result.try_into().map_err(from_foreign_error)?;
-            let ui_deviation: f64 = feed
-                .latest_confirmed_round
-                .std_deviation
-                .try_into()
-                .map_err(from_foreign_error)?;
+        //     let feed = bytemuck::from_bytes::<AggregatorAccountData>(&data[8..]);
+        //     let feed_result = feed.get_result().map_err(from_foreign_error)?;
+        //     let ui_price: f64 = feed_result.try_into().map_err(from_foreign_error)?;
+        //     let ui_deviation: f64 = feed
+        //         .latest_confirmed_round
+        //         .std_deviation
+        //         .try_into()
+        //         .map_err(from_foreign_error)?;
 
-            // The round_open_slot is an underestimate of the last update slot: Reporters will see
-            // the round opening and only then start executing the price tasks.
-            let last_update_slot = feed.latest_confirmed_round.round_open_slot;
+        //     // The round_open_slot is an underestimate of the last update slot: Reporters will see
+        //     // the round opening and only then start executing the price tasks.
+        //     let last_update_slot = feed.latest_confirmed_round.round_open_slot;
 
-            let decimals = QUOTE_DECIMALS - (base_decimals as i8);
-            let decimal_adj = power_of_ten(decimals);
-            let price = I80F48::from_num(ui_price) * decimal_adj;
-            let deviation = I80F48::from_num(ui_deviation) * decimal_adj;
-            require_gte!(price, 0);
-            OracleState {
-                price,
-                last_update_slot,
-                deviation,
-                oracle_type: OracleType::SwitchboardV2,
-                last_update_time: None,
-            }
-        }
-        OracleType::SwitchboardV1 => {
-            let result = FastRoundResultAccountData::deserialize(data).unwrap();
-            let ui_price = I80F48::from_num(result.result.result);
+        //     let decimals = QUOTE_DECIMALS - (base_decimals as i8);
+        //     let decimal_adj = power_of_ten(decimals);
+        //     let price = I80F48::from_num(ui_price) * decimal_adj;
+        //     let deviation = I80F48::from_num(ui_deviation) * decimal_adj;
+        //     require_gte!(price, 0);
+        //     OracleState {
+        //         price,
+        //         last_update_slot,
+        //         deviation,
+        //         oracle_type: OracleType::SwitchboardV2,
+        //         last_update_time: None,
+        //     }
+        // }
+        // OracleType::SwitchboardV1 => {
+        //     let result = FastRoundResultAccountData::deserialize(data).unwrap();
+        //     let ui_price = I80F48::from_num(result.result.result);
 
-            let ui_deviation =
-                I80F48::from_num(result.result.max_response - result.result.min_response);
-            let last_update_slot = result.result.round_open_slot;
+        //     let ui_deviation =
+        //         I80F48::from_num(result.result.max_response - result.result.min_response);
+        //     let last_update_slot = result.result.round_open_slot;
 
-            let decimals = QUOTE_DECIMALS - (base_decimals as i8);
-            let decimal_adj = power_of_ten(decimals);
-            let price = ui_price * decimal_adj;
-            let deviation = ui_deviation * decimal_adj;
-            require_gte!(price, 0);
-            OracleState {
-                price,
-                last_update_slot,
-                deviation,
-                oracle_type: OracleType::SwitchboardV1,
-                last_update_time: None,
-            }
-        }
-        OracleType::SwitchboardOnDemand => {
-            fn from_foreign_error(e: impl std::fmt::Display) -> Error {
-                error_msg!("{}", e)
-            }
-            let feed = bytemuck::from_bytes::<PullFeedAccountData>(&data[8..]);
-            let ui_price: f64 = feed
-                .value()
-                .ok_or_else(|| error_msg!("missing price"))?
-                .try_into()
-                .map_err(from_foreign_error)?;
-            let ui_deviation: f64 = feed
-                .std_dev()
-                .ok_or_else(|| error_msg!("missing deviation"))?
-                .try_into()
-                .map_err(from_foreign_error)?;
-            let last_update_slot = feed.result.min_slot;
+        //     let decimals = QUOTE_DECIMALS - (base_decimals as i8);
+        //     let decimal_adj = power_of_ten(decimals);
+        //     let price = ui_price * decimal_adj;
+        //     let deviation = ui_deviation * decimal_adj;
+        //     require_gte!(price, 0);
+        //     OracleState {
+        //         price,
+        //         last_update_slot,
+        //         deviation,
+        //         oracle_type: OracleType::SwitchboardV1,
+        //         last_update_time: None,
+        //     }
+        // }
+        // OracleType::SwitchboardOnDemand => {
+        //     fn from_foreign_error(e: impl std::fmt::Display) -> Error {
+        //         error_msg!("{}", e)
+        //     }
+        //     let feed = bytemuck::from_bytes::<PullFeedAccountData>(&data[8..]);
+        //     let ui_price: f64 = feed
+        //         .value()
+        //         .ok_or_else(|| error_msg!("missing price"))?
+        //         .try_into()
+        //         .map_err(from_foreign_error)?;
+        //     let ui_deviation: f64 = feed
+        //         .std_dev()
+        //         .ok_or_else(|| error_msg!("missing deviation"))?
+        //         .try_into()
+        //         .map_err(from_foreign_error)?;
+        //     let last_update_slot = feed.result.min_slot;
 
-            let decimals = QUOTE_DECIMALS - (base_decimals as i8);
-            let decimal_adj = power_of_ten(decimals);
-            let price = I80F48::from_num(ui_price) * decimal_adj;
-            let deviation = I80F48::from_num(ui_deviation) * decimal_adj;
-            require_gte!(price, 0);
-            OracleState {
-                price,
-                last_update_slot,
-                deviation,
-                oracle_type: OracleType::SwitchboardOnDemand,
-                last_update_time: None,
-            }
-        }
+        //     let decimals = QUOTE_DECIMALS - (base_decimals as i8);
+        //     let decimal_adj = power_of_ten(decimals);
+        //     let price = I80F48::from_num(ui_price) * decimal_adj;
+        //     let deviation = I80F48::from_num(ui_deviation) * decimal_adj;
+        //     require_gte!(price, 0);
+        //     OracleState {
+        //         price,
+        //         last_update_slot,
+        //         deviation,
+        //         oracle_type: OracleType::SwitchboardOnDemand,
+        //         last_update_time: None,
+        //     }
+        // }
         // OracleType::OrcaCLMM => {
         //     let whirlpool = load_orca_pool_state(oracle_info)?;
         //     let clmm_price = whirlpool.get_clmm_price();

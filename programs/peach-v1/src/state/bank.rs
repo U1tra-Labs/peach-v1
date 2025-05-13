@@ -25,7 +25,7 @@ pub struct Bank{
     #[derivative(Debug(format_with = "util::format_zero_terminated_utf8_bytes"))]
     pub name: [u8; 16],
 
-    pub _padding1: [u8; 16],
+    // pub _padding1: [u8; 0],
 
     pub mint: Pubkey,
     pub vault: Pubkey,
@@ -220,7 +220,7 @@ pub struct Bank{
     /// The daily collateral fees rate for fully utilized collateral.
     pub collateral_fee_per_day: f32,
 
-    pub _padding3: [u8; 4]
+    pub _padding3: [u8; 4],
 
     // #[derivative(Debug = "ignore")]
     // pub reserved: [u8; 1900],
@@ -326,7 +326,7 @@ impl Bank{
             zero_util_rate: existing_bank.zero_util_rate,
             platform_liquidation_fee: existing_bank.platform_liquidation_fee,
             collateral_fee_per_day: existing_bank.collateral_fee_per_day,
-            _padding1: [0; 16],
+            // _padding1: [0; 16],
             _padding2: [0; 4],
             _padding3: [0; 4],
         }

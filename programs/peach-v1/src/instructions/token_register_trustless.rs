@@ -93,7 +93,7 @@ pub fn token_register_trustless(
         collected_collateral_fees: I80F48::ZERO,
         collateral_fee_per_day: 0.0, // TODO
         tier: fill_from_str("C")?,
-        _padding1: Default::default(),
+        // _padding1: Default::default(),
         _padding2: Default::default(),
         _padding3: Default::default(),
     };

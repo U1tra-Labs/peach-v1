@@ -35,6 +35,7 @@ pub struct TokenPosition {
     // bookkeeping variable for onchain interest calculation
     // either deposit_index or borrow_index at last indexed_position change
     pub previous_index: I80F48,
+
     // (Display only)
     // Cumulative deposit interest in token native units
     pub cumulative_deposit_interest: f64,
@@ -42,8 +43,8 @@ pub struct TokenPosition {
     // Cumulative borrow interest in token native units
     pub cumulative_borrow_interest: f64,
 
-    #[derivative(Debug = "ignore")]
-    pub reserved: [u8; 128],
+    // #[derivative(Debug = "ignore")]
+    // pub reserved: [u8; 128],
 }
 // const_assert_eq!(
 //     size_of::<TokenPosition>(),
@@ -63,7 +64,7 @@ impl Default for TokenPosition {
             cumulative_borrow_interest: 0.0,
             previous_index: I80F48::ZERO,
             padding: Default::default(),
-            reserved: [0; 128],
+            // reserved: [0; 128],
         }
     }
 }

@@ -123,7 +123,7 @@ pub fn token_register(
         collected_collateral_fees: I80F48::ZERO,
         collateral_fee_per_day,
         tier: fill_from_str(&tier)?,
-        _padding1: Default::default(),
+        // _padding1: Default::default(),
         _padding2: Default::default(),
         _padding3: Default::default(),
     };
