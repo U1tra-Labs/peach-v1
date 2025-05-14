@@ -102,7 +102,7 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
         let unsafe_oracle_price = unsafe_oracle_state.price;
 
         // If increasing total deposits, check deposit limits
-        if indexed_position > 0 {
+        if indexed_position.is_positive() {
             bank.check_deposit_and_oo_limit()?;
         }
 
@@ -113,10 +113,10 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
         emit_stack(TokenBalanceLog {
             peach_market: self.market.key(),
             peach_account: self.account.key(),
-            token_index,
-            indexed_position: indexed_position.to_bits(),
-            deposit_index: bank.deposit_index.to_bits(),
-            borrow_index: bank.borrow_index.to_bits(),
+            token_index: token_index.0,
+            indexed_position: indexed_position.0,
+            deposit_index: bank.deposit_index.0,
+            borrow_index: bank.borrow_index.0,
         });
         drop(bank);
 
@@ -190,7 +190,7 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
             peach_market: self.market.key(),
             peach_account: self.account.key(),
             signer: self.token_authority.key(),
-            token_index,
+            token_index: token_index.0,
             quantity: amount_i80f48.to_num::<u64>(),
             price: unsafe_oracle_price.to_bits(),
         });

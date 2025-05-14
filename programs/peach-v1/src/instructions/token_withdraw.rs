@@ -110,10 +110,10 @@ pub fn token_withdraw(ctx: Context<TokenWithdraw>, amount: u64, allow_borrow: bo
     emit_stack(TokenBalanceLog {
         peach_market: ctx.accounts.market.key(),
         peach_account: ctx.accounts.account.key(),
-        token_index,
-        indexed_position: position.indexed_position.to_bits(),
-        deposit_index: bank.deposit_index.to_bits(),
-        borrow_index: bank.borrow_index.to_bits(),
+        token_index: token_index.0,
+        indexed_position: position.indexed_position.val().to_bits(),
+        deposit_index: bank.deposit_index.val().to_bits(),
+        borrow_index: bank.borrow_index.val().to_bits(),
     });
 
     // Update the net deposits - adjust by price so different tokens are on the same basis (in USD terms)
@@ -187,7 +187,7 @@ pub fn token_withdraw(ctx: Context<TokenWithdraw>, amount: u64, allow_borrow: bo
         peach_market: ctx.accounts.market.key(),
         peach_account: ctx.accounts.account.key(),
         signer: ctx.accounts.owner.key(),
-        token_index,
+        token_index: token_index.0,
         quantity: amount,
         price: unsafe_oracle_state.price.to_bits(),
     });
@@ -196,7 +196,7 @@ pub fn token_withdraw(ctx: Context<TokenWithdraw>, amount: u64, allow_borrow: bo
         emit_stack(WithdrawLoanLog {
             peach_market: ctx.accounts.market.key(),
             peach_account: ctx.accounts.account.key(),
-            token_index,
+            token_index: token_index.0,
             loan_amount: withdraw_result.loan_amount.to_bits(),
             loan_origination_fee: withdraw_result.loan_origination_fee.to_bits(),
             instruction: LoanOriginationFeeInstruction::TokenWithdraw,

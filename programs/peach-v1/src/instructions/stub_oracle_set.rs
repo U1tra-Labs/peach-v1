@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
-use fixed::types::I80F48;
 
 use crate::{error::PeachError, state::*};
+use crate::state::bank::MyFixedIdlWrapper;
 
-pub fn stub_oracle_set(ctx: Context<StubOracleSet>, price: I80F48) -> Result<()> {
+pub fn stub_oracle_set(ctx: Context<StubOracleSet>, price: MyFixedIdlWrapper) -> Result<()> {
     let mut oracle = ctx.accounts.oracle.load_mut()?;
     oracle.price = price;
     oracle.last_update_ts = Clock::get()?.unix_timestamp;
@@ -13,9 +13,9 @@ pub fn stub_oracle_set(ctx: Context<StubOracleSet>, price: I80F48) -> Result<()>
 
 pub fn stub_oracle_set_test(
     ctx: Context<StubOracleSet>,
-    price: I80F48,
+    price: MyFixedIdlWrapper,
     last_update_slot: u64,
-    deviation: I80F48,
+    deviation: MyFixedIdlWrapper,
 ) -> Result<()> {
     let mut oracle = ctx.accounts.oracle.load_mut()?;
     oracle.price = price;
@@ -23,6 +23,30 @@ pub fn stub_oracle_set_test(
     oracle.last_update_slot = last_update_slot;
     oracle.deviation = deviation;
 
+    Ok(())
+}
+
+pub fn stub_oracle_set_price(ctx: Context<StubOracleSet>, price: MyFixedIdlWrapper) -> Result<()> {
+    let mut oracle = ctx.accounts.oracle.load_mut()?;
+    // TODO: Should we allow setting this to 0?
+    oracle.price = price;
+    oracle.last_update_ts = Clock::get()?.unix_timestamp;
+    oracle.last_update_slot = Clock::get()?.slot;
+    Ok(())
+}
+
+pub fn stub_oracle_set_all(
+    ctx: Context<StubOracleSet>,
+    price: MyFixedIdlWrapper,
+    last_update_ts: i64,
+    last_update_slot: u64,
+    deviation: MyFixedIdlWrapper,
+) -> Result<()> {
+    let mut oracle = ctx.accounts.oracle.load_mut()?;
+    oracle.price = price;
+    oracle.last_update_ts = last_update_ts;
+    oracle.last_update_slot = last_update_slot;
+    oracle.deviation = deviation;
     Ok(())
 }
 

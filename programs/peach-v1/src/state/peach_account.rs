@@ -6,7 +6,6 @@ use anchor_lang::zero_copy;
 use anchor_lang::prelude::*;
 use anchor_lang::Discriminator;
 use arrayref::array_ref;
-use derivative::Derivative;
 use fixed::types::I80F48;
 use anchor_lang::solana_program::program_memory::sol_memmove;
 use static_assertions::const_assert_eq;
@@ -16,7 +15,6 @@ use crate::error_msg_typed;
 use crate::health::HealthCache;
 use crate::health::HealthType;
 use crate::logs::emit_stack;
-use crate::util;
 use crate::logs::DeactivateTokenPositionLog;
 use crate::state::*;
 
@@ -69,8 +67,7 @@ impl PeachAccountPdaSeeds {
 // When not reading via idl, PeachAccount binary data is backwards compatible: when ignoring trailing bytes,
 // a v2 account can be read as a v1 account and a v3 account can be read as v1 or v2 etc.
 #[account]
-#[derive(Derivative, PartialEq)]
-#[derivative(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct PeachAccount {
     // fixed
     // note: keep PeachAccountFixed in sync with changes here
@@ -80,7 +77,6 @@ pub struct PeachAccount {
     // ABI: Clients rely on this being at offset 40
     pub owner: Pubkey,
 
-    #[derivative(Debug(format_with = "util::format_zero_terminated_utf8_bytes"))]
     pub name: [u8; 32],
 
     // Alternative authority/signer of transactions for a peach account
@@ -139,20 +135,16 @@ pub struct PeachAccount {
     /// Time at which the last collateral fee was charged
     pub last_collateral_fee_charge: u64,
 
-    #[derivative(Debug = "ignore")]
     pub reserved: [u8; 152],
 
     // dynamic
     pub header_version: u8,
-    #[derivative(Debug = "ignore")]
     pub padding3: [u8; 7],
     // note: padding is required for TokenPosition, etc. to be aligned
-    #[derivative(Debug = "ignore")]
     pub padding4: u32,
     // Maps token_index -> deposit/borrow account for each token
     // that is active on this PeachAccount.
     pub tokens: Vec<TokenPosition>,
-    #[derivative(Debug = "ignore")]
     pub padding5: u32,
     // Maps serum_market_index -> open orders for each serum market
     // that is active on this PeachAccount.
@@ -167,7 +159,6 @@ pub struct PeachAccount {
     // pub padding8: u32,
     // pub token_conditional_swaps: Vec<TokenConditionalSwap>,
 
-    #[derivative(Debug = "ignore")]
     pub reserved_dynamic: [u8; 64],
 }
 
@@ -616,15 +607,16 @@ impl<
             let v = self.token_position_mut_by_raw_index(raw_index);
             if !v.is_active_for_token(token_index) {
                 *v = TokenPosition {
-                    indexed_position: I80F48::ZERO,
+                    indexed_position: MyFixedIdlWrapper::zero(),
                     token_index,
                     is_kamino_position,
                     in_use_count: 0,
+                    padding: [0; 3],
+                    _internal_padding_align_prev_idx: [0; 8],
+                    previous_index: MyFixedIdlWrapper::zero(),
                     cumulative_deposit_interest: 0.0,
                     cumulative_borrow_interest: 0.0,
-                    previous_index: I80F48::ZERO,
-                    padding: Default::default(),
-                    // reserved: [0; 128],
+                    _struct_padding_for_pod: [0; 16],
                 };
             }
             Ok((v, raw_index, bank_index))
@@ -645,7 +637,7 @@ impl<
         emit_stack(DeactivateTokenPositionLog {
             peach_market: peach_market,
             peach_account: peach_account_pubkey,
-            token_index: token_position.token_index,
+            token_index: token_position.token_index.0,
             cumulative_deposit_interest: token_position.cumulative_deposit_interest,
             cumulative_borrow_interest: token_position.cumulative_borrow_interest,
         });

@@ -13,6 +13,7 @@ use derivative::Derivative;
 /// price over every `delay_interval_seconds` (assume 1h) and then applying the
 /// `delay_growth_limit` between intervals.
 #[zero_copy]
+#[repr(C)]
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct StablePriceModel {

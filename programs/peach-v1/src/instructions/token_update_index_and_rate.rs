@@ -67,8 +67,8 @@ pub fn token_update_index_and_rate(
     let mut indexed_total_borrows = I80F48::ZERO;
     for ai in ctx.remaining_accounts.iter() {
         let bank = ai.load::<Bank>()?;
-        indexed_total_deposits += bank.indexed_deposits;
-        indexed_total_borrows += bank.indexed_borrows;
+        indexed_total_deposits += bank.indexed_deposits.val();
+        indexed_total_borrows += bank.indexed_borrows.val();
     }
 
     // compute and set latest index and average utilization on each bank
@@ -106,7 +106,7 @@ pub fn token_update_index_and_rate(
         let (deposit_index, borrow_index, borrow_fees, borrow_rate, deposit_rate) =
             some_bank.compute_index(indexed_total_deposits, indexed_total_borrows, diff_ts)?;
 
-        some_bank.collected_fees_native += borrow_fees;
+        some_bank.collected_fees_native = (some_bank.collected_fees_native.val() + borrow_fees).into();
 
         let new_avg_utilization = some_bank.compute_new_avg_utilization(
             indexed_total_deposits,
@@ -125,15 +125,15 @@ pub fn token_update_index_and_rate(
             && now_ts >= some_bank.maint_weight_shift_end;
 
         emit_stack(UpdateIndexLog {
-            peach_market: mint_info.market.key(),
-            token_index: mint_info.token_index,
+            peach_market: ctx.accounts.market.key(),
+            token_index: mint_info.token_index.0,
             deposit_index: deposit_index.to_bits(),
             borrow_index: borrow_index.to_bits(),
             avg_utilization: new_avg_utilization.to_bits(),
             price: price.to_bits(),
             stable_price: some_bank.stable_price().to_bits(),
-            collected_fees: some_bank.collected_fees_native.to_bits(),
-            loan_fee_rate: some_bank.loan_fee_rate.to_bits(),
+            collected_fees: some_bank.collected_fees_native.val().to_bits(),
+            loan_fee_rate: some_bank.loan_fee_rate.val().to_bits(),
             total_deposits: (deposit_index * indexed_total_deposits).to_bits(),
             total_borrows: (borrow_index * indexed_total_borrows).to_bits(),
             borrow_rate: borrow_rate.to_bits(),
@@ -154,19 +154,19 @@ pub fn token_update_index_and_rate(
 
             bank.index_last_updated = now_ts;
 
-            bank.deposit_index = deposit_index;
-            bank.borrow_index = borrow_index;
+            bank.deposit_index = deposit_index.into();
+            bank.borrow_index = borrow_index.into();
 
-            bank.avg_utilization = new_avg_utilization;
+            bank.avg_utilization = new_avg_utilization.into();
 
             bank.stable_price_model = stable_price_model;
 
             if maint_shift_done {
                 bank.maint_asset_weight = bank.maint_weight_shift_asset_target;
                 bank.maint_liab_weight = bank.maint_weight_shift_liab_target;
-                bank.maint_weight_shift_duration_inv = I80F48::ZERO;
-                bank.maint_weight_shift_asset_target = I80F48::ZERO;
-                bank.maint_weight_shift_liab_target = I80F48::ZERO;
+                bank.maint_weight_shift_duration_inv = I80F48::ZERO.into();
+                bank.maint_weight_shift_asset_target = I80F48::ZERO.into();
+                bank.maint_weight_shift_liab_target = I80F48::ZERO.into();
                 bank.maint_weight_shift_start = 0;
                 bank.maint_weight_shift_end = 0;
             }
@@ -182,16 +182,18 @@ pub fn token_update_index_and_rate(
         // update each hour
         if diff_ts > HOUR {
             // First setup when new parameters are introduced
-            if some_bank.interest_curve_scaling == 0.0 {
-                let old_max_rate = 0.5;
-                some_bank.interest_curve_scaling =
-                    some_bank.max_rate.to_num::<f64>() / old_max_rate;
-                some_bank.interest_target_utilization = some_bank.util0.to_num();
-
-                let descale_factor = I80F48::from_num(1.0 / some_bank.interest_curve_scaling);
-                some_bank.rate0 *= descale_factor;
-                some_bank.rate1 *= descale_factor;
-                some_bank.max_rate *= descale_factor;
+            if some_bank.interest_curve_scaling.val() == 0.0 {
+                let _market = ctx.accounts.market.load()?;
+                let old_max_rate = 1.1; // Reverted to original hardcoded value
+                some_bank.interest_curve_scaling = F64Bytes::new(some_bank.max_rate.val().to_num::<f64>() / old_max_rate);
+                some_bank.interest_target_utilization = F32Bytes::new(some_bank.util0.val().to_num::<f32>());
+                if old_max_rate != 0.0 {
+                    let descale_factor = I80F48::from_num(1.0 / some_bank.interest_curve_scaling.val());
+                    some_bank.util0 = MyFixedIdlWrapper::new(some_bank.util0.val() * descale_factor);
+                    some_bank.rate0 = MyFixedIdlWrapper::new(some_bank.rate0.val() * descale_factor);
+                    some_bank.rate1 = MyFixedIdlWrapper::new(some_bank.rate1.val() * descale_factor);
+                    some_bank.max_rate = MyFixedIdlWrapper::new(some_bank.max_rate.val() * descale_factor);
+                }
             }
 
             some_bank.update_interest_rate_scaling();
@@ -203,15 +205,15 @@ pub fn token_update_index_and_rate(
             let target_util = some_bank.interest_target_utilization;
 
             emit_stack(UpdateRateLog {
-                peach_market: mint_info.market.key(),
-                token_index: mint_info.token_index,
-                rate0: rate0.to_bits(),
-                util0: some_bank.util0.to_bits(),
-                rate1: rate1.to_bits(),
-                util1: some_bank.util1.to_bits(),
-                max_rate: max_rate.to_bits(),
-                curve_scaling: some_bank.interest_curve_scaling,
-                target_utilization: some_bank.interest_target_utilization,
+                peach_market: ctx.accounts.market.key(),
+                token_index: mint_info.token_index.0,
+                rate0: rate0.val().to_bits(),
+                util0: some_bank.util0.val().to_bits(),
+                rate1: rate1.val().to_bits(),
+                util1: some_bank.util1.val().to_bits(),
+                max_rate: max_rate.val().to_bits(),
+                curve_scaling: some_bank.interest_curve_scaling.val(),
+                target_utilization: some_bank.interest_target_utilization.val(),
             });
 
             drop(some_bank);

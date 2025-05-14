@@ -19,7 +19,7 @@ use fixed::types::I80F48;
 use crate::health::account_retriever::AccountRetriever;
 use crate::error::*;
 use crate::state::{
-    Bank, PeachAccountRef, TokenIndex
+    Bank, PeachAccountRef, TokenIndex, MyFixedIdlWrapper
 };
 
 /// Information about prices for a bank or perp market.
@@ -501,7 +501,7 @@ fn new_health_cache_impl(
                 .contains(&position.token_index);
             if !bank_is_available {
                 require_msg_typed!(
-                    position.indexed_position >= 0,
+                    position.indexed_position >= MyFixedIdlWrapper::zero(),
                     PeachError::InvalidBank,
                     "the bank for token index {} is a required health account when the account has a negative balance in it",
                     position.token_index
@@ -516,7 +516,7 @@ fn new_health_cache_impl(
         // Allow skipping of bad-oracle banks if the account has a nonnegative balance
         if allow_skipping_banks
             && bank_oracle_result.is_oracle_error()
-            && position.indexed_position >= 0
+            && position.indexed_position >= MyFixedIdlWrapper::zero()
         {
             // Ignore the asset because the oracle is bad, decreasing total health
             continue;
@@ -537,10 +537,10 @@ fn new_health_cache_impl(
         token_infos.push(TokenInfo {
             token_index: bank.token_index,
             maint_asset_weight,
-            init_asset_weight: bank.init_asset_weight,
+            init_asset_weight: bank.init_asset_weight.val(),
             init_scaled_asset_weight: bank.scaled_init_asset_weight(liab_price),
             maint_liab_weight,
-            init_liab_weight: bank.init_liab_weight,
+            init_liab_weight: bank.init_liab_weight.val(),
             init_scaled_liab_weight: bank.scaled_init_liab_weight(liab_price),
             prices,
             balance_spot: native,

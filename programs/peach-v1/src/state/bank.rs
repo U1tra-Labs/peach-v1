@@ -4,19 +4,166 @@ use fixed::types::I80F48;
 use crate::state::*;
 use crate::error::*;
 use crate::{accounts_zerocopy::KeyedAccountReader, i80f48::ClampToInt};
+use bytemuck::{Pod, Zeroable};
+use std::io::{Write};
+use std::fmt;
 
-use crate::util;
+// use crate::util;
 
 use super::{OracleAccountInfos, OracleConfig, StablePriceModel, TokenPosition};
 
 pub const HOUR: i64 = 3600;
 pub const YEAR_I80F48: I80F48 = I80F48::from_bits(31_536_000 * I80F48::ONE.to_bits());
 
-pub type TokenIndex = u16;
+#[derive(Clone, Copy, Default, Pod, Zeroable, AnchorSerialize, AnchorDeserialize)]
+#[repr(transparent)]
+pub struct MyFixedIdlWrapper(pub i128);
+
+impl std::fmt::Debug for MyFixedIdlWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        I80F48::from_bits(self.0).fmt(f)
+    }
+}
+
+impl PartialEq for MyFixedIdlWrapper {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+impl Eq for MyFixedIdlWrapper {}
+
+impl PartialOrd for MyFixedIdlWrapper {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        I80F48::from_bits(self.0).partial_cmp(&I80F48::from_bits(other.0))
+    }
+}
+impl Ord for MyFixedIdlWrapper {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        I80F48::from_bits(self.0).cmp(&I80F48::from_bits(other.0))
+    }
+}
+
+impl MyFixedIdlWrapper {
+    pub const ZERO_BITS: i128 = 0;
+    pub const ONE_BITS: i128 = 1_i128 << 48;
+    pub const DELTA_BITS: i128 = 1;
+
+    pub fn new(value: I80F48) -> Self {
+        Self(value.to_bits())
+    }
+
+    pub fn val(self) -> I80F48 {
+        I80F48::from_bits(self.0)
+    }
+
+    pub fn zero() -> Self { Self(Self::ZERO_BITS) }
+    pub fn one() -> Self { Self(Self::ONE_BITS) }
+    pub fn delta() -> Self { Self(Self::DELTA_BITS) }
+
+    pub fn is_positive(self) -> bool { self.val().is_positive() }
+    pub fn is_negative(self) -> bool { self.val().is_negative() }
+    pub fn is_zero(self) -> bool { self.0 == 0 }
+}
+
+impl From<I80F48> for MyFixedIdlWrapper {
+    fn from(value: I80F48) -> Self {
+        Self::new(value)
+    }
+}
+
+impl AccountSerialize for MyFixedIdlWrapper {
+    fn try_serialize<W: Write>(&self, writer: &mut W) -> anchor_lang::Result<()> {
+        writer.write_all(&self.0.to_le_bytes()).map_err(Into::into)
+    }
+}
+
+impl AccountDeserialize for MyFixedIdlWrapper {
+    fn try_deserialize(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+        if buf.len() < std::mem::size_of::<i128>() {
+            return Err(anchor_lang::error::ErrorCode::AccountDidNotDeserialize.into());
+        }
+        let mut bytes = [0u8; std::mem::size_of::<i128>()];
+        bytes.copy_from_slice(&buf[..std::mem::size_of::<i128>()]);
+        *buf = &buf[std::mem::size_of::<i128>()..];
+        Ok(Self(i128::from_le_bytes(bytes)))
+    }
+
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+        if buf.len() < std::mem::size_of::<i128>() {
+            return Err(anchor_lang::error::ErrorCode::AccountDidNotDeserialize.into());
+        }
+        let mut bytes = [0u8; std::mem::size_of::<i128>()];
+        bytes.copy_from_slice(&buf[..std::mem::size_of::<i128>()]);
+        *buf = &buf[std::mem::size_of::<i128>()..];
+        Ok(Self(i128::from_le_bytes(bytes)))
+    }
+}
+
+impl fmt::Display for MyFixedIdlWrapper {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Delegate to I80F48's Display implementation for a human-readable format
+        write!(f, "{}", I80F48::from_bits(self.0))
+    }
+}
+
+#[derive(
+    AnchorSerialize,
+    AnchorDeserialize,
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Pod,
+    Zeroable,
+    Hash
+)]
+#[repr(transparent)]
+pub struct TokenIndex(pub u16);
+
+impl TokenIndex {
+    pub const MAX: Self = TokenIndex(u16::MAX);
+}
+
+impl std::fmt::Display for TokenIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[repr(transparent)]
+#[derive(Clone, Copy, Pod, Zeroable, Default, Debug, AnchorSerialize, AnchorDeserialize)]
+pub struct F64Bytes(pub [u8; 8]);
+
+impl F64Bytes {
+    pub fn new(val: f64) -> Self {
+        Self(val.to_le_bytes())
+    }
+    pub fn val(&self) -> f64 {
+        f64::from_le_bytes(self.0)
+    }
+}
+
+#[repr(transparent)]
+#[derive(Clone, Copy, Pod, Zeroable, Default, Debug, AnchorSerialize, AnchorDeserialize)]
+pub struct F32Bytes(pub [u8; 4]);
+
+impl F32Bytes {
+    pub fn new(val: f32) -> Self {
+        Self(val.to_le_bytes())
+    }
+    pub fn val(&self) -> f32 {
+        f32::from_le_bytes(self.0)
+    }
+}
 
 #[derive(Derivative)]
-#[derivative(Debug)]
+// #[derivative(Debug)] // Commented out to test size mismatch
 #[account(zero_copy)]
+#[repr(C)]
 pub struct Bank{
 
     // ABI: Clients rely on this being at offset 8
@@ -36,8 +183,8 @@ pub struct Bank{
 
     /// the index used to scale the value of an IndexedPosition
     /// TODO: should always be >= 0, add checks?
-    pub deposit_index: I80F48,
-    pub borrow_index: I80F48,
+    pub deposit_index: MyFixedIdlWrapper,
+    pub borrow_index: MyFixedIdlWrapper,
 
     /// deposits/borrows for this bank
     ///
@@ -48,15 +195,15 @@ pub struct Bank{
     /// The vault amount is not deducable from these values.
     ///
     /// These become meaningful when summed over all banks (like in update_index_and_rate).
-    pub indexed_deposits: I80F48,
-    pub indexed_borrows: I80F48,
+    pub indexed_deposits: MyFixedIdlWrapper,
+    pub indexed_borrows: MyFixedIdlWrapper,
 
     pub index_last_updated: u64,
     pub bank_rate_last_updated: u64,
 
-    pub avg_utilization: I80F48,
+    pub avg_utilization: MyFixedIdlWrapper,
 
-    pub adjustment_factor: I80F48,
+    pub adjustment_factor: MyFixedIdlWrapper,
 
     /// The unscaled borrow interest curve is defined as continuous piecewise linear with the points:
     ///
@@ -66,33 +213,33 @@ pub struct Bank{
     /// - 100% util: max_rate
     ///
     /// The final rate is this unscaled curve multiplied by interest_curve_scaling.
-    pub util0: I80F48,
-    pub rate0: I80F48,
-    pub util1: I80F48,
-    pub rate1: I80F48,
+    pub util0: MyFixedIdlWrapper,
+    pub rate0: MyFixedIdlWrapper,
+    pub util1: MyFixedIdlWrapper,
+    pub rate1: MyFixedIdlWrapper,
 
     /// the 100% utilization rate
     ///
     /// This isn't the max_rate, since this still gets scaled by interest_curve_scaling,
     /// which is >=1.
-    pub max_rate: I80F48,
+    pub max_rate: MyFixedIdlWrapper,
 
     /// Fees collected over the lifetime of the bank
     ///
     /// See fees_withdrawn for how much of the fees was withdrawn.
     /// See collected_liquidation_fees for the (included) subtotal for liquidation related fees.
-    pub collected_fees_native: I80F48,
+    pub collected_fees_native: MyFixedIdlWrapper,
 
-    pub loan_origination_fee_rate: I80F48,
-    pub loan_fee_rate: I80F48,
+    pub loan_origination_fee_rate: MyFixedIdlWrapper,
+    pub loan_fee_rate: MyFixedIdlWrapper,
 
     // This is a _lot_ of bytes (64) - seems unnecessary
     // (could maybe store them in one byte each, as an informal U1F7?
     // that could store values between 0-2 and converting to I80F48 would be a cheap expand+shift)
-    pub maint_asset_weight: I80F48,
-    pub init_asset_weight: I80F48,
-    pub maint_liab_weight: I80F48,
-    pub init_liab_weight: I80F48,
+    pub maint_asset_weight: MyFixedIdlWrapper,
+    pub init_asset_weight: MyFixedIdlWrapper,
+    pub maint_liab_weight: MyFixedIdlWrapper,
+    pub init_liab_weight: MyFixedIdlWrapper,
 
     /// Liquidation fee that goes to the liqor.
     ///
@@ -101,10 +248,10 @@ pub struct Bank{
     /// A fraction of the price, like 0.05 for a 5% fee during liquidation.
     ///
     /// See also platform_liquidation_fee.
-    pub liquidation_fee: I80F48,
+    pub liquidation_fee: MyFixedIdlWrapper,
 
     // Collection of all fractions-of-native-tokens that got rounded away
-    pub dust: I80F48,
+    pub dust: MyFixedIdlWrapper,
 
     // Index into TokenInfo on the market
     pub token_index: TokenIndex,
@@ -117,7 +264,7 @@ pub struct Bank{
 
     /// The maximum utilization allowed when borrowing is 1-this value
     /// WARNING: Outdated name, kept for IDL compatibility
-    pub min_vault_to_deposits_ratio: f64,
+    pub min_vault_to_deposits_ratio: F64Bytes,
 
     /// Size in seconds of a net borrows window
     pub net_borrow_limit_window_size_ts: u64,
@@ -134,7 +281,7 @@ pub struct Bank{
     /// Set to f64::MAX to disable.
     ///
     /// See scaled_init_liab_weight().
-    pub borrow_weight_scale_start_quote: f64,
+    pub borrow_weight_scale_start_quote: F64Bytes,
 
     /// Limit for collateral of deposits in native quote
     ///
@@ -143,7 +290,7 @@ pub struct Bank{
     /// Set to f64::MAX to disable.
     ///
     /// See scaled_init_asset_weight().
-    pub deposit_weight_scale_start_quote: f64,
+    pub deposit_weight_scale_start_quote: F64Bytes,
 
     // We have 3 modes
     // 0 - Off,
@@ -170,14 +317,14 @@ pub struct Bank{
 
     /// Target utilization: If actual utilization is higher, scale up interest.
     /// If it's lower, scale down interest (if possible)
-    pub interest_target_utilization: f32,
+    pub interest_target_utilization: F32Bytes,
 
     pub _padding2: [u8; 4],
 
     /// Current interest curve scaling, always >= 1.0
     ///
     /// Except when first migrating to having this field, then 0.0
-    pub interest_curve_scaling: f64,
+    pub interest_curve_scaling: F64Bytes,
 
     /// Start timestamp in seconds at which maint weights should start to change away
     /// from maint_asset_weight, maint_liab_weight towards _asset_target and _liab_target.
@@ -187,10 +334,10 @@ pub struct Bank{
     pub maint_weight_shift_end: u64,
     /// Cache of the inverse of maint_weight_shift_end - maint_weight_shift_start,
     /// or zero if no shift is configured
-    pub maint_weight_shift_duration_inv: I80F48,
+    pub maint_weight_shift_duration_inv: MyFixedIdlWrapper,
     /// Maint asset weight to reach at _shift_end.
-    pub maint_weight_shift_asset_target: I80F48,
-    pub maint_weight_shift_liab_target: I80F48,
+    pub maint_weight_shift_asset_target: MyFixedIdlWrapper,
+    pub maint_weight_shift_liab_target: MyFixedIdlWrapper,
 
     /// Oracle that may be used if the main oracle is unstale or not confident enough.
     /// If this is Pubkey::default(), no fallback is available.
@@ -202,28 +349,28 @@ pub struct Bank{
     /// The unscaled borrow interest curve point for zero utilization.
     ///
     /// See util0, rate0, util1, rate1, max_rate
-    pub zero_util_rate: I80F48,
+    pub zero_util_rate: MyFixedIdlWrapper,
 
     /// Additional to liquidation_fee, but goes to the market owner instead of the liqor
-    pub platform_liquidation_fee: I80F48,
+    pub platform_liquidation_fee: MyFixedIdlWrapper,
 
     /// Platform fees that were collected during liquidation (in native tokens)
     ///
     /// See also collected_fees_native and fees_withdrawn.
-    pub collected_liquidation_fees: I80F48,
+    pub collected_liquidation_fees: MyFixedIdlWrapper,
 
     /// Collateral fees that have been collected (in native tokens)
     ///
     /// See also collected_fees_native and fees_withdrawn.
-    pub collected_collateral_fees: I80F48,
+    pub collected_collateral_fees: MyFixedIdlWrapper,
 
     /// The daily collateral fees rate for fully utilized collateral.
-    pub collateral_fee_per_day: f32,
+    pub collateral_fee_per_day: F32Bytes,
 
-    pub _padding3: [u8; 4],
+    pub _padding3: [u8; 48],
 
-    // #[derivative(Debug = "ignore")]
-    // pub reserved: [u8; 1900],
+    #[derivative(Debug = "ignore")]
+    pub reserved: [u8; 4],
 }
 
 pub struct WithdrawResult {
@@ -244,8 +391,8 @@ macro_rules! bank_seeds {
         &[
             b"Bank".as_ref(),
             $bank.market.as_ref(),
-            $bank.token_index.to_le_bytes(),
-            &bank.bank_num.to_le_bytes(),
+            $bank.token_index.0.to_le_bytes().as_ref(),
+            $bank.bank_num.to_le_bytes().as_ref(),
             &[$bank.bump],
         ]
     };
@@ -263,13 +410,13 @@ impl Bank{
         Self {
             // values that must be reset/changed
             vault,
-            indexed_deposits: I80F48::ZERO,
-            indexed_borrows: I80F48::ZERO,
-            collected_fees_native: I80F48::ZERO,
-            collected_liquidation_fees: I80F48::ZERO,
-            collected_collateral_fees: I80F48::ZERO,
+            indexed_deposits: MyFixedIdlWrapper::zero(),
+            indexed_borrows: MyFixedIdlWrapper::zero(),
+            collected_fees_native: MyFixedIdlWrapper::zero(),
+            collected_liquidation_fees: MyFixedIdlWrapper::zero(),
+            collected_collateral_fees: MyFixedIdlWrapper::zero(),
             fees_withdrawn: 0,
-            dust: I80F48::ZERO,
+            dust: MyFixedIdlWrapper::zero(),
             net_borrows_in_window: 0,
             bump,
             bank_num,
@@ -321,14 +468,14 @@ impl Bank{
             maint_weight_shift_duration_inv: existing_bank.maint_weight_shift_duration_inv,
             maint_weight_shift_asset_target: existing_bank.maint_weight_shift_asset_target,
             maint_weight_shift_liab_target: existing_bank.maint_weight_shift_liab_target,
-            fallback_oracle: existing_bank.oracle,
+            fallback_oracle: existing_bank.fallback_oracle,
             deposit_limit: existing_bank.deposit_limit,
             zero_util_rate: existing_bank.zero_util_rate,
             platform_liquidation_fee: existing_bank.platform_liquidation_fee,
             collateral_fee_per_day: existing_bank.collateral_fee_per_day,
-            // _padding1: [0; 16],
             _padding2: [0; 4],
-            _padding3: [0; 4],
+            _padding3: [0; 48],
+            reserved: [0; 4],
         }
     }
 
@@ -349,8 +496,8 @@ impl Bank{
             return I80F48::ZERO;
         }
 
-        let native_total_deposits = self.deposit_index * indexed_total_deposits;
-        let native_total_borrows = self.borrow_index * indexed_total_borrows;
+        let native_total_deposits = self.deposit_index.val() * indexed_total_deposits;
+        let native_total_borrows = self.borrow_index.val() * indexed_total_borrows;
         let instantaneous_utilization =
             Self::instantaneous_utilization(native_total_deposits, native_total_borrows);
 
@@ -359,21 +506,21 @@ impl Bank{
             I80F48::from_num(self.index_last_updated - self.bank_rate_last_updated);
         let diff_ts = I80F48::from_num(now_ts - self.index_last_updated);
         let new_avg_time = I80F48::from_num(now_ts - self.bank_rate_last_updated);
-        if new_avg_time <= 0 {
+        if new_avg_time <= I80F48::ZERO {
             return instantaneous_utilization;
         }
-        (self.avg_utilization * previous_avg_time + instantaneous_utilization * diff_ts)
+        (self.avg_utilization.val() * previous_avg_time + instantaneous_utilization * diff_ts)
             / new_avg_time
     }
 
     // computes new optimal rates and max rate
     pub fn update_interest_rate_scaling(&mut self) {
         // Interest increases above target_util, decreases below
-        let target_util = self.interest_target_utilization as f64;
+        let target_util = self.interest_target_utilization.val() as f64;
 
         // use avg_utilization and not instantaneous_utilization so that rates cannot be manipulated easily
         // also clamp to avoid unusually quick interest rate curve changes
-        let avg_util = self.avg_utilization.to_num::<f64>().max(0.0).min(1.0);
+        let avg_util = self.avg_utilization.val().to_num::<f64>().max(0.0).min(1.0);
 
         // move rates up when utilization is above optimal utilization, and vice versa
         // util factor is between -1 (avg util = 0) and +1 (avg util = 100%)
@@ -382,9 +529,9 @@ impl Bank{
         } else {
             (avg_util - target_util) / target_util
         };
-        let adjustment = 1.0 + self.adjustment_factor.to_num::<f64>() * util_factor;
+        let adjustment = 1.0 + self.adjustment_factor.val().to_num::<f64>() * util_factor;
 
-        self.interest_curve_scaling = (self.interest_curve_scaling * adjustment).max(1.0)
+        self.interest_curve_scaling = F64Bytes::new((self.interest_curve_scaling.val() * adjustment).max(1.0));
     }
 
     pub fn compute_index(
@@ -394,8 +541,8 @@ impl Bank{
         diff_ts: I80F48,
     ) -> Result<(I80F48, I80F48, I80F48, I80F48, I80F48)> {
         // compute index based on utilization
-        let native_total_deposits = self.deposit_index * indexed_total_deposits;
-        let native_total_borrows = self.borrow_index * indexed_total_borrows;
+        let native_total_deposits = self.deposit_index.val() * indexed_total_deposits;
+        let native_total_borrows = self.borrow_index.val() * indexed_total_borrows;
 
         let instantaneous_utilization =
             Self::instantaneous_utilization(native_total_deposits, native_total_borrows);
@@ -415,17 +562,17 @@ impl Bank{
         let deposit_rate = borrow_rate * instantaneous_utilization;
 
         // The loan fee rate is not distributed to depositors.
-        let borrow_rate_with_fees = borrow_rate + self.loan_fee_rate;
-        let borrow_fees = native_total_borrows * self.loan_fee_rate * diff_ts / YEAR_I80F48;
+        let borrow_rate_with_fees = borrow_rate + self.loan_fee_rate.val();
+        let borrow_fees = native_total_borrows * self.loan_fee_rate.val() * diff_ts / YEAR_I80F48;
 
-        let borrow_index =
-            (self.borrow_index * borrow_rate_with_fees * diff_ts) / YEAR_I80F48 + self.borrow_index;
-        let deposit_index =
-            (self.deposit_index * deposit_rate * diff_ts) / YEAR_I80F48 + self.deposit_index;
+        let borrow_index_val =
+            (self.borrow_index.val() * borrow_rate_with_fees * diff_ts) / YEAR_I80F48 + self.borrow_index.val();
+        let deposit_index_val =
+            (self.deposit_index.val() * deposit_rate * diff_ts) / YEAR_I80F48 + self.deposit_index.val();
 
         Ok((
-            deposit_index,
-            borrow_index,
+            deposit_index_val,
+            borrow_index_val,
             borrow_fees,
             borrow_rate,
             deposit_rate,
@@ -454,13 +601,13 @@ impl Bank{
     pub fn compute_interest_rate(&self, utilization: I80F48) -> I80F48 {
         Bank::interest_rate_curve_calculator(
             utilization,
-            self.zero_util_rate,
-            self.util0,
-            self.rate0,
-            self.util1,
-            self.rate1,
-            self.max_rate,
-            self.interest_curve_scaling,
+            self.zero_util_rate.val(),
+            self.util0.val(),
+            self.rate0.val(),
+            self.util1.val(),
+            self.rate1.val(),
+            self.max_rate.val(),
+            self.interest_curve_scaling.val(),
         )
     }
 
@@ -502,46 +649,46 @@ impl Bank{
     }
 
     pub fn verify(&self) -> Result<()> {
-        require_gte!(self.oracle_config.conf_filter, 0.0);
-        require_gte!(self.util0, I80F48::ZERO);
-        require_gte!(self.util1, self.util0);
-        require_gte!(I80F48::ONE, self.util1);
-        require_gte!(self.rate0, I80F48::ZERO);
-        require_gte!(self.rate1, I80F48::ZERO);
-        require_gte!(self.max_rate, I80F48::ZERO);
-        require_gte!(self.adjustment_factor, 0.0);
-        require_gte!(self.loan_fee_rate, 0.0);
-        require_gte!(self.loan_origination_fee_rate, 0.0);
+        require_gte!(self.oracle_config.conf_filter, MyFixedIdlWrapper::zero());
+        require_gte!(self.util0.val(), I80F48::ZERO);
+        require_gte!(self.util1.val(), self.util0.val());
+        require_gte!(I80F48::ONE, self.util1.val());
+        require_gte!(self.rate0.val(), I80F48::ZERO);
+        require_gte!(self.rate1.val(), I80F48::ZERO);
+        require_gte!(self.max_rate.val(), I80F48::ZERO);
+        require_gte!(self.adjustment_factor.val().to_num::<f64>(), 0.0_f64);
+        require_gte!(self.loan_fee_rate.val().to_num::<f64>(), 0.0_f64);
+        require_gte!(self.loan_origination_fee_rate.val().to_num::<f64>(), 0.0_f64);
         require_gte!(self.stable_price_model.delay_growth_limit, 0.0);
         require_gte!(self.stable_price_model.stable_growth_limit, 0.0);
-        require_gte!(self.init_asset_weight, 0.0);
-        require_gte!(self.maint_asset_weight, self.init_asset_weight);
-        require_gte!(self.maint_liab_weight, 0.0);
-        require_gte!(self.init_liab_weight, self.maint_liab_weight);
-        require_gte!(self.liquidation_fee, 0.0);
-        require_gte!(self.min_vault_to_deposits_ratio, 0.0);
-        require_gte!(1.0, self.min_vault_to_deposits_ratio);
+        require_gte!(self.init_asset_weight.val().to_num::<f64>(), 0.0_f64);
+        require_gte!(self.maint_asset_weight.val(), self.init_asset_weight.val());
+        require_gte!(self.maint_liab_weight.val().to_num::<f64>(), 0.0_f64);
+        require_gte!(self.init_liab_weight.val(), self.maint_liab_weight.val());
+        require_gte!(self.liquidation_fee.val().to_num::<f64>(), 0.0_f64);
+        require_gte!(self.min_vault_to_deposits_ratio.val(), 0.0);
+        require_gte!(1.0, self.min_vault_to_deposits_ratio.val());
         require_gte!(self.net_borrow_limit_per_window_quote, -1);
-        require_gt!(self.borrow_weight_scale_start_quote, 0.0);
-        require_gt!(self.deposit_weight_scale_start_quote, 0.0);
+        require_gt!(self.borrow_weight_scale_start_quote.val(), 0.0);
+        require_gt!(self.deposit_weight_scale_start_quote.val(), 0.0);
         require_gte!(2, self.reduce_only);
-        require_gte!(self.interest_curve_scaling, 1.0);
-        require_gte!(self.interest_target_utilization, 0.0);
-        require_gte!(1.0, self.interest_target_utilization);
-        require_gte!(self.maint_weight_shift_duration_inv, 0.0);
-        require_gte!(self.maint_weight_shift_asset_target, 0.0);
-        require_gte!(self.maint_weight_shift_liab_target, 0.0);
-        require_gte!(self.zero_util_rate, I80F48::ZERO);
-        require_gte!(self.platform_liquidation_fee, 0.0);
+        require_gte!(self.interest_curve_scaling.val(), 1.0);
+        require_gte!(self.interest_target_utilization.val(), 0.0);
+        require_gte!(1.0, self.interest_target_utilization.val());
+        require_gte!(self.maint_weight_shift_duration_inv.val().to_num::<f64>(), 0.0_f64);
+        require_gte!(self.maint_weight_shift_asset_target.val().to_num::<f64>(), 0.0_f64);
+        require_gte!(self.maint_weight_shift_liab_target.val().to_num::<f64>(), 0.0_f64);
+        require_gte!(self.zero_util_rate.val(), I80F48::ZERO);
+        require_gte!(self.platform_liquidation_fee.val().to_num::<f64>(), 0.0_f64);
         if !self.allows_asset_liquidation() {
             require!(self.are_borrows_reduce_only(), PeachError::SomeError);
-            require_eq!(self.maint_asset_weight, I80F48::ZERO);
+            require_eq!(self.maint_asset_weight.val(), I80F48::ZERO);
         }
-        require_gte!(self.collateral_fee_per_day, 0.0);
+        require_gte!(self.collateral_fee_per_day.val(), 0.0);
         if self.is_force_withdraw() {
             require!(self.are_deposits_reduce_only(), PeachError::SomeError);
             require!(!self.allows_asset_liquidation(), PeachError::SomeError);
-            require_eq!(self.maint_asset_weight, I80F48::ZERO);
+            require_eq!(self.maint_asset_weight.val(), I80F48::ZERO);
         }
         Ok(())
     }
@@ -573,8 +720,8 @@ impl Bank{
         let deposits = self.native_deposits();
         // let serum = I80F48::from(self.potential_serum_tokens);
         let total = deposits; // + serum;
-        let remaining = I80F48::from(self.deposit_limit) - total;
-        if remaining < 0 {
+        let remaining = I80F48::from_num(self.deposit_limit) - total;
+        if remaining < I80F48::ZERO {
             return Err(error_msg_typed!(
                 PeachError::BankDepositLimit,
                 "deposit limit exceeded: remaining: {}, total: {}, limit: {}, deposits: {}", //, serum: {}",
@@ -596,37 +743,37 @@ impl Bank{
     /// such that scaled_init_weight * deposits remains constant.
     #[inline(always)]
     pub fn scaled_init_asset_weight(&self, price: I80F48) -> I80F48 {
-        if self.deposit_weight_scale_start_quote == f64::MAX {
-            return self.init_asset_weight;
+        if self.deposit_weight_scale_start_quote.val() == f64::MAX {
+            return self.init_asset_weight.val();
         }
         let all_deposits =
             self.native_deposits().to_num::<f64>(); // + self.potential_serum_tokens as f64;
         let deposits_quote = all_deposits * price.to_num::<f64>();
-        if deposits_quote <= self.deposit_weight_scale_start_quote {
-            self.init_asset_weight
+        if deposits_quote <= self.deposit_weight_scale_start_quote.val() {
+            self.init_asset_weight.val()
         } else {
             // The next line is around 500 CU
-            let scale = self.deposit_weight_scale_start_quote / deposits_quote;
-            self.init_asset_weight * I80F48::from_num(scale)
+            let scale = self.deposit_weight_scale_start_quote.val() / deposits_quote;
+            self.init_asset_weight.val() * I80F48::from_num(scale)
         }
     }
 
     #[inline(always)]
     pub fn scaled_init_liab_weight(&self, price: I80F48) -> I80F48 {
-        if self.borrow_weight_scale_start_quote == f64::MAX {
-            return self.init_liab_weight;
+        if self.borrow_weight_scale_start_quote.val() == f64::MAX {
+            return self.init_liab_weight.val();
         }
         let borrows_quote = self.native_borrows().to_num::<f64>() * price.to_num::<f64>();
-        if borrows_quote <= self.borrow_weight_scale_start_quote {
-            self.init_liab_weight
-        } else if self.borrow_weight_scale_start_quote == 0.0 {
+        if borrows_quote <= self.borrow_weight_scale_start_quote.val() {
+            self.init_liab_weight.val()
+        } else if self.borrow_weight_scale_start_quote.val() == 0.0 {
             // TODO: will certainly cause overflow, so it's not exactly what is needed; health should be -MAX?
             // maybe handling this case isn't super helpful?
             I80F48::MAX
         } else {
             // The next line is around 500 CU
-            let scale = borrows_quote / self.borrow_weight_scale_start_quote;
-            self.init_liab_weight * I80F48::from_num(scale)
+            let scale = borrows_quote / self.borrow_weight_scale_start_quote.val();
+            self.init_liab_weight.val() * I80F48::from_num(scale)
         }
     }
 
@@ -634,7 +781,7 @@ impl Bank{
     /// Keep some in reserve to satisfy non-borrow withdraws.
     pub fn enforce_max_utilization_on_borrow(&self) -> Result<()> {
         self.enforce_max_utilization(
-            I80F48::ONE - I80F48::from_num(self.min_vault_to_deposits_ratio),
+            I80F48::ONE - I80F48::from_num(self.min_vault_to_deposits_ratio.val()),
         )
     }
 
@@ -666,12 +813,12 @@ impl Bank{
             .checked_mul_int(self.net_borrows_in_window.into())
             .unwrap();
 
-        I80F48::from(self.net_borrow_limit_per_window_quote) - net_borrows_quote
+        I80F48::from_num(self.net_borrow_limit_per_window_quote) - net_borrows_quote
     }
 
     pub fn check_net_borrows(&self, oracle_price: I80F48) -> Result<()> {
         let remaining_quote = self.remaining_net_borrows_quote(oracle_price);
-        if remaining_quote < 0 {
+        if remaining_quote < I80F48::ZERO {
             return Err(error_msg_typed!(PeachError::BankNetBorrowsLimitReached,
                     "net_borrows_in_window: {:?}, remaining quote: {:?}, net_borrow_limit_per_window_quote: {:?}, last_net_borrows_window_start_ts: {:?}",
                     self.net_borrows_in_window, remaining_quote, self.net_borrow_limit_per_window_quote, self.last_net_borrows_window_start_ts
@@ -692,30 +839,30 @@ impl Bank{
 
     #[inline(always)]
     pub fn native_borrows(&self) -> I80F48 {
-        self.borrow_index * self.indexed_borrows
+        self.borrow_index.val() * self.indexed_borrows.val()
     }
 
     #[inline(always)]
     pub fn native_deposits(&self) -> I80F48 {
-        self.deposit_index * self.indexed_deposits
+        self.deposit_index.val() * self.indexed_deposits.val()
     }
 
     pub fn maint_weights(&self, now_ts: u64) -> (I80F48, I80F48) {
         if self.maint_weight_shift_duration_inv.is_zero() || now_ts <= self.maint_weight_shift_start
         {
-            (self.maint_asset_weight, self.maint_liab_weight)
+            (self.maint_asset_weight.val(), self.maint_liab_weight.val())
         } else if now_ts >= self.maint_weight_shift_end {
             (
-                self.maint_weight_shift_asset_target,
-                self.maint_weight_shift_liab_target,
+                self.maint_weight_shift_asset_target.val(),
+                self.maint_weight_shift_liab_target.val(),
             )
         } else {
-            let scale = I80F48::from(now_ts - self.maint_weight_shift_start)
-                * self.maint_weight_shift_duration_inv;
-            let asset = self.maint_asset_weight
-                + scale * (self.maint_weight_shift_asset_target - self.maint_asset_weight);
-            let liab = self.maint_liab_weight
-                + scale * (self.maint_weight_shift_liab_target - self.maint_liab_weight);
+            let scale = I80F48::from_num(now_ts - self.maint_weight_shift_start)
+                * self.maint_weight_shift_duration_inv.val();
+            let asset = self.maint_asset_weight.val()
+                + scale * (self.maint_weight_shift_asset_target.val() - self.maint_asset_weight.val());
+            let liab = self.maint_liab_weight.val()
+                + scale * (self.maint_weight_shift_liab_target.val() - self.maint_liab_weight.val());
             (asset, liab)
         }
     }
@@ -745,21 +892,21 @@ impl Bank{
         opening_indexed_position: I80F48,
     ) {
         if opening_indexed_position.is_positive() {
-            let interest = ((self.deposit_index - position.previous_index)
+            let interest = ((self.deposit_index.val() - position.previous_index.val())
                 * opening_indexed_position)
                 .to_num::<f64>();
             position.cumulative_deposit_interest += interest;
         } else {
-            let interest = ((self.borrow_index - position.previous_index)
+            let interest = ((self.borrow_index.val() - position.previous_index.val())
                 * opening_indexed_position)
                 .to_num::<f64>();
             position.cumulative_borrow_interest -= interest;
         }
 
-        if position.indexed_position.is_positive() {
-            position.previous_index = self.deposit_index
+        if position.indexed_position.is_positive() { 
+            position.previous_index = self.deposit_index;
         } else {
-            position.previous_index = self.borrow_index
+            position.previous_index = self.borrow_index;
         }
     }
 
@@ -820,7 +967,7 @@ impl Bank{
         allow_dusting: bool,
         now_ts: u64,
     ) -> Result<bool> {
-        let opening_indexed_position = position.indexed_position;
+        let opening_indexed_position = position.indexed_position.val();
         let result = self.deposit_internal(position, native_amount, allow_dusting, now_ts)?;
         self.update_cumulative_interest(position, opening_indexed_position);
         Ok(result)
@@ -830,11 +977,11 @@ impl Bank{
     pub fn deposit_internal(
         &mut self,
         position: &mut TokenPosition,
-        mut native_amount: I80F48,
+        native_amount: I80F48,
         allow_dusting: bool,
         now_ts: u64,
     ) -> Result<bool> {
-        require_gte!(native_amount, 0);
+        require_gte!(native_amount, I80F48::ZERO);
 
         let native_position = position.native(self);
 
@@ -858,34 +1005,34 @@ impl Bank{
             self.update_net_borrows(native_position.max(-native_amount), now_ts);
 
             let new_native_position = native_position + native_amount;
-            let indexed_change = div_rounding_up(native_amount, self.borrow_index);
+            let indexed_change = div_rounding_up(native_amount, self.borrow_index.val());
             // this is only correct if it's not positive, because it scales the whole amount by borrow_index
-            let new_indexed_value = position.indexed_position + indexed_change;
+            let new_indexed_value = position.indexed_position.val() + indexed_change;
             if new_indexed_value.is_negative() {
                 // pay back borrows only, leaving a negative position
-                self.indexed_borrows -= indexed_change;
-                position.indexed_position = new_indexed_value;
+                self.indexed_borrows = MyFixedIdlWrapper::new(self.indexed_borrows.val() - indexed_change);
+                position.indexed_position = MyFixedIdlWrapper::new(new_indexed_value);
                 return Ok(true);
             } else if new_native_position < I80F48::ONE && allow_dusting {
                 // if there's less than one token deposited, zero the position
-                self.dust += new_native_position;
-                self.indexed_borrows += position.indexed_position;
-                position.indexed_position = I80F48::ZERO;
+                self.dust = MyFixedIdlWrapper::new(self.dust.val() + new_native_position);
+                self.indexed_borrows = MyFixedIdlWrapper::new(self.indexed_borrows.val() + position.indexed_position.val());
+                position.indexed_position = MyFixedIdlWrapper::zero();
                 return Ok(false);
             }
 
             // pay back all borrows
-            self.indexed_borrows += position.indexed_position; // position.value is negative
-            position.indexed_position = I80F48::ZERO;
+            self.indexed_borrows = MyFixedIdlWrapper::new(self.indexed_borrows.val() + position.indexed_position.val()); // position.value is negative
+            position.indexed_position = MyFixedIdlWrapper::zero();
             // deposit the rest
             // note: .max(0) because there's a scenario where new_indexed_value == 0 and new_native_position < 0
-            native_amount = new_native_position.max(I80F48::ZERO);
+            let _native_amount = new_native_position.max(I80F48::ZERO);
         }
 
         // add to deposits
-        let indexed_change = div_rounding_up(native_amount, self.deposit_index);
-        self.indexed_deposits += indexed_change;
-        position.indexed_position += indexed_change;
+        let indexed_change = div_rounding_up(native_amount, self.deposit_index.val());
+        self.indexed_deposits = MyFixedIdlWrapper::new(self.indexed_deposits.val() + indexed_change);
+        position.indexed_position = MyFixedIdlWrapper::new(position.indexed_position.val() + indexed_change);
 
         Ok(true)
     }
@@ -943,7 +1090,7 @@ impl Bank{
         allow_dusting: bool,
         now_ts: u64,
     ) -> Result<WithdrawResult> {
-        let opening_indexed_position = position.indexed_position;
+        let opening_indexed_position = position.indexed_position.val();
         let res = self.withdraw_internal(
             position,
             native_amount,
@@ -955,7 +1102,7 @@ impl Bank{
         res
     }
 
-        /// Internal function to withdraw funds
+    /// Internal function to withdraw funds
     fn withdraw_internal(
         &mut self,
         position: &mut TokenPosition,
@@ -964,7 +1111,7 @@ impl Bank{
         allow_dusting: bool,
         now_ts: u64,
     ) -> Result<WithdrawResult> {
-        require_gte!(native_amount, 0);
+        require_gte!(native_amount, I80F48::ZERO);
         let native_position = position.native(self);
 
         if !native_position.is_negative() {
@@ -973,9 +1120,9 @@ impl Bank{
                 // withdraw deposits only
                 if new_native_position < I80F48::ONE && allow_dusting {
                     // zero the account collecting the leftovers in `dust`
-                    self.dust += new_native_position;
-                    self.indexed_deposits -= position.indexed_position;
-                    position.indexed_position = I80F48::ZERO;
+                    self.dust = MyFixedIdlWrapper::new(self.dust.val() + new_native_position);
+                    self.indexed_deposits = MyFixedIdlWrapper::new(self.indexed_deposits.val() - position.indexed_position.val());
+                    position.indexed_position = MyFixedIdlWrapper::zero();
                     return Ok(WithdrawResult {
                         position_is_active: false,
                         loan_origination_fee: I80F48::ZERO,
@@ -983,9 +1130,9 @@ impl Bank{
                     });
                 } else {
                     // withdraw some deposits leaving a positive balance
-                    let indexed_change = native_amount / self.deposit_index;
-                    self.indexed_deposits -= indexed_change;
-                    position.indexed_position -= indexed_change;
+                    let indexed_change = native_amount / self.deposit_index.val();
+                    self.indexed_deposits = MyFixedIdlWrapper::new(self.indexed_deposits.val() - indexed_change);
+                    position.indexed_position = MyFixedIdlWrapper::new(position.indexed_position.val() - indexed_change);
                     return Ok(WithdrawResult {
                         position_is_active: true,
                         loan_origination_fee: I80F48::ZERO,
@@ -995,23 +1142,23 @@ impl Bank{
             }
 
             // withdraw all deposits
-            self.indexed_deposits -= position.indexed_position;
-            position.indexed_position = I80F48::ZERO;
+            self.indexed_deposits = MyFixedIdlWrapper::new(self.indexed_deposits.val() - position.indexed_position.val());
+            position.indexed_position = MyFixedIdlWrapper::zero();
             // borrow the rest
             native_amount = -new_native_position;
         }
 
         let mut loan_origination_fee = I80F48::ZERO;
         if with_loan_origination_fee {
-            loan_origination_fee = self.loan_origination_fee_rate * native_amount;
-            self.collected_fees_native += loan_origination_fee;
+            loan_origination_fee = self.loan_origination_fee_rate.val() * native_amount;
+            self.collected_fees_native = MyFixedIdlWrapper::new(self.collected_fees_native.val() + loan_origination_fee);
             native_amount += loan_origination_fee;
         }
 
         // add to borrows
-        let indexed_change = native_amount / self.borrow_index;
-        self.indexed_borrows += indexed_change;
-        position.indexed_position -= indexed_change;
+        let indexed_change = native_amount / self.borrow_index.val();
+        self.indexed_borrows = MyFixedIdlWrapper::new(self.indexed_borrows.val() + indexed_change);
+        position.indexed_position = MyFixedIdlWrapper::new(position.indexed_position.val() - indexed_change);
 
         // net borrows requires updating in only this case, since other branches of the method deal with
         // withdraws and not borrows

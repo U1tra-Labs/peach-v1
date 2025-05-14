@@ -13,7 +13,10 @@ pub fn admin_token_withdraw_fees(ctx: Context<AdminTokenWithdrawFees>) -> Result
     let mut bank = ctx.accounts.bank.load_mut()?;
 
     let market_seeds = market_seeds!(market);
-    let fees = bank.collected_fees_native.floor().to_num::<u64>() - bank.fees_withdrawn;
+    let fees = bank.collected_fees_native.val().floor().to_num::<u64>() - bank.fees_withdrawn;
+
+    require_gt!(fees, 0);
+
     let amount = fees.min(ctx.accounts.vault.amount);
     token::transfer(
         ctx.accounts.transfer_ctx().with_signer(&[market_seeds]),

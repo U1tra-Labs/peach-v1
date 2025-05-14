@@ -5,10 +5,11 @@ use anchor_lang::prelude::*;
 /// In practice this is set to the USDC token index, and that is wrong: actually
 /// oracles quote in USD. Any use of this constant points to a potentially
 /// incorrect assumption.
-pub const QUOTE_TOKEN_INDEX: TokenIndex = 0;
+pub const QUOTE_TOKEN_INDEX: TokenIndex = TokenIndex(0);
 
 #[account(zero_copy)]
-#[derive(Debug)]
+#[repr(C)]
+#[derive(Default, Debug)]
 pub struct Market {
     pub creator: Pubkey,
     pub market_num: u32,
@@ -19,7 +20,9 @@ pub struct Market {
     pub padding: [u8; 1],
     pub deposit_limit_quote: u64,
     pub ix_gate: u128,
-    pub collateral_fee_interval: u64
+    pub collateral_fee_interval: u64,
+    /// Padding to align struct size to multiple of 16 for zero_copy Pod
+    pub reserved: [u8; 8],
 }
 
 impl Market {

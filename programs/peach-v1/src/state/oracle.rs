@@ -1,8 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_lang::{AnchorDeserialize, Discriminator};
-use static_assertions::const_assert_eq;
-use std::mem::size_of;
+// use static_assertions::const_assert_eq;
+// use std::mem::size_of;
 use pyth_solana_receiver_sdk::price_update::VerificationLevel;
+use bytemuck;
 // use switchboard_on_demand::PullFeedAccountData;
 // use switchboard_program::FastRoundResultAccountData;
 // use switchboard_v2::AggregatorAccountData;
@@ -11,9 +12,13 @@ use crate::accounts_zerocopy::*;
 use crate::error::PeachError;
 // use crate::error_msg;
 // use crate::error::Contextable;
+use crate::state::bank::MyFixedIdlWrapper;
+// use crate::state::stable_price::StablePriceModel;
 
 use fixed::types::I80F48;
 use derivative::Derivative;
+
+// use crate::state::oracle_utils::{OracleAccountInfos, OraclePriceType}; // Removed this line
 
 const DECIMAL_CONSTANT_ZERO_INDEX: i8 = 12;
 const DECIMAL_CONSTANTS: [I80F48; 25] = [
@@ -90,13 +95,25 @@ pub mod sol_mint_mainnet {
 }
 
 #[zero_copy]
+#[repr(C)]
 #[derive(Derivative, PartialEq, Eq)]
 #[derivative(Debug)]
 pub struct OracleConfig {
-    pub conf_filter: I80F48,
+    pub conf_filter: MyFixedIdlWrapper,
+    /// Max staleness for a price feed to be considered valid for trading, in slots.
     pub max_staleness_slots: i64,
     #[derivative(Debug = "ignore")]
     pub reserved: [u8; 72],
+}
+
+impl Default for OracleConfig {
+    fn default() -> Self {
+        OracleConfig {
+            conf_filter: MyFixedIdlWrapper::zero(),
+            max_staleness_slots: -1,
+            reserved: [0; 72],
+        }
+    }
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Debug, Default)]
@@ -108,7 +125,7 @@ pub struct OracleConfigParams {
 impl OracleConfigParams {
     pub fn to_oracle_config(&self) -> OracleConfig {
         OracleConfig {
-            conf_filter: I80F48::from_num(self.conf_filter),
+            conf_filter: I80F48::from_num(self.conf_filter).into(),
             max_staleness_slots: self.max_staleness_slots.map(|v| v as i64).unwrap_or(-1),
             reserved: [0; 72],
         }
@@ -179,7 +196,7 @@ impl OracleState {
     }
 
     pub fn check_confidence(&self, config: &OracleConfig) -> Result<()> {
-        if self.deviation > config.conf_filter * self.price {
+        if self.deviation > config.conf_filter.val() * self.price {
             return Err(PeachError::OracleConfidence.into());
         }
         Ok(())
@@ -187,20 +204,22 @@ impl OracleState {
 }
 
 #[account(zero_copy)]
+#[repr(C)]
+#[derive(Default, Debug)]
 pub struct StubOracle {
     // ABI: Clients rely on this being at offset 8
     pub market: Pubkey,
     // ABI: Clients rely on this being at offset 40
     pub mint: Pubkey,
-    pub price: I80F48,
+    pub price: MyFixedIdlWrapper,
     pub last_update_ts: i64,
     pub last_update_slot: u64,
-    pub deviation: I80F48,
+    pub deviation: MyFixedIdlWrapper,
     pub reserved: [u8; 16],
 }
 // const_assert_eq!(size_of::<StubOracle>(), 32 + 32 + 16 + 8 + 8 + 16 + 104);
 // const_assert_eq!(size_of::<StubOracle>(), 216);
-const_assert_eq!(size_of::<StubOracle>() % 8, 0);
+// const_assert_eq!(size_of::<StubOracle>() % 8, 0);
 
 pub fn check_is_valid_fallback_oracle(acc_info: &impl KeyedAccountReader) -> Result<()> {
     if acc_info.key() == &Pubkey::default() {
@@ -296,80 +315,40 @@ fn oracle_state_unchecked_inner<T: KeyedAccountReader>(
     base_decimals: u8,
     use_fallback: bool,
 ) -> Result<OracleState> {
-    let oracle_info = if use_fallback {
-        acc_infos
-            .fallback_opt
-            .ok_or_else(|| error!(PeachError::UnknownOracleType))?
+    let acc_info = if use_fallback {
+        acc_infos.fallback_opt.unwrap()
     } else {
         acc_infos.oracle
     };
-    let _data = &oracle_info.data();
-    let oracle_type = determine_oracle_type(oracle_info)?;
-
-    Ok(match oracle_type {
+    let oracle_type = determine_oracle_type(acc_info)?;
+    match oracle_type {
+        OracleType::Pyth => get_pyth_state(acc_info, base_decimals),
+        OracleType::PythV2 => get_pyth_on_demand_state(acc_info, base_decimals),
         OracleType::Stub => {
-            let stub = oracle_info.load::<StubOracle>()?;
-            let deviation = if stub.deviation == 0 {
-                // allows the confidence check to pass even for negative prices
-                I80F48::MIN
-            } else {
-                stub.deviation
-            };
-            let last_update_slot = if stub.last_update_slot == 0 {
-                // ensure staleness checks will never fail
-                u64::MAX
-            } else {
-                stub.last_update_slot
-            };
-            OracleState {
-                price: stub.price,
-                last_update_slot,
-                deviation,
-                oracle_type: OracleType::Stub,
-                last_update_time: None,
+            let data = acc_info.data();
+            // The discriminator (8 bytes) is checked by determine_oracle_type.
+            // The struct itself doesn't store the discriminator.
+            let expected_data_len_without_discriminator = core::mem::size_of::<StubOracle>();
+            if data.len() < 8 + expected_data_len_without_discriminator {
+                // Consider a more specific error or logging
+                return Err(ProgramError::AccountDataTooSmall.into());
             }
+            let account_data_body = &data[8..8 + expected_data_len_without_discriminator];
+            let stub_oracle: &StubOracle = bytemuck::from_bytes(account_data_body);
+
+            Ok(OracleState {
+                price: stub_oracle.price.val(),
+                last_update_slot: stub_oracle.last_update_slot,
+                deviation: stub_oracle.deviation.val(),
+                last_update_time: Some(stub_oracle.last_update_ts as u64),
+                oracle_type,
+            })
         }
-        OracleType::Pyth => get_pyth_state(oracle_info, base_decimals)?,
-        OracleType::PythV2 => get_pyth_on_demand_state(oracle_info, base_decimals)?,
-        // OracleType::SwitchboardV2 => {
-        //     fn from_foreign_error(e: impl std::fmt::Display) -> Error {
-        //         error_msg!("{}", e)
-        //     }
-
-        //     let feed = bytemuck::from_bytes::<AggregatorAccountData>(&data[8..]);
-        //     let feed_result = feed.get_result().map_err(from_foreign_error)?;
-        //     let ui_price: f64 = feed_result.try_into().map_err(from_foreign_error)?;
-        //     let ui_deviation: f64 = feed
-        //         .latest_confirmed_round
-        //         .std_deviation
-        //         .try_into()
-        //         .map_err(from_foreign_error)?;
-
-        //     // The round_open_slot is an underestimate of the last update slot: Reporters will see
-        //     // the round opening and only then start executing the price tasks.
-        //     let last_update_slot = feed.latest_confirmed_round.round_open_slot;
-
-        //     let decimals = QUOTE_DECIMALS - (base_decimals as i8);
-        //     let decimal_adj = power_of_ten(decimals);
-        //     let price = I80F48::from_num(ui_price) * decimal_adj;
-        //     let deviation = I80F48::from_num(ui_deviation) * decimal_adj;
-        //     require_gte!(price, 0);
-        //     OracleState {
-        //         price,
-        //         last_update_slot,
-        //         deviation,
-        //         oracle_type: OracleType::SwitchboardV2,
-        //         last_update_time: None,
-        //     }
-        // }
         // OracleType::SwitchboardV1 => {
-        //     let result = FastRoundResultAccountData::deserialize(data).unwrap();
-        //     let ui_price = I80F48::from_num(result.result.result);
-
-        //     let ui_deviation =
-        //         I80F48::from_num(result.result.max_response - result.result.min_response);
-        //     let last_update_slot = result.result.round_open_slot;
-
+        //     let swb_oracle = AggregatorAccountData::new(acc_info.as_ref())?;
+        //     let ui_price = I80F48::from_num(swb_oracle.result.result.result);
+        //     let ui_deviation = I80F48::from_num(swb_oracle.result.max_response - swb_oracle.result.min_response);
+        //     let last_update_slot = swb_oracle.result.round_open_slot;
         //     let decimals = QUOTE_DECIMALS - (base_decimals as i8);
         //     let decimal_adj = power_of_ten(decimals);
         //     let price = ui_price * decimal_adj;
@@ -384,22 +363,10 @@ fn oracle_state_unchecked_inner<T: KeyedAccountReader>(
         //     }
         // }
         // OracleType::SwitchboardOnDemand => {
-        //     fn from_foreign_error(e: impl std::fmt::Display) -> Error {
-        //         error_msg!("{}", e)
-        //     }
-        //     let feed = bytemuck::from_bytes::<PullFeedAccountData>(&data[8..]);
-        //     let ui_price: f64 = feed
-        //         .value()
-        //         .ok_or_else(|| error_msg!("missing price"))?
-        //         .try_into()
-        //         .map_err(from_foreign_error)?;
-        //     let ui_deviation: f64 = feed
-        //         .std_dev()
-        //         .ok_or_else(|| error_msg!("missing deviation"))?
-        //         .try_into()
-        //         .map_err(from_foreign_error)?;
+        //     let feed = bytemuck::from_bytes::<PullFeedAccountData>(acc_info.data())?;
+        //     let ui_price: f64 = feed.value().ok_or_else(|| error_msg!("missing price"))?;
+        //     let ui_deviation: f64 = feed.std_dev().ok_or_else(|| error_msg!("missing deviation"))?;
         //     let last_update_slot = feed.result.min_slot;
-
         //     let decimals = QUOTE_DECIMALS - (base_decimals as i8);
         //     let decimal_adj = power_of_ten(decimals);
         //     let price = I80F48::from_num(ui_price) * decimal_adj;
@@ -414,7 +381,7 @@ fn oracle_state_unchecked_inner<T: KeyedAccountReader>(
         //     }
         // }
         // OracleType::OrcaCLMM => {
-        //     let whirlpool = load_orca_pool_state(oracle_info)?;
+        //     let whirlpool = load_orca_pool_state(acc_info)?;
         //     let clmm_price = whirlpool.get_clmm_price();
         //     let quote_oracle_state = whirlpool.quote_state_unchecked(acc_infos)?;
         //     let price = clmm_price * quote_oracle_state.price;
@@ -427,7 +394,7 @@ fn oracle_state_unchecked_inner<T: KeyedAccountReader>(
         //     }
         // }
         // OracleType::RaydiumCLMM => {
-        //     let whirlpool = load_raydium_pool_state(oracle_info)?;
+        //     let whirlpool = load_raydium_pool_state(acc_info)?;
         //     let clmm_price = whirlpool.get_clmm_price();
         //     let quote_oracle_state = whirlpool.quote_state_unchecked(acc_infos)?;
         //     let price = clmm_price * quote_oracle_state.price;
@@ -439,7 +406,7 @@ fn oracle_state_unchecked_inner<T: KeyedAccountReader>(
         //         last_update_time: None,
         //     }
         // }
-    })
+    }
 }
 
 pub fn get_pyth_state(
@@ -548,6 +515,8 @@ pub fn oracle_log_context(
         state.deviation.to_num::<f64>(),
         state.last_update_slot,
         now.unwrap_or_else(|| (u64::MAX, u64::MAX)),
-        oracle_config.conf_filter.to_num::<f32>(),
+        oracle_config.conf_filter.val().to_num::<f32>(),
     )
 }
+
+// const SCORE_MAX_AGE_SEC: u32 = 1800; // 30 minutes

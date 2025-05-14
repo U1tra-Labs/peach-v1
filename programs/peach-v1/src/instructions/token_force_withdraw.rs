@@ -66,10 +66,10 @@ pub fn token_force_withdraw(ctx: Context<TokenForceWithdraw>) -> Result<()> {
     emit_stack(TokenBalanceLog {
         peach_market: ctx.accounts.market.key(),
         peach_account: ctx.accounts.account.key(),
-        token_index,
-        indexed_position: position.indexed_position.to_bits(),
-        deposit_index: bank.deposit_index.to_bits(),
-        borrow_index: bank.borrow_index.to_bits(),
+        token_index: token_index.0,
+        indexed_position: position.indexed_position.val().to_bits(),
+        deposit_index: bank.deposit_index.val().to_bits(),
+        borrow_index: bank.borrow_index.val().to_bits(),
     });
 
     // Get the oracle price, even if stale or unconfident: We want to allow force withdraws
@@ -91,7 +91,7 @@ pub fn token_force_withdraw(ctx: Context<TokenForceWithdraw>) -> Result<()> {
     emit_stack(ForceWithdrawLog {
         peach_market: ctx.accounts.market.key(),
         peach_account: ctx.accounts.account.key(),
-        token_index,
+        token_index: token_index.0,
         quantity: amount,
         price: unsafe_oracle_state.price.to_bits(),
         to_token_account: withdraw_target.key(),

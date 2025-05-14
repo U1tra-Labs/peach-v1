@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 use instructions::*;
-use state::{OracleConfigParams, TokenIndex};
+use state::{OracleConfigParams, TokenIndex, bank::MyFixedIdlWrapper};
 
-use fixed::types::I80F48;
+// use fixed::types::I80F48; // Commenting out unused import
 
 #[macro_use]
 pub mod util;
@@ -129,8 +129,14 @@ pub mod peach_v1 {
         Ok(())
     }
 
-    pub fn stub_oracle_create(ctx: Context<StubOracleCreate>, price: I80F48) -> Result<()> {
-        instructions::stub_oracle_create(ctx, price)?;
+    pub fn stub_oracle_create(
+        ctx: Context<StubOracleCreate>,
+        price: MyFixedIdlWrapper,
+        last_update_ts: i64,
+        last_update_slot: u64,
+        deviation: MyFixedIdlWrapper,
+    ) -> Result<()> {
+        instructions::stub_oracle_create(ctx, price, last_update_ts, last_update_slot, deviation)?;
         Ok(())
     }
 
@@ -186,16 +192,16 @@ pub mod peach_v1 {
         Ok(())
     }
 
-    pub fn stub_oracle_set(ctx: Context<StubOracleSet>, price: I80F48) -> Result<()> {
+    pub fn stub_oracle_set(ctx: Context<StubOracleSet>, price: MyFixedIdlWrapper) -> Result<()> {
         instructions::stub_oracle_set(ctx, price)?;
         Ok(())
     }
 
     pub fn stub_oracle_set_test(
         ctx: Context<StubOracleSet>,
-        price: I80F48,
+        price: MyFixedIdlWrapper,
         last_update_slot: u64,
-        deviation: I80F48,
+        deviation: MyFixedIdlWrapper,
     ) -> Result<()> {
         instructions::stub_oracle_set_test(ctx, price, last_update_slot, deviation)?;
         Ok(())

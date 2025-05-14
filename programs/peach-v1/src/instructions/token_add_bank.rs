@@ -58,7 +58,7 @@ pub struct TokenAddBank<'info> {
     #[account(
         init,
         // using the token_index in this seed guards against reusing it
-        seeds = [b"Bank".as_ref(), market.key().as_ref(), &token_index.to_le_bytes(), &bank_num.to_le_bytes()],
+        seeds = [b"Bank".as_ref(), market.key().as_ref(), &token_index.0.to_le_bytes(), &bank_num.to_le_bytes()],
         bump,
         payer = payer,
         space = 8 + std::mem::size_of::<Bank>(),
@@ -66,8 +66,8 @@ pub struct TokenAddBank<'info> {
     pub bank: AccountLoader<'info, Bank>,
 
     #[account(
-        init,
-        seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.to_le_bytes(), &bank_num.to_le_bytes()],
+        init_if_needed,
+        seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.0.to_le_bytes(), &bank_num.to_le_bytes()],
         bump,
         token::authority = market,
         token::mint = mint,

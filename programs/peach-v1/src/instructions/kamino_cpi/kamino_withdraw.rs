@@ -1,4 +1,3 @@
-
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::solana_program::{program::invoke_signed, sysvar};
@@ -159,7 +158,7 @@ pub fn kamino_withdraw<'info>(
             emit_stack(WithdrawLoanLog {
                 peach_market: ctx.accounts.market.key(),
                 peach_account: ctx.accounts.peach_account.key(),
-                token_index,
+                token_index: token_index.0,
                 loan_amount: withdraw_result.loan_amount.to_bits(),
                 loan_origination_fee: withdraw_result.loan_origination_fee.to_bits(),
                 instruction: LoanOriginationFeeInstruction::TokenWithdraw,

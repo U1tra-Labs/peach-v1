@@ -121,7 +121,7 @@ where
     let token_position_count = account.active_token_positions().count();
     for bank_ai in &remaining_accounts[0..token_position_count] {
         let mut bank = bank_ai.load_mut::<Bank>()?;
-        if bank.collateral_fee_per_day <= 0.0 || bank.maint_asset_weight.is_zero() {
+        if bank.collateral_fee_per_day.val() <= 0.0 || bank.maint_asset_weight.is_zero() {
             continue;
         }
 
@@ -135,19 +135,19 @@ where
             continue;
         }
 
-        let fee = token_balance * scaling * I80F48::from_num(bank.collateral_fee_per_day);
+        let fee = token_balance * scaling * I80F48::from_num(bank.collateral_fee_per_day.val());
         assert!(fee <= token_balance);
 
         let token_info = health_cache.token_info(bank.token_index)?;
 
         total_collateral_fees_in_usd += fee * token_info.prices.oracle;
 
-        bank.collected_collateral_fees += fee;
+        bank.collected_collateral_fees = (bank.collected_collateral_fees.val() + fee).into();
 
         emit_stack(TokenCollateralFeeLog {
             peach_market: peach_market,
             peach_account: account_key,
-            token_index: bank.token_index,
+            token_index: bank.token_index.0,
             fee: fee.to_bits(),
             asset_usage_fraction: asset_usage_scaling.to_bits(),
             price: token_info.prices.oracle.to_bits(),
@@ -192,16 +192,16 @@ where
             account.deactivate_token_position_and_log(raw_token_index, account_key);
         }
 
-        bank.collected_fees_native += fee;
+        bank.collected_fees_native = (bank.collected_fees_native.val() + fee).into();
         let token_position = account.token_position(bank.token_index)?;
 
         emit_stack(TokenBalanceLog {
             peach_market: peach_market,
             peach_account: account_key,
-            token_index: bank.token_index,
-            indexed_position: token_position.indexed_position.to_bits(),
-            deposit_index: bank.deposit_index.to_bits(),
-            borrow_index: bank.borrow_index.to_bits(),
+            token_index: bank.token_index.0,
+            indexed_position: token_position.indexed_position.val().to_bits(),
+            deposit_index: bank.deposit_index.val().to_bits(),
+            borrow_index: bank.borrow_index.val().to_bits(),
         })
     }
 

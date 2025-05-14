@@ -30,7 +30,7 @@ pub struct TokenVaultCreate<'info> {
 
     #[account(
         init,
-        seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
+        seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.0.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
         bump,
         token::authority = market,
         token::mint = mint,

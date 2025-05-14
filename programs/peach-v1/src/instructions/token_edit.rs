@@ -10,6 +10,8 @@ use crate::{state::*, InterestRateParams};
 use crate::logs::{emit_stack, TokenMetaDataLogV2};
 use crate::util::fill_from_str;
 
+use crate::state::F64Bytes;
+
 #[allow(unused_variables)]
 #[allow(clippy::too_many_arguments)]
 pub fn token_edit(
@@ -124,12 +126,12 @@ pub fn token_edit(
             interest_rate_params.rate1,
             interest_rate_params.max_rate,
         );
-            bank.adjustment_factor = I80F48::from_num(interest_rate_params.adjustment_factor);
-            bank.util0 = I80F48::from_num(interest_rate_params.util0);
-            bank.rate0 = I80F48::from_num(interest_rate_params.rate0);
-            bank.util1 = I80F48::from_num(interest_rate_params.util1);
-            bank.rate1 = I80F48::from_num(interest_rate_params.rate1);
-            bank.max_rate = I80F48::from_num(interest_rate_params.max_rate);
+            bank.adjustment_factor = I80F48::from_num(interest_rate_params.adjustment_factor).into();
+            bank.util0 = I80F48::from_num(interest_rate_params.util0).into();
+            bank.rate0 = I80F48::from_num(interest_rate_params.rate0).into();
+            bank.util1 = I80F48::from_num(interest_rate_params.util1).into();
+            bank.rate1 = I80F48::from_num(interest_rate_params.rate1).into();
+            bank.max_rate = I80F48::from_num(interest_rate_params.max_rate).into();
             require_market_admin = true;
         }
 
@@ -139,7 +141,7 @@ pub fn token_edit(
                 bank.loan_origination_fee_rate,
                 loan_origination_fee_rate
             );
-            bank.loan_origination_fee_rate = I80F48::from_num(loan_origination_fee_rate);
+            bank.loan_origination_fee_rate = I80F48::from_num(loan_origination_fee_rate).into();
             require_market_admin = true;
         }
         if let Some(loan_fee_rate) = loan_fee_rate_opt {
@@ -148,7 +150,7 @@ pub fn token_edit(
                 bank.loan_fee_rate,
                 loan_fee_rate
             );
-            bank.loan_fee_rate = I80F48::from_num(loan_fee_rate);
+            bank.loan_fee_rate = I80F48::from_num(loan_fee_rate).into();
             require_market_admin = true;
         }
 
@@ -158,7 +160,7 @@ pub fn token_edit(
                 bank.maint_asset_weight,
                 maint_asset_weight
             );
-            bank.maint_asset_weight = I80F48::from_num(maint_asset_weight);
+            bank.maint_asset_weight = I80F48::from_num(maint_asset_weight).into();
             require_market_admin = true;
         }
         if let Some(init_asset_weight) = init_asset_weight_opt {
@@ -173,7 +175,7 @@ pub fn token_edit(
                 PeachError::InitAssetWeightCantBeNegative
             );
 
-            bank.init_asset_weight = I80F48::from_num(init_asset_weight);
+            bank.init_asset_weight = I80F48::from_num(init_asset_weight).into();
 
             if init_asset_weight != 0.0 {
                 require_market_admin = true;
@@ -185,7 +187,7 @@ pub fn token_edit(
                 bank.maint_liab_weight,
                 maint_liab_weight
             );
-            bank.maint_liab_weight = I80F48::from_num(maint_liab_weight);
+            bank.maint_liab_weight = I80F48::from_num(maint_liab_weight).into();
             require_market_admin = true;
         }
         if let Some(init_liab_weight) = init_liab_weight_opt {
@@ -194,7 +196,7 @@ pub fn token_edit(
                 bank.init_liab_weight,
                 init_liab_weight
             );
-            bank.init_liab_weight = I80F48::from_num(init_liab_weight);
+            bank.init_liab_weight = I80F48::from_num(init_liab_weight).into();
             require_market_admin = true;
         }
         if let Some(liquidation_fee) = liquidation_fee_opt {
@@ -203,7 +205,7 @@ pub fn token_edit(
                 bank.liquidation_fee,
                 liquidation_fee
             );
-            bank.liquidation_fee = I80F48::from_num(liquidation_fee);
+            bank.liquidation_fee = I80F48::from_num(liquidation_fee).into();
             require_market_admin = true;
         }
 
@@ -242,7 +244,7 @@ pub fn token_edit(
                 bank.min_vault_to_deposits_ratio,
                 min_vault_to_deposits_ratio
             );
-            bank.min_vault_to_deposits_ratio = min_vault_to_deposits_ratio;
+            bank.min_vault_to_deposits_ratio = F64Bytes::new(min_vault_to_deposits_ratio);
             require_market_admin = true;
         }
         if let Some(net_borrow_limit_per_window_quote) = net_borrow_limit_per_window_quote_opt {
@@ -276,7 +278,7 @@ pub fn token_edit(
                 bank.borrow_weight_scale_start_quote,
                 borrow_weight_scale_start_quote
             );
-            bank.borrow_weight_scale_start_quote = borrow_weight_scale_start_quote;
+            bank.borrow_weight_scale_start_quote = F64Bytes::new(borrow_weight_scale_start_quote);
             require_market_admin = true;
         }
         if let Some(deposit_weight_scale_start_quote) = deposit_weight_scale_start_quote_opt {
@@ -285,7 +287,7 @@ pub fn token_edit(
                 bank.deposit_weight_scale_start_quote,
                 deposit_weight_scale_start_quote
             );
-            bank.deposit_weight_scale_start_quote = deposit_weight_scale_start_quote;
+            bank.deposit_weight_scale_start_quote = F64Bytes::new(deposit_weight_scale_start_quote);
             require_market_admin = true;
         }
 
@@ -336,7 +338,7 @@ pub fn token_edit(
                 interest_curve_scaling
             );
             require_gte!(interest_curve_scaling, 1.0);
-            bank.interest_curve_scaling = interest_curve_scaling.into();
+            bank.interest_curve_scaling = F64Bytes::new(interest_curve_scaling as f64);
             require_market_admin = true;
         }
         if let Some(interest_target_utilization) = interest_target_utilization_opt {
@@ -346,20 +348,20 @@ pub fn token_edit(
                 interest_target_utilization
             );
             require_gte!(interest_target_utilization, 0.0);
-            bank.interest_target_utilization = interest_target_utilization;
+            bank.interest_target_utilization = F32Bytes::new(interest_target_utilization);
             require_market_admin = true;
         }
 
         if maint_weight_shift_abort {
             let now_ts: u64 = Clock::get()?.unix_timestamp.try_into().unwrap();
             let (maint_asset_weight, maint_liab_weight) = bank.maint_weights(now_ts);
-            bank.maint_asset_weight = maint_asset_weight;
-            bank.maint_liab_weight = maint_liab_weight;
+            bank.maint_asset_weight = maint_asset_weight.into();
+            bank.maint_liab_weight = maint_liab_weight.into();
             bank.maint_weight_shift_start = 0;
             bank.maint_weight_shift_end = 0;
-            bank.maint_weight_shift_duration_inv = I80F48::ZERO;
-            bank.maint_weight_shift_asset_target = I80F48::ZERO;
-            bank.maint_weight_shift_liab_target = I80F48::ZERO;
+            bank.maint_weight_shift_duration_inv = I80F48::ZERO.into();
+            bank.maint_weight_shift_asset_target = I80F48::ZERO.into();
+            bank.maint_weight_shift_liab_target = I80F48::ZERO.into();
             msg!(
                 "Maint weight shift aborted, current maint weights asset {} liab {}",
                 maint_asset_weight,
@@ -392,7 +394,7 @@ pub fn token_edit(
                 maint_weight_shift_asset_target
             );
             bank.maint_weight_shift_asset_target =
-                I80F48::from_num(maint_weight_shift_asset_target);
+                I80F48::from_num(maint_weight_shift_asset_target).into();
             require_market_admin = true;
         }
         if let Some(maint_weight_shift_liab_target) = maint_weight_shift_liab_target_opt {
@@ -401,16 +403,16 @@ pub fn token_edit(
                 bank.maint_weight_shift_liab_target,
                 maint_weight_shift_liab_target
             );
-            bank.maint_weight_shift_liab_target = I80F48::from_num(maint_weight_shift_liab_target);
+            bank.maint_weight_shift_liab_target = I80F48::from_num(maint_weight_shift_liab_target).into();
             require_market_admin = true;
         }
         if maint_weight_shift_start_opt.is_some() || maint_weight_shift_end_opt.is_some() {
             let was_enabled = bank.maint_weight_shift_duration_inv.is_positive();
             if bank.maint_weight_shift_end <= bank.maint_weight_shift_start {
-                bank.maint_weight_shift_duration_inv = I80F48::ZERO;
+                bank.maint_weight_shift_duration_inv = I80F48::ZERO.into();
             } else {
-                bank.maint_weight_shift_duration_inv = I80F48::ONE
-                    / I80F48::from(bank.maint_weight_shift_end - bank.maint_weight_shift_start);
+                bank.maint_weight_shift_duration_inv = (I80F48::ONE
+                    / I80F48::from_num(bank.maint_weight_shift_end - bank.maint_weight_shift_start)).into();
             }
             msg!(
                 "Maint weight shift enabled old {}, new {}",
@@ -435,7 +437,7 @@ pub fn token_edit(
                 bank.zero_util_rate,
                 zero_util_rate
             );
-            bank.zero_util_rate = I80F48::from_num(zero_util_rate);
+            bank.zero_util_rate = I80F48::from_num(zero_util_rate).into();
             require_market_admin = true;
         }
 
@@ -445,7 +447,7 @@ pub fn token_edit(
                 bank.platform_liquidation_fee,
                 platform_liquidation_fee
             );
-            bank.platform_liquidation_fee = I80F48::from_num(platform_liquidation_fee);
+            bank.platform_liquidation_fee = I80F48::from_num(platform_liquidation_fee).into();
             if platform_liquidation_fee != 0.0 {
                 require_market_admin = true;
             }
@@ -457,7 +459,7 @@ pub fn token_edit(
                 bank.collateral_fee_per_day,
                 collateral_fee_per_day
             );
-            bank.collateral_fee_per_day = collateral_fee_per_day;
+            bank.collateral_fee_per_day = F32Bytes::new(collateral_fee_per_day);
             if collateral_fee_per_day != 0.0 {
                 require_market_admin = true;
             }
@@ -498,10 +500,10 @@ pub fn token_edit(
 
     emit_stack(TokenMetaDataLogV2 {
         market: ctx.accounts.market.key(),
-        mint: mint_info.mint.key(),
-        token_index: bank.token_index,
+        mint: bank.mint,
+        token_index: bank.token_index.0,
         mint_decimals: bank.mint_decimals,
-        oracle: mint_info.oracle.key(),
+        oracle: bank.oracle,
         fallback_oracle: ctx.accounts.fallback_oracle.key(),
         mint_info: ctx.accounts.mint_info.key(),
     });
