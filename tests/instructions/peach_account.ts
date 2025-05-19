@@ -12,7 +12,7 @@ export async function createPeachAccount(peachAccount: PublicKey, market: Public
     .accountCreate(accountNum, token_count, name)
     .accounts({
       market: market,
-      account: peachAccount,
+      peachAccount: peachAccount,
       owner: user.publicKey,
       payer: user.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId,

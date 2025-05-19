@@ -1,8 +1,7 @@
 use anchor_lang::prelude::*;
 use instructions::*;
-use state::{OracleConfigParams, TokenIndex, bank::MyFixedIdlWrapper};
-
-// use fixed::types::I80F48; // Commenting out unused import
+use state::OracleConfigParams;
+use custom_types::token_index::TokenIndex;
 
 #[macro_use]
 pub mod util;
@@ -10,17 +9,19 @@ pub mod util;
 pub mod instructions;
 pub mod state;
 pub mod error;
-pub mod i80f48;
 pub mod types;
+pub mod custom_types;
 pub mod logs;
 pub mod accounts_zerocopy;
 pub mod health;
 pub mod constants;
 
-declare_id!("HpPVs6mWxJvYUUTQEKvek79C5Hou2VaJJjSVzF9N1KHd");
+declare_id!("EYz3GPbE1qoXS3i4ziRmfyTQgVjZt3ymMxYKZZiEaEED");
 
 #[program]
 pub mod peach_v1 {
+
+    use crate::custom_types::TokenIndex;
 
     use super::*;
 
@@ -42,8 +43,8 @@ pub mod peach_v1 {
         name: String,
     ) -> Result<()> {
         instructions::account_create(
-            &ctx.accounts.account,
-            ctx.bumps.account,
+            &ctx.accounts.peach_account,
+            ctx.bumps.peach_account,
             ctx.accounts.market.key(),
             ctx.accounts.owner.key(),
             account_num,
@@ -131,12 +132,9 @@ pub mod peach_v1 {
 
     pub fn stub_oracle_create(
         ctx: Context<StubOracleCreate>,
-        price: MyFixedIdlWrapper,
-        last_update_ts: i64,
-        last_update_slot: u64,
-        deviation: MyFixedIdlWrapper,
+        price: u64
     ) -> Result<()> {
-        instructions::stub_oracle_create(ctx, price, last_update_ts, last_update_slot, deviation)?;
+        instructions::stub_oracle_create(ctx, price)?;
         Ok(())
     }
 
@@ -192,16 +190,16 @@ pub mod peach_v1 {
         Ok(())
     }
 
-    pub fn stub_oracle_set(ctx: Context<StubOracleSet>, price: MyFixedIdlWrapper) -> Result<()> {
+    pub fn stub_oracle_set(ctx: Context<StubOracleSet>, price: u64) -> Result<()> {
         instructions::stub_oracle_set(ctx, price)?;
         Ok(())
     }
 
     pub fn stub_oracle_set_test(
         ctx: Context<StubOracleSet>,
-        price: MyFixedIdlWrapper,
+        price: u64,
         last_update_slot: u64,
-        deviation: MyFixedIdlWrapper,
+        deviation: u64,
     ) -> Result<()> {
         instructions::stub_oracle_set_test(ctx, price, last_update_slot, deviation)?;
         Ok(())

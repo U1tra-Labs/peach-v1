@@ -1,21 +1,21 @@
 // use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
-use anchor_lang::prelude::Pubkey; // For Pubkey
+use anchor_lang::prelude::Pubkey;
 
+use crate::custom_types::fixed_wrapper::FixedWrapper;
 // Assuming these paths are correct based on your project structure
 use crate::state::oracle::OracleConfig;
 use crate::state::stable_price::StablePriceModel;
-use crate::state::bank::MyFixedIdlWrapper;
 
 #[repr(C)]
 #[derive(Pod, Zeroable, Clone, Copy, Default, Debug)] // Added Default and Debug for easier testing
 pub struct MinimalBank {
     pub oracle_config: OracleConfig,
     pub stable_price_model: StablePriceModel,
-    pub wrapper: MyFixedIdlWrapper,
+    pub wrapper: FixedWrapper,
     // Added fields:
-    pub deposit_index: MyFixedIdlWrapper,
-    pub borrow_index: MyFixedIdlWrapper,
+    pub deposit_index: FixedWrapper,
+    pub borrow_index: FixedWrapper,
     pub index_last_updated: u64,
     pub bank_rate_last_updated: u64,
     // Newly added fields
@@ -24,7 +24,7 @@ pub struct MinimalBank {
 }
 
 // Implementing Default for nested types if they don't have it or to be explicit.
-// MyFixedIdlWrapper already derives Default.
+// FixedWrapper already derives Default.
 // OracleConfig has a Default impl.
 // StablePriceModel has a Default impl.
 

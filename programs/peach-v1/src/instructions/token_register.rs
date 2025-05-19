@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::accounts_zerocopy::AccountInfoRef;
+use crate::custom_types::{F32Bytes, F64Bytes, TokenIndex};
 use crate::error::*;
 use crate::logs::{emit_stack, TokenMetaDataLogV2};
 use crate::state::*;
@@ -123,9 +124,8 @@ pub fn token_register(
         collected_collateral_fees: I80F48::ZERO.into(),
         collateral_fee_per_day: F32Bytes::new(collateral_fee_per_day),
         tier: fill_from_str(&tier)?,
-        _padding2: [0; 4],
-        _padding3: [0; 48],
-        reserved: [0u8; 4],
+        _padding1: [0; 12],
+        reserved: [0; 12],
     };
 
     let oracle_ref = &AccountInfoRef::borrow(ctx.accounts.oracle.as_ref())?;

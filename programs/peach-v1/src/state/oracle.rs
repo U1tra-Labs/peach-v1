@@ -1,18 +1,22 @@
+use std::mem::size_of;
+
 use anchor_lang::prelude::*;
 use anchor_lang::{AnchorDeserialize, Discriminator};
+// use fixed::traits::Fixed;
 // use static_assertions::const_assert_eq;
 // use std::mem::size_of;
 use pyth_solana_receiver_sdk::price_update::VerificationLevel;
 use bytemuck;
+use static_assertions::const_assert_eq;
 // use switchboard_on_demand::PullFeedAccountData;
 // use switchboard_program::FastRoundResultAccountData;
 // use switchboard_v2::AggregatorAccountData;
 
 use crate::accounts_zerocopy::*;
 use crate::error::PeachError;
+use crate::custom_types::fixed_wrapper::FixedWrapper;
 // use crate::error_msg;
 // use crate::error::Contextable;
-use crate::state::bank::MyFixedIdlWrapper;
 // use crate::state::stable_price::StablePriceModel;
 
 use fixed::types::I80F48;
@@ -95,11 +99,10 @@ pub mod sol_mint_mainnet {
 }
 
 #[zero_copy]
-#[repr(C)]
 #[derive(Derivative, PartialEq, Eq)]
 #[derivative(Debug)]
 pub struct OracleConfig {
-    pub conf_filter: MyFixedIdlWrapper,
+    pub conf_filter: FixedWrapper,
     /// Max staleness for a price feed to be considered valid for trading, in slots.
     pub max_staleness_slots: i64,
     #[derivative(Debug = "ignore")]
@@ -109,7 +112,7 @@ pub struct OracleConfig {
 impl Default for OracleConfig {
     fn default() -> Self {
         OracleConfig {
-            conf_filter: MyFixedIdlWrapper::zero(),
+            conf_filter: FixedWrapper::new(I80F48::from_num(1000.0)),
             max_staleness_slots: -1,
             reserved: [0; 72],
         }
@@ -211,15 +214,15 @@ pub struct StubOracle {
     pub market: Pubkey,
     // ABI: Clients rely on this being at offset 40
     pub mint: Pubkey,
-    pub price: MyFixedIdlWrapper,
+    pub price: FixedWrapper,
     pub last_update_ts: i64,
     pub last_update_slot: u64,
-    pub deviation: MyFixedIdlWrapper,
+    pub deviation: FixedWrapper,
     pub reserved: [u8; 16],
 }
 // const_assert_eq!(size_of::<StubOracle>(), 32 + 32 + 16 + 8 + 8 + 16 + 104);
 // const_assert_eq!(size_of::<StubOracle>(), 216);
-// const_assert_eq!(size_of::<StubOracle>() % 8, 0);
+const_assert_eq!(size_of::<StubOracle>() % 16, 0);
 
 pub fn check_is_valid_fallback_oracle(acc_info: &impl KeyedAccountReader) -> Result<()> {
     if acc_info.key() == &Pubkey::default() {

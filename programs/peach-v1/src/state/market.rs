@@ -80,4 +80,4 @@ macro_rules! market_seeds {
 
 pub use market_seeds;
 
-use super::TokenIndex;
+use crate::custom_types::TokenIndex;

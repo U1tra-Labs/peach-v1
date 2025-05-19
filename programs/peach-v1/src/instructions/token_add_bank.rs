@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
+use crate::custom_types::TokenIndex;
 use crate::error::PeachError;
 use crate::state::*;
 
@@ -66,7 +67,7 @@ pub struct TokenAddBank<'info> {
     pub bank: AccountLoader<'info, Bank>,
 
     #[account(
-        init_if_needed,
+        init,
         seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.0.to_le_bytes(), &bank_num.to_le_bytes()],
         bump,
         token::authority = market,

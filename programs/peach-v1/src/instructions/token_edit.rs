@@ -10,7 +10,7 @@ use crate::{state::*, InterestRateParams};
 use crate::logs::{emit_stack, TokenMetaDataLogV2};
 use crate::util::fill_from_str;
 
-use crate::state::F64Bytes;
+use crate::custom_types::{F32Bytes, F64Bytes};
 
 #[allow(unused_variables)]
 #[allow(clippy::too_many_arguments)]

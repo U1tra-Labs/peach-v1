@@ -12,13 +12,14 @@ use static_assertions::const_assert_eq;
 use crate::error::Contextable;
 use crate::error::PeachError;
 use crate::error_msg_typed;
+use crate::custom_types::fixed_wrapper::FixedWrapper;
 use crate::health::HealthCache;
 use crate::health::HealthType;
 use crate::logs::emit_stack;
 use crate::logs::DeactivateTokenPositionLog;
 use crate::state::*;
 
-use super::TokenIndex;
+use crate::custom_types::TokenIndex;
 
 type BorshVecLength = u32;
 const BORSH_VEC_PADDING_BYTES: usize = 4;
@@ -607,13 +608,13 @@ impl<
             let v = self.token_position_mut_by_raw_index(raw_index);
             if !v.is_active_for_token(token_index) {
                 *v = TokenPosition {
-                    indexed_position: MyFixedIdlWrapper::zero(),
+                    indexed_position: FixedWrapper::zero(),
                     token_index,
                     is_kamino_position,
                     in_use_count: 0,
                     padding: [0; 3],
                     _internal_padding_align_prev_idx: [0; 8],
-                    previous_index: MyFixedIdlWrapper::zero(),
+                    previous_index: FixedWrapper::zero(),
                     cumulative_deposit_interest: 0.0,
                     cumulative_borrow_interest: 0.0,
                     _struct_padding_for_pod: [0; 16],

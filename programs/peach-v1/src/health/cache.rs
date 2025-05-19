@@ -16,10 +16,12 @@
 use anchor_lang::prelude::*;
 use fixed::types::I80F48;
 
+use crate::custom_types::fixed_wrapper::FixedWrapper;
+use crate::custom_types::TokenIndex;
 use crate::health::account_retriever::AccountRetriever;
 use crate::error::*;
 use crate::state::{
-    Bank, PeachAccountRef, TokenIndex, MyFixedIdlWrapper
+    Bank, PeachAccountRef
 };
 
 /// Information about prices for a bank or perp market.
@@ -501,7 +503,7 @@ fn new_health_cache_impl(
                 .contains(&position.token_index);
             if !bank_is_available {
                 require_msg_typed!(
-                    position.indexed_position >= MyFixedIdlWrapper::zero(),
+                    position.indexed_position >= FixedWrapper::zero(),
                     PeachError::InvalidBank,
                     "the bank for token index {} is a required health account when the account has a negative balance in it",
                     position.token_index
@@ -516,7 +518,7 @@ fn new_health_cache_impl(
         // Allow skipping of bad-oracle banks if the account has a nonnegative balance
         if allow_skipping_banks
             && bank_oracle_result.is_oracle_error()
-            && position.indexed_position >= MyFixedIdlWrapper::zero()
+            && position.indexed_position >= FixedWrapper::zero()
         {
             // Ignore the asset because the oracle is bad, decreasing total health
             continue;

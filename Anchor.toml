@@ -5,10 +5,10 @@ seeds = false
 skip-lint = false
 
 [programs.devnet]
-peach_v1 = "ALBzpjn7Q8T2oiTQc4wgpmFNBr89xtXWcWaGQCpZBzbp"
+peach_v1 = "EYz3GPbE1qoXS3i4ziRmfyTQgVjZt3ymMxYKZZiEaEED"
 
 [programs.localnet]
-peach_v1 = "ALBzpjn7Q8T2oiTQc4wgpmFNBr89xtXWcWaGQCpZBzbp"
+peach_v1 = "EYz3GPbE1qoXS3i4ziRmfyTQgVjZt3ymMxYKZZiEaEED"
 
 [programs.mainnet]
 peach_v1 = "HpPVs6mWxJvYUUTQEKvek79C5Hou2VaJJjSVzF9N1KHd"

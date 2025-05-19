@@ -1,8 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::{error::PeachError, state::{IxGate, Market}};
-use crate::state::*;
+use crate::{custom_types::TokenIndex, error::PeachError, state::{IxGate, Market}};
 
 const FIRST_BANK_NUM: u32 = 0;
 

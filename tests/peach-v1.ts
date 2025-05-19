@@ -1,20 +1,21 @@
 import * as anchor from "@coral-xyz/anchor";
 import { assert } from "chai";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import { createTokenMint, deriveMarketPDA, derivePeachAccountPDA, deriveBankPDA, deriveVaultPDA, deriveMintInfoPDA, createTokenAccount, transferToken, provider, testDerivePeachAccountPDA } from "./helpers/setup";
+import { deriveMarketPDA, derivePeachAccountPDA, deriveBankPDA, deriveVaultPDA, deriveMintInfoPDA, createTokenAccount, transferToken, provider, testDerivePeachAccountPDA, getUSDCMint } from "./helpers/setup";
 import { defundWallet, getFundedWallet } from "./helpers/fundWallets";
+import { delayForMainnet } from "./helpers/rpc";
 import { marketClose, marketCreate } from "./instructions/market";
 import { createPeachAccount } from "./instructions/peach_account";
 import { createStubOracle } from "./instructions/oracle";
 import { tokenChargeCollateralFees, tokenDeposit, tokenDepositIntoExisting, tokenDeregister, tokenForceWithdraw, tokenRegister, tokenWithdraw } from "./instructions/token";
-import { I80F48 } from "./helpers/I80F48";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { KAMINO_FARM_MAINNET, KAMINO_LENDING_MAIN_MARKET, KAMINO_LENDING, KAMINO_RESERVE_FARM_STATE_USDC, KAMINO_RESERVE_USDC, KAMINO_RESERVED_USDC_MINT, TEST_ENV, USDC_MINT_MAINNET } from "./helpers/const";
-import { Idl, Program } from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
 import { createLookupTableAddress } from "./helpers/create_alt";
 import kamino_idl from "./kamino/kamino_lending.json";
 import { ASSOCIATED_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
+import type { KaminoLending } from "./kamino/kamino_lending";
 
 // Test suite
 describe("peach-v1", () => {
@@ -25,14 +26,17 @@ describe("peach-v1", () => {
   const programWallet = (program.provider.wallet as NodeWallet).payer; 
   const connection: anchor.web3.Connection = program.provider.connection;
 
-  const idl = kamino_idl as Idl;
-  const kaminoProgram = new Program(idl, KAMINO_LENDING, provider);
+  const kaminoProgram = new Program<KaminoLending>(kamino_idl, provider);
 
   // This test suite is for testing unit instructions from the peach program
   describe("Native happy tests", () => {
     let admin: Keypair;
     let user: Keypair;
-    const stubOracle = Keypair.generate(); // This is a keypair for the stub oracle, used for testing
+    
+    // This is a keypair for the stub oracle, used for testing in devnet/localnet
+    // TODO: Replace with a real oracle in mainnet and get price from it
+    const stubOracle = Keypair.generate(); 
+    let oracle_price = new anchor.BN(1.0);
 
     let market: PublicKey, peachAccount: PublicKey, bank: PublicKey, vault: PublicKey, mintInfo: PublicKey;
     
@@ -45,10 +49,10 @@ describe("peach-v1", () => {
 
     // Update these values as needed; make sure you change the test cases accordingly
     // These values are used to derive the PDAs for the peach account, bank, vault, and mint info
+    let marketNum = 0, accountNum = 0, tokenIndex = 0;
     // These values are used to test the deposit and withdraw functions
-    let marketNum = 0, accountNum = 0, tokenIndex = 0, price = 1.0;
-    let deposit_amount1 = new anchor.BN(100), deposit_amount2 = new anchor.BN(50);
-    let withdraw_amount = new anchor.BN(5);
+    let deposit_amount1 = new anchor.BN(50), deposit_amount2 = new anchor.BN(35);
+    let withdraw_amount = new anchor.BN(24);
 
     before(async () => {
       console.log("Starting Test Setup");
@@ -56,24 +60,24 @@ describe("peach-v1", () => {
       console.log("Balance before testing: ", await connection.getBalance(programWallet.publicKey));
 
       admin = await getFundedWallet();
-      // Wait for the wallet to be funded
-      setTimeout(() => {}, 5000);
+      delayForMainnet();
       user = await getFundedWallet();
+      delayForMainnet();
 
       // Create mint from our program wallet for local/devnet testing
       // For mainnet, use USDC mint
-      setTimeout(() => {}, 5000);
-      usdc_mint = USDC_MINT_MAINNET;
+      usdc_mint = await getUSDCMint();
+      delayForMainnet();
       
       // Create token accounts
-      setTimeout(() => { }, 5000);
-      // usdcATA = await createTokenAccount(usdc_mint, programWallet);
-      usdcATA = new PublicKey("Dc22vGVRbk5dVucRLrwA5UJBuZFKufF4W4kf5pvjLDMZ"); // program wallet USDC token account
+      usdcATA = await createTokenAccount(usdc_mint, programWallet);
+      // usdcATA = new PublicKey("Dc22vGVRbk5dVucRLrwA5UJBuZFKufF4W4kf5pvjLDMZ"); // program wallet USDC token account
+      delayForMainnet();
 
       // Transfer some tokens to user
-      setTimeout(() => {}, 5000);
       user1ATA = await transferToken(usdc_mint, usdcATA, programWallet, user, 0.01 * 10 ** 6);
-
+      delayForMainnet();
+      
       // Derive PDAs
       market = deriveMarketPDA(marketNum, admin.publicKey);
       peachAccount = derivePeachAccountPDA(market, accountNum, user.publicKey);
@@ -115,7 +119,7 @@ describe("peach-v1", () => {
         try {
           await createPeachAccount(peachAccount, market, accountNum, user);
           
-          const account = await program.account.peachAccount.fetch(peachAccount);
+          const account = await program.account.peachAccountFixed.fetch(peachAccount);
           assert.equal(account.accountNum, accountNum);
           assert(account.owner.equals(user.publicKey));
         }
@@ -126,10 +130,10 @@ describe("peach-v1", () => {
 
       it("Creates a stub oracle", async () => {
         try {
-          await createStubOracle(stubOracle, market, usdc_mint, price, admin);
+          await createStubOracle(stubOracle, market, usdc_mint, oracle_price, admin);
           
           const oracle = await program.account.stubOracle.fetch(stubOracle.publicKey);
-          assert.equal(oracle.price.val.toNumber(), I80F48.fromNumber(price).getData().toNumber());
+          assert.equal(oracle.price[0].toNumber() / Math.pow(2, 48), oracle_price.toNumber());
           assert.ok(oracle.mint.equals(usdc_mint));
         }
         catch (err) {
@@ -144,12 +148,11 @@ describe("peach-v1", () => {
           const mintInfoAccount = await program.account.mintInfo.fetch(mintInfo);
           const bankAccount = await program.account.bank.fetch(bank);
           const vaultAccount = await connection.getParsedAccountInfo(vault);
-          // console.log("Bank: ", bankAccount, "\n Vault: ", vault.value.data);
           assert.ok(vaultAccount.value.data.parsed.info.owner == market.toBase58());
           assert.ok(mintInfoAccount.mint.equals(usdc_mint));
           assert.ok(mintInfoAccount.oracle.equals(stubOracle.publicKey));
           assert.ok(bankAccount.mint.equals(usdc_mint));
-          assert.ok(bankAccount.tokenIndex == tokenIndex);
+          assert.ok(bankAccount.tokenIndex[0] == tokenIndex);
         }
         catch (err) {
           assert.fail("Error while registering token: " + err);
@@ -157,16 +160,16 @@ describe("peach-v1", () => {
       });
     });
 
-    describe.skip("Native Token operations", () => {
+    describe("Native Token operations", () => {
 
       it("Deposits a token", async () => {
         try{
           await tokenDeposit(deposit_amount1, market, peachAccount, bank, vault, stubOracle.publicKey, user1ATA, user);
           
           const vaultBalance = await connection.getTokenAccountBalance(vault);
-          const userAccount = await program.account.peachAccount.fetch(peachAccount);
+          const userAccount = await program.account.peachAccountFixed.fetch(peachAccount);
           assert.equal(userAccount.netDeposits.toNumber(), deposit_amount1);
-          assert.equal(vaultBalance.value.amount, deposit_amount1);
+          assert.equal(vaultBalance.value.amount, deposit_amount1.toString());
         } catch (err)  {
           assert.fail("Error while depositing a token: " + err);
         }
@@ -177,7 +180,7 @@ describe("peach-v1", () => {
           await tokenWithdraw(withdraw_amount, market, peachAccount, bank, vault, stubOracle.publicKey, user1ATA);
 
           const vaultBalance = await connection.getTokenAccountBalance(vault);
-          const peachAccount1 = await program.account.peachAccount.fetch(peachAccount);
+          const peachAccount1 = await program.account.peachAccountFixed.fetch(peachAccount);
           assert.equal(peachAccount1.netDeposits.toNumber(), deposit_amount1.sub(withdraw_amount));
           assert.equal(vaultBalance.value.amount, deposit_amount1.sub(withdraw_amount));
         } catch (err) {
@@ -190,7 +193,7 @@ describe("peach-v1", () => {
           await tokenDepositIntoExisting(deposit_amount2, market, peachAccount, bank, vault, stubOracle.publicKey, user1ATA, user);
           
           const vaultBalance = await connection.getTokenAccountBalance(vault);
-          const userAccount = await program.account.peachAccount.fetch(peachAccount);
+          const userAccount = await program.account.peachAccountFixed.fetch(peachAccount);
           assert.equal(userAccount.netDeposits.toNumber(), deposit_amount2.add(deposit_amount1).sub(withdraw_amount).toNumber());
           assert.equal(vaultBalance.value.amount, deposit_amount2.add(deposit_amount1).sub(withdraw_amount).toNumber());
         } catch (err)  {
@@ -210,7 +213,7 @@ describe("peach-v1", () => {
     });
 
     // This test suite is for testing Kamino instructions, to be done only on mainnet
-    describe("Kamino operations", () => {
+    describe.skip("Kamino operations", () => {
       
       // Kamino instruction's specific variables
       let userMetaDataPDA: PublicKey;
@@ -344,7 +347,7 @@ describe("peach-v1", () => {
 
       });
 
-      it("Init Obligation", async () => {
+      it.skip("Init Obligation", async () => {
 
         const signature = await program.methods.kaminoInitObligation(args)
             .accounts({
@@ -370,7 +373,7 @@ describe("peach-v1", () => {
         assert.equal(obligationAccount.tag, args.tag);
       });
 
-      it("Init User Obligation Farm for Reserve", async () => {
+      it.skip("Init User Obligation Farm for Reserve", async () => {
         
         const signature = await program.methods.kaminoInitObligationFarmForReserve(mode)
           .accounts({
@@ -432,7 +435,7 @@ describe("peach-v1", () => {
           
       });
 
-      it("Withdraw from kamino", async() => {
+      it.skip("Withdraw from kamino", async() => {
 
         const signature = await program.methods.kaminoWithdraw(
             deposit_amount,
@@ -471,7 +474,7 @@ describe("peach-v1", () => {
 
     });
 
-    describe.skip("Deregister and close accounts", () => {      
+    describe("Deregister and close accounts", () => {      
       it("Close stub oracle", async () => {
         try {
           await program.methods.stubOracleClose()
@@ -506,7 +509,7 @@ describe("peach-v1", () => {
           .signers([user])
           .rpc();
           
-          assert.ok(await program.account.peachAccount.fetch(peachAccount).then(() => false).catch(() => true));
+          assert.ok(await program.account.peachAccountFixed.fetch(peachAccount).then(() => false).catch(() => true));
         } catch (err) {
           assert.fail("Error while closing stub oracle: " + err);
         }
@@ -548,3 +551,4 @@ describe("peach-v1", () => {
   });
 
 });
+

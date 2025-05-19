@@ -57,7 +57,7 @@ pub struct AccountCreate<'info> {
         payer = payer,
         space = PeachAccount::space(token_count),
     )]
-    pub account: AccountLoader<'info, PeachAccountFixed>,
+    pub peach_account: AccountLoader<'info, PeachAccountFixed>,
     pub owner: Signer<'info>,
 
     #[account(mut)]

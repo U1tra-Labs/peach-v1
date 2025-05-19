@@ -1,4 +1,5 @@
 use crate::accounts_zerocopy::*;
+use crate::custom_types::TokenIndex;
 use crate::error::PeachError;
 use crate::health::*;
 use crate::state::*;

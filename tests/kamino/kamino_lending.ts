@@ -1,4 +1,4 @@
-{
+export type KaminoLending = {
   "address": "DrbgiNhrmpd3FhWCiQUXce3YkJQ6DcfUp49qmoCFYe2r",
   "metadata": {
     "name": "kamino_lending",
@@ -5247,4 +5247,4 @@
       }
     }
   ]
-}
+};

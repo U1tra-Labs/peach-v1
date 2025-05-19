@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use derivative::Derivative;
 
-use super::TokenIndex;
+use crate::custom_types::TokenIndex;
 use crate::error::*;
 
 pub const MAX_BANKS: usize = 6;

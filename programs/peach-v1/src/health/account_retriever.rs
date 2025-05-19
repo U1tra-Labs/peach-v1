@@ -2,18 +2,15 @@ use anchor_lang::prelude::*;
 use anchor_lang::ZeroCopy;
 use fixed::types::I80F48;
 
-// use fixed::types::I80F48;
-
 use std::cell::Ref;
-// use std::collections::HashMap;
 
 use crate::accounts_zerocopy::*;
+use crate::custom_types::TokenIndex;
 use crate::error::*;
 use crate::state::pyth_mainnet_sol_oracle;
 use crate::state::pyth_mainnet_usdc_oracle;
 use crate::state::OracleAccountInfos;
-// use crate::state::OracleAccountInfos;
-use crate::state::{Bank, PeachAccountRef, TokenIndex};
+use crate::state::{Bank, PeachAccountRef};
 
 /// This trait abstracts how to find accounts needed for the health computation.
 ///

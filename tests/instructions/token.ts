@@ -23,7 +23,9 @@ export async function tokenRegister(tokenIndex: number, usdc_mint: PublicKey, ma
       "USDC",
       {
         confFilter: 0.01,
-        maxStalenessSlots: 60,
+        // This should be low, but as we are using a stub oracle, it needs to be high enough. 
+        // TODO: Change it to a real value when using mainnet
+        maxStalenessSlots: 500000000, 
       },
       {
         util0: 0.8,

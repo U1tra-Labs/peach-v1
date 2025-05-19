@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use fixed::types::I80F48;
 
 use crate::accounts_zerocopy::AccountInfoRef;
+use crate::custom_types::{F32Bytes, F64Bytes, TokenIndex};
 use crate::error::PeachError;
 use crate::instructions::INDEX_START;
 use crate::state::*;
@@ -89,9 +90,8 @@ pub fn token_register_trustless(
         collected_collateral_fees: I80F48::ZERO.into(),
         collateral_fee_per_day: F32Bytes::new(0.0),
         tier: fill_from_str("C")?,
-        _padding2: [0; 4],
-        _padding3: [0; 48],
-        reserved: [0u8; 4],
+        _padding1: [0; 12],
+        reserved: [0; 12],
     };
     let oracle_ref = &AccountInfoRef::borrow(ctx.accounts.oracle.as_ref())?;
     if let Ok(oracle_price) = bank.oracle_price(&OracleAccountInfos::from_reader(oracle_ref), None)

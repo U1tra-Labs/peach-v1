@@ -1,6 +1,8 @@
 use anchor_lang::{prelude::*, Discriminator};
 
+use crate::custom_types::{F32Bytes, F64Bytes};
 use crate::error::PeachError;
+use crate::custom_types::fixed_wrapper::FixedWrapper;
 use crate::logs::{emit_stack, UpdateIndexLog, UpdateRateLog};
 use crate::state::{OracleAccountInfos, HOUR};
 use crate::{
@@ -189,10 +191,10 @@ pub fn token_update_index_and_rate(
                 some_bank.interest_target_utilization = F32Bytes::new(some_bank.util0.val().to_num::<f32>());
                 if old_max_rate != 0.0 {
                     let descale_factor = I80F48::from_num(1.0 / some_bank.interest_curve_scaling.val());
-                    some_bank.util0 = MyFixedIdlWrapper::new(some_bank.util0.val() * descale_factor);
-                    some_bank.rate0 = MyFixedIdlWrapper::new(some_bank.rate0.val() * descale_factor);
-                    some_bank.rate1 = MyFixedIdlWrapper::new(some_bank.rate1.val() * descale_factor);
-                    some_bank.max_rate = MyFixedIdlWrapper::new(some_bank.max_rate.val() * descale_factor);
+                    some_bank.util0 = FixedWrapper::new(some_bank.util0.val() * descale_factor);
+                    some_bank.rate0 = FixedWrapper::new(some_bank.rate0.val() * descale_factor);
+                    some_bank.rate1 = FixedWrapper::new(some_bank.rate1.val() * descale_factor);
+                    some_bank.max_rate = FixedWrapper::new(some_bank.max_rate.val() * descale_factor);
                 }
             }
 

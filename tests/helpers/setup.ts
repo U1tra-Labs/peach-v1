@@ -4,6 +4,7 @@ import { PeachV1 } from "../../target/types/peach_v1";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { createAssociatedTokenAccount, createMint, getOrCreateAssociatedTokenAccount, mintTo, transfer } from "@solana/spl-token";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
+import { USDC_MINT_MAINNET } from "./const";
 
 export const provider = anchor.AnchorProvider.env();
 anchor.setProvider(provider);
@@ -16,6 +17,13 @@ const PEACH_ACCOUNT_SEED = "PeachAccount";
 const BANK_SEED = "Bank";
 const VAULT_SEED = "Vault";
 const MINT_INFO_SEED = "MintInfo";
+
+export async function getUSDCMint(): Promise<PublicKey> {
+  if (provider.connection.rpcEndpoint.includes("mainnet")) {
+      return USDC_MINT_MAINNET;
+  }
+  return await createTokenMint(6, envProviderPayer);
+}
 
 // Function to create a mint
 export async function createTokenMint(decimals = 10, owner: Keypair): Promise<PublicKey> {
@@ -36,15 +44,15 @@ export async function createTokenAccount(mint: PublicKey, owner: Keypair): Promi
     owner.publicKey,
   );
 
-  // const transactionSignature = await mintTo(
-  //   program.provider.connection,
-  //   owner,
-  //   mint,
-  //   getAssociatedTokenAddress,
-  //   owner,
-  //   2000000,
-  //   [owner]
-  // );
+  const transactionSignature = await mintTo(
+    program.provider.connection,
+    owner,
+    mint,
+    getAssociatedTokenAddress,
+    owner,
+    2000000,
+    [owner]
+  );
 
   return getAssociatedTokenAddress;
 }
