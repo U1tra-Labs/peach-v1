@@ -4,7 +4,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 
-export async function tokenRegister(tokenIndex: number, usdc_mint: PublicKey, marketPDA: PublicKey, vaultPDA: PublicKey, mintInfoPDA: PublicKey, bankPDA: PublicKey, stubOracle: PublicKey, admin: Keypair) {
+export async function tokenRegister(tokenIndex: number, usdc_mint: PublicKey, marketPDA: PublicKey, vaultPDA: PublicKey, mintInfoPDA: PublicKey, bankPDA: PublicKey, oracle: PublicKey, admin: Keypair) {
     const ix1 = await program.methods.tokenVaultCreate(tokenIndex)
       .accounts({
         market: marketPDA,
@@ -68,8 +68,8 @@ export async function tokenRegister(tokenIndex: number, usdc_mint: PublicKey, ma
         bank: bankPDA,
         vault: vaultPDA,
         mintInfo: mintInfoPDA,
-        oracle: stubOracle,
-        fallbackOracle: stubOracle,
+        oracle: oracle,
+        fallbackOracle: oracle,
         payer: admin.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
@@ -88,7 +88,7 @@ export async function tokenRegister(tokenIndex: number, usdc_mint: PublicKey, ma
 
 }
 
-export async function tokenDeposit(deposit_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, stubOracle: PublicKey, tokenAccount: PublicKey, user: Keypair) {    
+export async function tokenDeposit(deposit_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, oracle: PublicKey, tokenAccount: PublicKey, user: Keypair) {    
     const tx = await program.methods
         .tokenDeposit(deposit_amount, false)
         .accounts({
@@ -97,7 +97,7 @@ export async function tokenDeposit(deposit_amount: anchor.BN, marketPDA: PublicK
         owner: user.publicKey,
         bank: bankPDA,
         vault: vaultPDA,
-        oracle: stubOracle,
+        oracle: oracle,
         tokenAccount: tokenAccount,
         tokenAuthority: user.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -108,7 +108,7 @@ export async function tokenDeposit(deposit_amount: anchor.BN, marketPDA: PublicK
     return tx;
 }
 
-export async function tokenDepositIntoExisting(deposit_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, stubOracle: PublicKey, tokenAccount: PublicKey, user: Keypair) {    
+export async function tokenDepositIntoExisting(deposit_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, oracle: PublicKey, tokenAccount: PublicKey, user: Keypair) {    
     const tx = await program.methods
         .tokenDeposit(deposit_amount, false)
         .accounts({
@@ -117,7 +117,7 @@ export async function tokenDepositIntoExisting(deposit_amount: anchor.BN, market
         owner: user.publicKey,
         bank: bankPDA,
         vault: vaultPDA,
-        oracle: stubOracle,
+        oracle: oracle,
         tokenAccount: tokenAccount,
         tokenAuthority: user.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
@@ -128,7 +128,7 @@ export async function tokenDepositIntoExisting(deposit_amount: anchor.BN, market
     return tx;
 }
 
-export async function tokenForceWithdraw(marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, stubOracle: PublicKey, tokenAccount: PublicKey) {
+export async function tokenForceWithdraw(marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, oracle: PublicKey, tokenAccount: PublicKey) {
     const envProviderPayer = (provider.wallet as NodeWallet).payer;
 
     const tx = await program.methods
@@ -140,7 +140,7 @@ export async function tokenForceWithdraw(marketPDA: PublicKey, peachAccountPDA: 
         alternateOwnerTokenAccount: tokenAccount,
         bank: bankPDA,
         vault: vaultPDA,
-        oracle: stubOracle,
+        oracle: oracle,
         tokenProgram: TOKEN_PROGRAM_ID,
         })
         .signers([envProviderPayer])
@@ -149,7 +149,7 @@ export async function tokenForceWithdraw(marketPDA: PublicKey, peachAccountPDA: 
     return tx;
 }
 
-export async function tokenWithdraw(withdraw_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, stubOracle: PublicKey, tokenAccount: PublicKey) {
+export async function tokenWithdraw(withdraw_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, oracle: PublicKey, tokenAccount: PublicKey) {
     const envProviderPayer = (provider.wallet as NodeWallet).payer;
 
     const tx = await program.methods
@@ -160,7 +160,7 @@ export async function tokenWithdraw(withdraw_amount: anchor.BN, marketPDA: Publi
         owner: provider.wallet.publicKey,
         bank: bankPDA,
         vault: vaultPDA,
-        oracle: stubOracle,
+        oracle: oracle,
         tokenAccount: tokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
         })

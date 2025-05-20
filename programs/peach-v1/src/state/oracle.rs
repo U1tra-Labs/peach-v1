@@ -248,9 +248,9 @@ pub fn check_is_valid_fallback_oracle(acc_info: &impl KeyedAccountReader) -> Res
 pub fn determine_oracle_type(acc_info: &impl KeyedAccountReader) -> Result<OracleType> {
     let data = acc_info.data();
 
-    if u32::from_le_bytes(data[0..4].try_into().unwrap()) == pyth_sdk_solana::state::MAGIC {
+    if data.len()>= 4 && u32::from_le_bytes(data[0..4].try_into().unwrap()) == pyth_sdk_solana::state::MAGIC {
         return Ok(OracleType::Pyth);
-    } else if &data[0..8] == StubOracle::DISCRIMINATOR {
+    } else if data.len() >= 8 && &data[0..8] == StubOracle::DISCRIMINATOR {
         return Ok(OracleType::Stub);
     }
     // https://github.com/switchboard-xyz/switchboard-v2/blob/main/libraries/rs/src/aggregator.rs#L114

@@ -6,6 +6,6 @@ export const connection = provider.connection;
 
 export async function delayForMainnet() {
   if (connection.rpcEndpoint.includes("mainnet")) {
-    setTimeout(() => {}, 5000); // 5 seconds delay
+    setTimeout(() => {}, 1000); // 1 second delay
   }
 }
