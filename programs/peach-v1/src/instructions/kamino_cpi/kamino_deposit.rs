@@ -259,7 +259,7 @@ pub fn kamino_deposit<'info>(
     );
 
     let accounts = vec![
-        AccountMeta::new(ctx.accounts.peach_account.key(), true), 
+        AccountMeta::new(ctx.accounts.signer.key(), true), 
         AccountMeta::new(ctx.accounts.obligation.key(), false), 
         AccountMeta::new_readonly(ctx.accounts.lending_market.key(), false), 
         AccountMeta::new_readonly(ctx.accounts.lending_market_authority.key(), false), 
@@ -269,11 +269,13 @@ pub fn kamino_deposit<'info>(
         AccountMeta::new(ctx.accounts.kamino_collateral_mint.key(), false),
         AccountMeta::new(ctx.accounts.kamino_destination_deposit_collateral.key(), false),
         AccountMeta::new(ctx.accounts.user_token_account.key(), false),
-        AccountMeta::new(ctx.accounts.user_kamino_reserve_usdc_token_account.key(), false),
+        // AccountMeta::new_readonly(ctx.accounts.user_kamino_reserve_usdc_token_account.key(), false), //placeholder
+        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false), // placeholder used in klend-sdk
         AccountMeta::new_readonly(ctx.accounts.collateral_token_program.key(), false),
         AccountMeta::new_readonly(ctx.accounts.liquidity_token_program.key(), false),
         AccountMeta::new_readonly(ctx.accounts.instructions_sysvar.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false), // not needed for kamino program
+        // AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false), // not needed for kamino program
+        AccountMeta::new(ctx.accounts.kamino_obligation_farm_user_state.key(), false),
         AccountMeta::new(ctx.accounts.kamino_reserve_farm_state.key(), false),
         AccountMeta::new_readonly(ctx.accounts.farms_program.key(), false),
     ];
@@ -292,31 +294,34 @@ pub fn kamino_deposit<'info>(
 
 
     let _lending_hub_key = ctx.accounts.market.key();
-    let account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
+    let _account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
 
     
     invoke_signed(
         &kamino_deposit_ix,
         &[
-            ctx.accounts.peach_account.to_account_info(),
+            ctx.accounts.signer.to_account_info(),
             ctx.accounts.obligation.clone(),
             ctx.accounts.lending_market.clone(),
             ctx.accounts.lending_market_authority.clone(),
             ctx.accounts.kamino_reserve.clone(),
             ctx.accounts.mint.to_account_info(),
-            ctx.accounts.kamino_reserve_liquidity_usdc_supply.to_account_info(),
+            ctx.accounts.kamino_reserve_liquidity_usdc_supply.clone(),
             ctx.accounts.kamino_collateral_mint.to_account_info(),
-            ctx.accounts.kamino_destination_deposit_collateral.to_account_info(),
+            ctx.accounts.kamino_destination_deposit_collateral.clone(),
             ctx.accounts.user_token_account.to_account_info(),
-            ctx.accounts.user_kamino_reserve_usdc_token_account.to_account_info(),
+            // ctx.accounts.user_kamino_reserve_usdc_token_account.to_account_info(), 
+            ctx.accounts.kamino_program.clone(), 
             ctx.accounts.collateral_token_program.to_account_info(),
             ctx.accounts.liquidity_token_program.to_account_info(),
             ctx.accounts.instructions_sysvar.to_account_info(), 
-            ctx.accounts.kamino_program.clone(),
+            ctx.accounts.kamino_obligation_farm_user_state.clone(),
             ctx.accounts.kamino_reserve_farm_state.clone(),
             ctx.accounts.farms_program.clone(),
+            // ctx.accounts.kamino_program.clone(),
         ],
-        &[&account_seeds.signer_seeds()],
+        &[],
+        // &[&account_seeds.signer_seeds()],
     )?;
 
     Ok(())
@@ -363,7 +368,6 @@ pub struct DepositKamino<'info> {
     #[account(mut)]
     pub kamino_collateral_mint: InterfaceAccount<'info, Mint>,
 
-    #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
 
     #[account(
@@ -378,7 +382,7 @@ pub struct DepositKamino<'info> {
     #[account(
         mut,
         token::mint = mint,
-        token::authority = peach_account,
+        token::authority = signer,
     )]
     pub user_token_account: InterfaceAccount<'info, TokenAccount>,
 
@@ -404,8 +408,12 @@ pub struct DepositKamino<'info> {
     /// CHECK: Verified by Kamino program
     pub farms_program: AccountInfo<'info>,
 
-    /// CHECK: Verified by Kamino program
     #[account(mut)]
+    /// CHECK: Verified by Kamino program
+    pub kamino_obligation_farm_user_state: AccountInfo<'info>,
+
+    #[account(mut)]
+    /// CHECK: Verified by Kamino program
     pub kamino_reserve_farm_state: AccountInfo<'info>,
    
     pub collateral_token_program: Program<'info, Token>, 

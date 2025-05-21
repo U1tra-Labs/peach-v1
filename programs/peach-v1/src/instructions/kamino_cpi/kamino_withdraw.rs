@@ -1,34 +1,35 @@
+use crate::accounts_zerocopy::AccountInfoRef;
+use crate::constants::KAMINO_PROGRAM_ID;
+use crate::error::{Contextable, PeachError};
+use crate::health::{
+    new_fixed_order_account_retriever_with_optional_banks,
+    new_health_cache_skipping_missing_banks_and_bad_oracles,
+};
+use crate::logs::{emit_stack, LoanOriginationFeeInstruction, WithdrawLoanLog};
+use crate::state::{
+    oracle_log_context, oracle_state_unchecked, Bank, Market, OracleAccountInfos,
+    PeachAccountFixed, PeachAccountLoader,
+};
+use crate::util::{clock_now, sighash};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::solana_program::{program::invoke_signed, sysvar};
 use anchor_spl::token::Token;
 use anchor_spl::{
-    associated_token::AssociatedToken, 
-    token_interface::{
-        Mint, 
-        TokenAccount, 
-        TokenInterface, 
-    }
+    associated_token::AssociatedToken,
+    token_interface::{Mint, TokenAccount, TokenInterface},
 };
 use fixed::types::I80F48;
-use crate::accounts_zerocopy::AccountInfoRef;
-use crate::constants::KAMINO_PROGRAM_ID;
-use crate::error::{Contextable, PeachError};
-use crate::health::{new_fixed_order_account_retriever_with_optional_banks, new_health_cache_skipping_missing_banks_and_bad_oracles};
-use crate::logs::{emit_stack, LoanOriginationFeeInstruction, WithdrawLoanLog};
-use crate::state::{oracle_log_context, oracle_state_unchecked, Bank, Market, OracleAccountInfos, PeachAccountFixed, PeachAccountLoader};
-use crate::util::{clock_now, sighash};
 
 pub fn kamino_withdraw<'info>(
     ctx: Context<'_, '_, '_, 'info, WithdrawKamino<'info>>,
-    withdraw_amount: u64, 
+    withdraw_amount: u64,
     allow_borrow: bool,
 ) -> Result<()> {
-    
     require!(withdraw_amount > 0, PeachError::InvalidAmount);
 
-    msg!("Withdraw amount: {:?}", withdraw_amount);    
-    msg!("Withdraw mint: {:?}", ctx.accounts.mint.key()); 
+    msg!("Withdraw amount: {:?}", withdraw_amount);
+    msg!("Withdraw mint: {:?}", ctx.accounts.mint.key());
 
     {
         // let market = ctx.accounts.market.load()?;
@@ -114,7 +115,8 @@ pub fn kamino_withdraw<'info>(
             if health_cache.has_token_info(token_index) {
                 // This is the normal case: the health cache knows about the token, we can
                 // compute the health for the new state by adjusting its balance
-                health_cache.adjust_token_balance(&bank, native_position_after - native_position)?;
+                health_cache
+                    .adjust_token_balance(&bank, native_position_after - native_position)?;
                 account.check_health_post(&health_cache, pre_init_health_lower_bound)?;
             } else {
                 // The health cache does not know about the token! It has a bad oracle or wasn't
@@ -142,7 +144,10 @@ pub fn kamino_withdraw<'info>(
         // deactivated.
         //
         if !withdraw_result.position_is_active {
-            account.deactivate_token_position_and_log(raw_token_index, ctx.accounts.peach_account.key());
+            account.deactivate_token_position_and_log(
+                raw_token_index,
+                ctx.accounts.peach_account.key(),
+            );
         }
 
         // emit_stack(WithdrawLog {
@@ -201,7 +206,7 @@ pub fn kamino_withdraw<'info>(
             ctx.accounts.lending_market.key().as_ref(),
             ctx.accounts.mint.key().as_ref(),
         ],
-        &KAMINO_PROGRAM_ID,  // Kamino program ID here!
+        &KAMINO_PROGRAM_ID, // Kamino program ID here!
     );
 
     require_keys_eq!(
@@ -211,73 +216,90 @@ pub fn kamino_withdraw<'info>(
     );
 
     let accounts = vec![
-        AccountMeta::new(ctx.accounts.peach_account.key(), true), 
-        AccountMeta::new(ctx.accounts.obligation.key(), false), 
-        AccountMeta::new_readonly(ctx.accounts.lending_market.key(), false), 
-        AccountMeta::new_readonly(ctx.accounts.lending_market_authority.key(), false), 
-        AccountMeta::new(ctx.accounts.kamino_reserve.key(), false),     
-        AccountMeta::new(ctx.accounts.mint.key(), false),
-        AccountMeta::new(ctx.accounts.kamino_destination_deposit_collateral.key(), false),
+        AccountMeta::new(ctx.accounts.signer.key(), true),
+        AccountMeta::new(ctx.accounts.obligation.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.lending_market.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.lending_market_authority.key(), false),
+        AccountMeta::new(ctx.accounts.kamino_reserve.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.mint.key(), false),
+        AccountMeta::new(
+            ctx.accounts.kamino_destination_deposit_collateral.key(),
+            false,
+        ),
         AccountMeta::new(ctx.accounts.kamino_collateral_mint.key(), false),
-        AccountMeta::new(ctx.accounts.kamino_reserve_liquidity_usdc_supply.key(), false),
+        AccountMeta::new(
+            ctx.accounts.kamino_reserve_liquidity_usdc_supply.key(),
+            false,
+        ),
         AccountMeta::new(ctx.accounts.user_token_account.key(), false),
-        AccountMeta::new(ctx.accounts.user_kamino_reserve_usdc_token_account.key(), false),
+        // AccountMeta::new_readonly(
+        //     ctx.accounts.user_kamino_reserve_usdc_token_account.key(),
+        //     false,
+        // ),
+        AccountMeta::new_readonly(
+            ctx.accounts.kamino_program.key(),
+            false,
+        ), // placeholder used in klend-sdk
         AccountMeta::new_readonly(ctx.accounts.collateral_token_program.key(), false),
         AccountMeta::new_readonly(ctx.accounts.liquidity_token_program.key(), false),
         AccountMeta::new_readonly(ctx.accounts.instructions_sysvar.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false),
+        // AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false),
+        AccountMeta::new(ctx.accounts.kamino_obligation_farm_user_state.key(), false),
         AccountMeta::new(ctx.accounts.kamino_reserve_farm_state.key(), false),
         AccountMeta::new_readonly(ctx.accounts.farms_program.key(), false),
     ];
 
-    let discriminator = sighash("global", "withdraw_obligation_collateral_and_redeem_reserve_collateral_v2");
-                                                               
+    let discriminator = sighash(
+        "global",
+        "withdraw_obligation_collateral_and_redeem_reserve_collateral_v2",
+    );
 
     let mut data = discriminator.to_vec();
     data.extend_from_slice(&withdraw_amount.to_le_bytes());
 
-
-    let kamino_deposit_ix = Instruction {
+    let kamino_withdraw_ix = Instruction {
         program_id: ctx.accounts.kamino_program.key(),
         accounts,
         data,
     };
 
-
     let _market_key = ctx.accounts.market.key();
-    let account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
-    
+    let _account_seeds = &ctx.accounts.peach_account.load()?.pda_seeds();
+
     invoke_signed(
-        &kamino_deposit_ix,
+        &kamino_withdraw_ix,
         &[
-            ctx.accounts.peach_account.to_account_info(),
+            ctx.accounts.signer.to_account_info(),
             ctx.accounts.obligation.clone(),
             ctx.accounts.lending_market.clone(),
             ctx.accounts.lending_market_authority.clone(),
             ctx.accounts.kamino_reserve.clone(),
             ctx.accounts.mint.to_account_info(),
-            ctx.accounts.kamino_destination_deposit_collateral.to_account_info(),
+            ctx.accounts.kamino_destination_deposit_collateral.clone(),
             ctx.accounts.kamino_collateral_mint.to_account_info(),
-            ctx.accounts.kamino_reserve_liquidity_usdc_supply.to_account_info(),
+            ctx.accounts.kamino_reserve_liquidity_usdc_supply.clone(),
             ctx.accounts.user_token_account.to_account_info(),
-            ctx.accounts.user_kamino_reserve_usdc_token_account.to_account_info(),
+            // ctx.accounts
+            //     .user_kamino_reserve_usdc_token_account
+            //     .to_account_info(),
+            ctx.accounts.kamino_program.to_account_info(),
             ctx.accounts.collateral_token_program.to_account_info(),
             ctx.accounts.liquidity_token_program.to_account_info(),
-            ctx.accounts.instructions_sysvar.to_account_info(), 
-            ctx.accounts.kamino_program.clone(),
+            ctx.accounts.instructions_sysvar.to_account_info(),
+            // ctx.accounts.kamino_program.clone(),
+            ctx.accounts.kamino_obligation_farm_user_state.clone(),
             ctx.accounts.kamino_reserve_farm_state.clone(),
             ctx.accounts.farms_program.clone(),
         ],
-        &[&account_seeds.signer_seeds()],
+        &[],
+        // &[&account_seeds.signer_seeds()],
     )?;
 
     Ok(())
 }
 
-
 #[derive(Accounts)]
 pub struct WithdrawKamino<'info> {
-
     #[account(
         mut,
         address = peach_account.load()?.owner,
@@ -306,7 +328,6 @@ pub struct WithdrawKamino<'info> {
 
     // #[account(mut)]
     // pub vault: Account<'info, TokenAccount>,
-
     /// CHECK: The oracle can be one of several different account types
     pub oracle: UncheckedAccount<'info>,
 
@@ -315,7 +336,6 @@ pub struct WithdrawKamino<'info> {
     #[account(mut)]
     pub kamino_collateral_mint: InterfaceAccount<'info, Mint>,
 
-    #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
 
     #[account(
@@ -330,7 +350,7 @@ pub struct WithdrawKamino<'info> {
     #[account(
         mut,
         token::mint = mint,
-        token::authority = peach_account,
+        token::authority = signer,
     )]
     pub user_token_account: InterfaceAccount<'info, TokenAccount>,
 
@@ -348,28 +368,30 @@ pub struct WithdrawKamino<'info> {
     /// CHECK: Verified by Kamino program / process method
     pub kamino_reserve_liquidity_usdc_supply: AccountInfo<'info>,
 
-
     #[account(address = KAMINO_PROGRAM_ID)]
     /// CHECK: Kamino program ID
-    pub kamino_program: AccountInfo<'info>, 
+    pub kamino_program: AccountInfo<'info>,
     /// Kamino Farms program
     /// CHECK: Verified by Kamino program
     pub farms_program: AccountInfo<'info>,
-
-    /// CHECK: Verified by Kamino program
+    
     #[account(mut)]
-    pub kamino_reserve_farm_state: AccountInfo<'info>,
-   
-    pub collateral_token_program: Program<'info, Token>, 
+    /// CHECK: Verified by Kamino program
+    pub kamino_obligation_farm_user_state: AccountInfo<'info>,
 
-    pub liquidity_token_program: Interface<'info, TokenInterface>, 
+    #[account(mut)]
+    /// CHECK: Verified by Kamino program
+    pub kamino_reserve_farm_state: AccountInfo<'info>,
+
+    pub collateral_token_program: Program<'info, Token>,
+
+    pub liquidity_token_program: Interface<'info, TokenInterface>,
 
     pub system_program: Program<'info, System>,
-    
+
     pub associated_token_program: Program<'info, AssociatedToken>,
 
     #[account(address = sysvar::instructions::ID)]
     /// CHECK: This is sysvar instructions account.
     pub instructions_sysvar: UncheckedAccount<'info>,
-
 }

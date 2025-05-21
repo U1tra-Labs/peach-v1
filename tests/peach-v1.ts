@@ -10,7 +10,7 @@ import { createStubOracle } from "./instructions/oracle";
 import { tokenChargeCollateralFees, tokenDeposit, tokenDepositIntoExisting, tokenDeregister, tokenForceWithdraw, tokenRegister, tokenWithdraw } from "./instructions/token";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { KAMINO_FARM_MAINNET, KAMINO_LENDING_MAIN_MARKET, KAMINO_LENDING, KAMINO_RESERVE_FARM_STATE_USDC, KAMINO_RESERVE_USDC, KAMINO_RESERVED_USDC_MINT, TEST_ENV, USDC_MINT_MAINNET, PYTH_USDC_ORACLE } from "./helpers/const";
+import { KAMINO_FARM_MAINNET, KAMINO_LENDING_MAIN_MARKET, KAMINO_LENDING, KAMINO_RESERVE_FARM_STATE_USDC, KAMINO_RESERVE_USDC, KAMINO_RESERVED_USDC_MINT, TEST_ENV, USDC_MINT_MAINNET, PYTH_USDC_ORACLE, KAMINO_SCOPE_PRICES } from "./helpers/const";
 import { Program } from "@coral-xyz/anchor";
 import { createLookupTableAddress } from "./helpers/create_alt";
 import kamino_idl from "./kamino/kamino_lending.json";
@@ -27,6 +27,7 @@ describe("peach-v1", () => {
   const connection: anchor.web3.Connection = program.provider.connection;
 
   const kaminoProgram = new Program<KaminoLending>(kamino_idl, provider);
+  const kaminoProgramId = KAMINO_LENDING;
 
   // This test suite is for testing unit instructions from the peach program
   describe("Native happy tests", () => {
@@ -53,7 +54,7 @@ describe("peach-v1", () => {
 
     // Update these values as needed; make sure you change the test cases accordingly
     // These values are used to derive the PDAs for the peach account, bank, vault, and mint info
-    let marketNum = 0, accountNum = 0, tokenIndex = 0;
+    let marketNum = 0, accountNum = 1, tokenIndex = 0;
     // These values are used to test the deposit and withdraw functions
     let deposit_amount1 = new anchor.BN(100), deposit_amount2 = new anchor.BN(50);
     let withdraw_amount1 = new anchor.BN(10), withdraw_amount2 = new anchor.BN(30);
@@ -67,29 +68,31 @@ describe("peach-v1", () => {
       delayForMainnet();
       user = await getFundedWallet();
       delayForMainnet();
-      user2 = await getFundedWallet();
-      delayForMainnet();
+      // user2 = await getFundedWallet();
+      // delayForMainnet();
 
       // Create mint from our program wallet for local/devnet testing
       // For mainnet, use USDC mint
-      usdc_mint = await getUSDCMint();
+      // usdc_mint = await getUSDCMint();
+      usdc_mint = USDC_MINT_MAINNET;
       delayForMainnet();
       
       // Create token accounts
-      usdcATA = await createTokenAccount(usdc_mint, programWallet);
-      // usdcATA = new PublicKey("Dc22vGVRbk5dVucRLrwA5UJBuZFKufF4W4kf5pvjLDMZ"); // program wallet USDC token account
+      // usdcATA = await createTokenAccount(usdc_mint, programWallet);
+      usdcATA = new PublicKey("Dc22vGVRbk5dVucRLrwA5UJBuZFKufF4W4kf5pvjLDMZ"); // program wallet USDC token account
       delayForMainnet();
 
       // Transfer some tokens to user
       user1ATA = await transferToken(usdc_mint, usdcATA, programWallet, user, 0.01 * 10 ** 6);
+      console.log("User1 ATA: ", user1ATA.toBase58());
       delayForMainnet();
-      user2ATA = await transferToken(usdc_mint, usdcATA, programWallet, user2, 0.01 * 10 ** 6);
-      delayForMainnet();
+      // user2ATA = await transferToken(usdc_mint, usdcATA, programWallet, user2, 0.01 * 10 ** 6);
+      // delayForMainnet();
       
       // Derive PDAs
       market = deriveMarketPDA(marketNum, admin.publicKey);
       peachAccount = derivePeachAccountPDA(market, accountNum, user.publicKey);
-      peachAccount2 = derivePeachAccountPDA(market, accountNum + 1, user2.publicKey);
+      // peachAccount2 = derivePeachAccountPDA(market, accountNum + 1, user2.publicKey);
       bank = deriveBankPDA(market, tokenIndex);
       vault = deriveVaultPDA(market, tokenIndex);
       mintInfo = deriveMintInfoPDA(market, usdc_mint);
@@ -106,7 +109,7 @@ describe("peach-v1", () => {
       console.log(
         "Admin: ", admin.publicKey.toBase58(),
         "\n User1: ", user.publicKey.toBase58(),
-        "\n User2: ", user2.publicKey.toBase58(),
+        // "\n User2: ", user2.publicKey.toBase58(),
       );
     
     });
@@ -129,14 +132,14 @@ describe("peach-v1", () => {
       it("Creates a peach account", async () => {
         try {
           await createPeachAccount(peachAccount, market, accountNum, user);
-          await createPeachAccount(peachAccount2, market, accountNum + 1, user2);
+          // await createPeachAccount(peachAccount2, market, accountNum + 1, user2);
           
           const account = await program.account.peachAccountFixed.fetch(peachAccount);
-          const account2 = await program.account.peachAccountFixed.fetch(peachAccount2);
+          // const account2 = await program.account.peachAccountFixed.fetch(peachAccount2);
           assert.equal(account.accountNum, accountNum);
-          assert.equal(account2.accountNum, accountNum + 1);
+          // assert.equal(account2.accountNum, accountNum + 1);
           assert(account.owner.equals(user.publicKey));
-          assert(account2.owner.equals(user2.publicKey));
+          // assert(account2.owner.equals(user2.publicKey));
         }
         catch (err) {
           assert.fail("Error while creating peach account: " + err);
@@ -177,7 +180,7 @@ describe("peach-v1", () => {
       });
     });
 
-    describe("Native Token operations", () => {
+    describe.skip("Native Token operations", () => {
 
       it("Deposits a token: user1", async () => {
         try{
@@ -246,7 +249,7 @@ describe("peach-v1", () => {
     });
 
     // This test suite is for testing Kamino instructions, to be done only on mainnet
-    describe.skip("Kamino operations", () => {
+    describe("Kamino operations", () => {
       
       // Kamino instruction's specific variables
       let userMetaDataPDA: PublicKey;
@@ -306,7 +309,7 @@ describe("peach-v1", () => {
       
         user_kamino_usdc_token_account = await getAssociatedTokenAddress(
             KAMINO_RESERVED_USDC_MINT,
-            peachAccount,
+            user.publicKey,
             true,
         );
         delayForMainnet();
@@ -317,7 +320,7 @@ describe("peach-v1", () => {
                 KAMINO_LENDING_MAIN_MARKET.toBuffer(),
                 USDC_MINT_MAINNET.toBuffer(),
             ],
-            kaminoProgram.programId
+            kaminoProgramId
         );
 
         [reserveDepositCollateralPda] = PublicKey.findProgramAddressSync(
@@ -326,7 +329,7 @@ describe("peach-v1", () => {
                 KAMINO_LENDING_MAIN_MARKET.toBuffer(),
                 USDC_MINT_MAINNET.toBuffer(),
             ],
-            kaminoProgram.programId
+            kaminoProgramId
         );
 
         [lendingMarketAuthorityPDA] = PublicKey.findProgramAddressSync(
@@ -346,7 +349,7 @@ describe("peach-v1", () => {
             KAMINO_FARM_MAINNET
         )
 
-        console.log("Kamino program id: ", kaminoProgram.programId.toBase58());
+        console.log("Kamino program id: ", kaminoProgramId.toBase58());
         console.log("User MetaData PDA:", userMetaDataPDA.toBase58());
         console.log("Obligation PDA address: ", obligationPDA.toBase58());
         console.log("User Token Account", userTokenAccount.toBase58());
@@ -381,7 +384,7 @@ describe("peach-v1", () => {
         delayForMainnet();
       });
 
-      it.skip("Init Obligation", async () => {
+      it("Init Obligation", async () => {
 
         const signature = await program.methods.kaminoInitObligation(args)
           .accounts({
@@ -408,7 +411,7 @@ describe("peach-v1", () => {
         delayForMainnet();
       });
 
-      it.skip("Init User Obligation Farm for Reserve", async () => {
+      it("Init User Obligation Farm for Reserve", async () => {
         
         const signature = await program.methods.kaminoInitObligationFarmForReserve(mode)
           .accounts({
@@ -433,7 +436,39 @@ describe("peach-v1", () => {
         delayForMainnet();
       });
 
-      it.skip("Deposit to kamino", async () => {
+      it("Deposit to kamino", async () => {
+        
+        console.log("Preparing to call kaminoDeposit with the following:");
+        console.log("Args:", {
+          deposit_amount,
+          someOtherArg: 0, // replace with meaningful name if needed
+        });
+        console.log("Accounts:", {
+          signer: user.publicKey.toBase58(),
+          obligation: obligationPDA.toBase58(),
+          peachAccount: peachAccount.toBase58(),
+          bank: bank.toBase58(),
+          oracle: oracle.toBase58(),
+          market: market.toBase58(),
+          kaminoCollateralMint: KAMINO_RESERVED_USDC_MINT.toBase58(),
+          mint: USDC_MINT_MAINNET.toBase58(),
+          userKaminoReserveUsdcTokenAccount: user_kamino_usdc_token_account.toBase58(),
+          userTokenAccount: user1ATA.toBase58(),
+          kaminoReserve: KAMINO_RESERVE_USDC.toBase58(),
+          lendingMarket: KAMINO_LENDING_MAIN_MARKET.toBase58(),
+          lendingMarketAuthority: lendingMarketAuthorityPDA.toBase58(),
+          kaminoDestinationDepositCollateral: reserveDepositCollateralPda.toBase58(),
+          kaminoReserveLiquidityUsdcSupply: reserveLiquiditySupplyPda.toBase58(),
+          kaminoProgram: kaminoProgramId.toBase58(),
+          farmsProgram: KAMINO_FARM_MAINNET.toBase58(),
+          kaminoReserveFarmState: KAMINO_RESERVE_FARM_STATE_USDC.toBase58(),
+          collateralTokenProgram: TOKEN_PROGRAM_ID.toBase58(),
+          liquidityTokenProgram: TOKEN_PROGRAM_ID.toBase58(),
+          systemProgram: SystemProgram.programId.toBase58(),
+          associatedTokenProgram: ASSOCIATED_PROGRAM_ID.toBase58(),
+          instructionsSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY.toBase58(),
+        });
+
         
         const signature = await program.methods.kaminoDeposit(
             deposit_amount,
@@ -454,8 +489,9 @@ describe("peach-v1", () => {
             lendingMarketAuthority: lendingMarketAuthorityPDA,
             kaminoDestinationDepositCollateral: reserveDepositCollateralPda,
             kaminoReserveLiquidityUsdcSupply: reserveLiquiditySupplyPda,
-            kaminoProgram: kaminoProgram.programId,
+            kaminoProgram: kaminoProgramId,
             farmsProgram: KAMINO_FARM_MAINNET,
+            kaminoObligationFarmUserState: obligationFarm,
             kaminoReserveFarmState: KAMINO_RESERVE_FARM_STATE_USDC,
             collateralTokenProgram: TOKEN_PROGRAM_ID,
             liquidityTokenProgram: TOKEN_PROGRAM_ID,
@@ -470,11 +506,11 @@ describe("peach-v1", () => {
         delayForMainnet();
       });
 
-      it.skip("Withdraw from kamino", async() => {
-
+      it("Withdraw from kamino", async () => {
+        
         const signature = await program.methods.kaminoWithdraw(
             deposit_amount,
-            0,
+            true,
         ).accounts({
             signer: user.publicKey,
             obligation: obligationPDA,
@@ -491,8 +527,9 @@ describe("peach-v1", () => {
             lendingMarketAuthority: lendingMarketAuthorityPDA,
             kaminoDestinationDepositCollateral: reserveDepositCollateralPda,
             kaminoReserveLiquidityUsdcSupply: reserveLiquiditySupplyPda,
-            kaminoProgram: kaminoProgram.programId,
+            kaminoProgram: kaminoProgramId,
             farmsProgram: KAMINO_FARM_MAINNET,
+            kaminoObligationFarmUserState: obligationFarm,
             kaminoReserveFarmState: KAMINO_RESERVE_FARM_STATE_USDC,
             collateralTokenProgram: TOKEN_PROGRAM_ID,
             liquidityTokenProgram: TOKEN_PROGRAM_ID,
@@ -544,20 +581,20 @@ describe("peach-v1", () => {
           .signers([user])
             .rpc();
           
-        await program.methods.accountClose(true)
-          .accounts({
-              market: market,
-              account: peachAccount2,
-              owner: user2.publicKey,
-              solDestination: programWallet.publicKey,
-              tokenProgram: TOKEN_PROGRAM_ID,
-            }
-          )
-          .signers([user2])
-          .rpc();
+        // await program.methods.accountClose(true)
+        //   .accounts({
+        //       market: market,
+        //       account: peachAccount2,
+        //       owner: user2.publicKey,
+        //       solDestination: programWallet.publicKey,
+        //       tokenProgram: TOKEN_PROGRAM_ID,
+        //     }
+        //   )
+        //   .signers([user2])
+        //   .rpc();
           
           assert.ok(await program.account.peachAccountFixed.fetch(peachAccount).then(() => false).catch(() => true));
-          assert.ok(await program.account.peachAccountFixed.fetch(peachAccount2).then(() => false).catch(() => true));
+          // assert.ok(await program.account.peachAccountFixed.fetch(peachAccount2).then(() => false).catch(() => true));
         } catch (err) {
           assert.fail("Error while closing stub oracle: " + err);
         }
@@ -594,7 +631,7 @@ describe("peach-v1", () => {
       console.log("Defunding wallets");
       await defundWallet(admin);
       await defundWallet(user);
-      await defundWallet(user2);
+      // await defundWallet(user2);
       console.log("Wallets defunded");
       console.log("Balance before testing: ", await connection.getBalance(programWallet.publicKey));
     });
@@ -602,4 +639,3 @@ describe("peach-v1", () => {
   });
 
 });
-

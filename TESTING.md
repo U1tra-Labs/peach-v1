@@ -15,7 +15,7 @@ anchor test
 ### 🌐 Mainnet Testing
 
 #### 1. Set the Solana Cluster to Mainnet
-
+(Replace <MAINNET_RPC_URL> in double quotes)
 ```bash
 solana config set --url <MAINNET_RPC_URL>
 ```
@@ -32,6 +32,8 @@ Copy the new program ID into both:
 
 * `Anchor.toml`
 * `programs/peach-v1/src/lib.rs`
+
+Change cluster to mainnet (with api-key if using custom rpc) in Anchor.toml
 
 #### 4. Build the Program
 
@@ -62,18 +64,6 @@ You can resume the deploy using the buffer:
    ```bash
    solana program deploy ./target/deploy/peach_v1.so --program-id ./target/deploy/peach_v1_mainnet-keypair.json --buffer keypair.json
    ```
-
-### 🧾 IDL Configuration
-
-Ensure the generated IDL is named `peach_v_1.json`.
-
-If it's your **first time deploying**, manually add the `metadata` field:
-
-```json
-"metadata": {
-  "address": "your-program-id-here"
-}
-```
 
 ### ✅ Running Mainnet Tests
 

@@ -17,6 +17,9 @@ export const KAMINO_LENDING_MAIN_MARKET = new PublicKey(
     "7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF"
 );
 
+export const KAMINO_SCOPE_PRICES = new PublicKey(
+    "3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C");
+
 export const KAMINO_RESERVE_FARM_STATE_USDC = new PublicKey(
     "JAvnB9AKtgPsTEoKmn24Bq64UMoYcrtWtq42HHBdsPkh");
 
