@@ -63,6 +63,11 @@ pub enum IxGate {
     TokenEdit = 19,
     TokenDeregister = 20,
     AdminTokenWithdrawFees = 21,
+    KaminoInitUserMetaData = 22,
+    KaminoInitObligation = 23,
+    KaminoInitObligationFarmsForReserve = 24,
+    KaimnoDeposit = 25,
+    KaimnoWithdraw = 26,
 }
 
 // note: using creator instead of admin, since admin can be changed

@@ -12,12 +12,12 @@ pub fn kamino_init_obligation_farm_for_reserve(
 ) -> Result<()> {
 
     let _market = ctx.accounts.market.key();
-    let account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
+    let _account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
 
 
     let accounts = vec![
         AccountMeta::new(ctx.accounts.payer.key(), true),
-        AccountMeta::new_readonly(ctx.accounts.peach_account.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.payer.key(), false),
         AccountMeta::new(ctx.accounts.obligation.key(), false),
         AccountMeta::new_readonly(ctx.accounts.lending_market_authority.key(), false),
         AccountMeta::new(ctx.accounts.reserve.key(), false),
@@ -45,7 +45,7 @@ pub fn kamino_init_obligation_farm_for_reserve(
         &instruction,
         &[
             ctx.accounts.payer.to_account_info(),
-            ctx.accounts.peach_account.to_account_info(),
+            ctx.accounts.payer.to_account_info(),
             ctx.accounts.obligation.clone(),
             ctx.accounts.lending_market_authority.clone(),
             ctx.accounts.reserve.clone(),
@@ -57,7 +57,8 @@ pub fn kamino_init_obligation_farm_for_reserve(
             ctx.accounts.system_program.to_account_info(),
             ctx.accounts.kamino_program.clone(), 
         ],
-        &[&account_seeds.signer_seeds()],
+        &[]
+        // &[&account_seeds.signer_seeds()],
     )?;
 
     Ok(())

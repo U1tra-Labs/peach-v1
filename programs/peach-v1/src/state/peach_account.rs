@@ -495,8 +495,32 @@ impl<
             })
     }
 
+    /// Returns
+    /// - the kamino position
+    /// - the raw index into the token positions list (for use with get_raw/deactivate)
+    pub fn token_position_and_raw_index_kamino(
+        &self,
+        token_index: TokenIndex,
+    ) -> Result<(&TokenPosition, usize)> {
+        self.all_token_positions()
+            .enumerate()
+            .find_map(|(raw_index, p)| (p.is_active_for_token(token_index) && p.is_kamino_position()).then_some((p, raw_index)))
+            .ok_or_else(|| {
+                error_msg_typed!(
+                    PeachError::TokenPositionDoesNotExist,
+                    "position for token index {} not found",
+                    token_index
+                )
+            })
+    }
+
     pub fn token_position(&self, token_index: TokenIndex) -> Result<&TokenPosition> {
         self.token_position_and_raw_index(token_index)
+            .map(|(p, _)| p)
+    }
+
+    pub fn token_position_kamino(&self, token_index: TokenIndex) -> Result<&TokenPosition> {
+        self.token_position_and_raw_index_kamino(token_index)
             .map(|(p, _)| p)
     }
 
@@ -563,7 +587,28 @@ impl<
         let raw_index = self
             .all_token_positions()
             .enumerate()
-            .find_map(|(raw_index, p)| p.is_active_for_token(token_index).then_some(raw_index))
+            .find_map(|(raw_index, p)|  p.is_active_for_token(token_index).then_some(raw_index))
+            .ok_or_else(|| {
+                error_msg_typed!(
+                    PeachError::TokenPositionDoesNotExist,
+                    "position for token index {} not found",
+                    token_index
+                )
+            })?;
+        Ok((self.token_position_mut_by_raw_index(raw_index), raw_index))
+    }
+
+    /// Returns
+    /// - the kamino position
+    /// - the raw index into the token positions list (for use with get_raw/deactivate)
+    pub fn token_position_mut_kamino(
+        &mut self,
+        token_index: TokenIndex,
+    ) -> Result<(&mut TokenPosition, usize)> {
+        let raw_index = self
+            .all_token_positions()
+            .enumerate()
+            .find_map(|(raw_index, p)|  (p.is_active_for_token(token_index) && p.is_kamino_position()).then_some(raw_index))
             .ok_or_else(|| {
                 error_msg_typed!(
                     PeachError::TokenPositionDoesNotExist,
@@ -593,7 +638,12 @@ impl<
         let mut active_index = 0;
         let mut match_or_free = None;
         for (raw_index, position) in self.all_token_positions().enumerate() {
-            if position.is_active_for_token(token_index) {
+            if position.is_active_for_token(token_index) && is_kamino_position == 1 && position.is_kamino_position() {
+                // Can't return early because of lifetimes
+                match_or_free = Some((raw_index, active_index));
+                break;
+            }
+            else if position.is_active_for_token(token_index) && is_kamino_position == 0 {
                 // Can't return early because of lifetimes
                 match_or_free = Some((raw_index, active_index));
                 break;

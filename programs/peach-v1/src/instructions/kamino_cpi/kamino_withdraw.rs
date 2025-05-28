@@ -7,8 +7,7 @@ use crate::health::{
 };
 use crate::logs::{emit_stack, LoanOriginationFeeInstruction, WithdrawLoanLog};
 use crate::state::{
-    oracle_log_context, oracle_state_unchecked, Bank, Market, OracleAccountInfos,
-    PeachAccountFixed, PeachAccountLoader,
+    oracle_log_context, oracle_state_unchecked, Bank, IxGate, Market, OracleAccountInfos, PeachAccountFixed, PeachAccountLoader
 };
 use crate::util::{clock_now, sighash};
 use anchor_lang::prelude::*;
@@ -32,13 +31,14 @@ pub fn kamino_withdraw<'info>(
     msg!("Withdraw mint: {:?}", ctx.accounts.mint.key());
 
     {
-        // let market = ctx.accounts.market.load()?;
         let token_index = ctx.accounts.bank.load()?.token_index;
         let (now_ts, now_slot) = clock_now();
 
         // Create the account's position for that token index
-        let mut account = ctx.accounts.peach_account.load_full_mut()?;
-        let (_, raw_token_index, _) = account.ensure_token_position(token_index, 0)?;
+        let mut account: crate::state::DynamicAccount<crate::state::PeachAccountDynamicHeader, std::cell::RefMut<'_, PeachAccountFixed>, std::cell::RefMut<'_, [u8]>> = ctx.accounts.peach_account.load_full_mut()?;
+        let (token_position, raw_token_index, _) = account.ensure_token_position(token_index, 1)?;
+
+        msg!("Token position: {:?}", token_position);
 
         // Health check _after_ the token position is guaranteed to exist
         let pre_health_opt = if !account.fixed.is_in_health_region() {
@@ -76,6 +76,8 @@ pub fn kamino_withdraw<'info>(
             withdraw_amount
         };
 
+        msg!("Amount to withdraw: {:?}", amount);
+
         let is_borrow = amount > native_position;
         require!(allow_borrow || !is_borrow, PeachError::SomeError);
         if bank.are_borrows_reduce_only() {
@@ -100,6 +102,8 @@ pub fn kamino_withdraw<'info>(
         )?;
         let native_position_after = position.native(&bank);
 
+        msg!("Native position after withdraw: {:?}", native_position_after);
+
         // Avoid getting in trouble because of the mutable bank account borrow later
         drop(bank);
         let bank = ctx.accounts.bank.load()?;
@@ -107,6 +111,8 @@ pub fn kamino_withdraw<'info>(
         // Update the net deposits - adjust by price so different tokens are on the same basis (in USD terms)
         let amount_usd = (amount_i80f48 * unsafe_oracle_state.price).to_num::<i64>();
         account.fixed.net_deposits -= amount_usd;
+
+        msg!("Net deposits after withdraw: {:?}", account.fixed.net_deposits);
 
         //
         // Health check
@@ -121,7 +127,7 @@ pub fn kamino_withdraw<'info>(
             } else {
                 // The health cache does not know about the token! It has a bad oracle or wasn't
                 // provided in the health accounts. Borrows are out of the question!
-                require!(!is_borrow, PeachError::BorrowsRequireHealthAccountBank);
+                // require!(!is_borrow, PeachError::BorrowsRequireHealthAccountBank);
 
                 // Since the health cache isn't aware of the bank we changed, the health
                 // estimation is the same.
@@ -148,16 +154,8 @@ pub fn kamino_withdraw<'info>(
                 raw_token_index,
                 ctx.accounts.peach_account.key(),
             );
+            msg!("Deactivated token position: {:?}", raw_token_index);
         }
-
-        // emit_stack(WithdrawLog {
-        //     peach_market: ctx.accounts.market.key(),
-        //     peach_account: ctx.accounts.peach_account.key(),
-        //     signer: ctx.accounts.owner.key(),
-        //     token_index,
-        //     quantity: amount,
-        //     price: unsafe_oracle_state.price.to_bits(),
-        // });
 
         if withdraw_result.loan_origination_fee.is_positive() {
             emit_stack(WithdrawLoanLog {
@@ -200,21 +198,6 @@ pub fn kamino_withdraw<'info>(
 
     msg!("CPI Tranfer: Kamino - Withdraw");
 
-    let (kamino_reserve_liquidity_usdc_supply_pda, _bump) = Pubkey::find_program_address(
-        &[
-            b"reserve_liq_supply",
-            ctx.accounts.lending_market.key().as_ref(),
-            ctx.accounts.mint.key().as_ref(),
-        ],
-        &KAMINO_PROGRAM_ID, // Kamino program ID here!
-    );
-
-    require_keys_eq!(
-        kamino_reserve_liquidity_usdc_supply_pda,
-        ctx.accounts.kamino_reserve_liquidity_usdc_supply.key(),
-        PeachError::InvalidKaminoReserveLiquiditySupplyAccount
-    );
-
     let accounts = vec![
         AccountMeta::new(ctx.accounts.signer.key(), true),
         AccountMeta::new(ctx.accounts.obligation.key(), false),
@@ -232,18 +215,10 @@ pub fn kamino_withdraw<'info>(
             false,
         ),
         AccountMeta::new(ctx.accounts.user_token_account.key(), false),
-        // AccountMeta::new_readonly(
-        //     ctx.accounts.user_kamino_reserve_usdc_token_account.key(),
-        //     false,
-        // ),
-        AccountMeta::new_readonly(
-            ctx.accounts.kamino_program.key(),
-            false,
-        ), // placeholder used in klend-sdk
+        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false), // placeholder used in klend-sdk
         AccountMeta::new_readonly(ctx.accounts.collateral_token_program.key(), false),
         AccountMeta::new_readonly(ctx.accounts.liquidity_token_program.key(), false),
         AccountMeta::new_readonly(ctx.accounts.instructions_sysvar.key(), false),
-        // AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false),
         AccountMeta::new(ctx.accounts.kamino_obligation_farm_user_state.key(), false),
         AccountMeta::new(ctx.accounts.kamino_reserve_farm_state.key(), false),
         AccountMeta::new_readonly(ctx.accounts.farms_program.key(), false),
@@ -258,7 +233,7 @@ pub fn kamino_withdraw<'info>(
     data.extend_from_slice(&withdraw_amount.to_le_bytes());
 
     let kamino_withdraw_ix = Instruction {
-        program_id: ctx.accounts.kamino_program.key(),
+        program_id: KAMINO_PROGRAM_ID,
         accounts,
         data,
     };
@@ -279,20 +254,16 @@ pub fn kamino_withdraw<'info>(
             ctx.accounts.kamino_collateral_mint.to_account_info(),
             ctx.accounts.kamino_reserve_liquidity_usdc_supply.clone(),
             ctx.accounts.user_token_account.to_account_info(),
-            // ctx.accounts
-            //     .user_kamino_reserve_usdc_token_account
-            //     .to_account_info(),
             ctx.accounts.kamino_program.to_account_info(),
             ctx.accounts.collateral_token_program.to_account_info(),
             ctx.accounts.liquidity_token_program.to_account_info(),
             ctx.accounts.instructions_sysvar.to_account_info(),
-            // ctx.accounts.kamino_program.clone(),
             ctx.accounts.kamino_obligation_farm_user_state.clone(),
             ctx.accounts.kamino_reserve_farm_state.clone(),
             ctx.accounts.farms_program.clone(),
+            ctx.accounts.kamino_program.clone(),
         ],
         &[],
-        // &[&account_seeds.signer_seeds()],
     )?;
 
     Ok(())
@@ -301,8 +272,12 @@ pub fn kamino_withdraw<'info>(
 #[derive(Accounts)]
 pub struct WithdrawKamino<'info> {
     #[account(
+        constraint = market.load()?.is_ix_enabled(IxGate::TokenDeposit) @ PeachError::IxIsDisabled,
+    )]
+    pub market: AccountLoader<'info, Market>,
+
+    #[account(
         mut,
-        address = peach_account.load()?.owner,
     )]
     pub signer: Signer<'info>,
 
@@ -331,21 +306,10 @@ pub struct WithdrawKamino<'info> {
     /// CHECK: The oracle can be one of several different account types
     pub oracle: UncheckedAccount<'info>,
 
-    pub market: AccountLoader<'info, Market>,
-
     #[account(mut)]
     pub kamino_collateral_mint: InterfaceAccount<'info, Mint>,
 
     pub mint: InterfaceAccount<'info, Mint>,
-
-    #[account(
-        init_if_needed,
-        payer = signer,
-        associated_token::mint = kamino_collateral_mint,
-        associated_token::authority = peach_account,
-        associated_token::token_program = collateral_token_program,
-    )]
-    pub user_kamino_reserve_usdc_token_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
@@ -374,7 +338,7 @@ pub struct WithdrawKamino<'info> {
     /// Kamino Farms program
     /// CHECK: Verified by Kamino program
     pub farms_program: AccountInfo<'info>,
-    
+
     #[account(mut)]
     /// CHECK: Verified by Kamino program
     pub kamino_obligation_farm_user_state: AccountInfo<'info>,

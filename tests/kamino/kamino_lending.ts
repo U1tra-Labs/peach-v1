@@ -1,5 +1,5 @@
 export type KaminoLending = {
-  "address": "DrbgiNhrmpd3FhWCiQUXce3YkJQ6DcfUp49qmoCFYe2r",
+  "address": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
   "metadata": {
     "name": "kamino_lending",
     "version": "1.11.0",

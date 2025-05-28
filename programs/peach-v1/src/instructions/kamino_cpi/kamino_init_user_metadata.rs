@@ -11,8 +11,8 @@ pub fn kamino_init_user_metadata(
     user_lookup_table_account: Pubkey,
 ) -> Result<()> {
 
-    let account = & ctx.accounts.peach_account.key();
-    let account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
+    let account = & ctx.accounts.owner.key();
+    let _account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
     let _market = ctx.accounts.market.key();
     let _owner = ctx.accounts.owner.key();
 
@@ -25,7 +25,7 @@ pub fn kamino_init_user_metadata(
     );
 
     let accounts = vec![
-        AccountMeta::new_readonly(ctx.accounts.peach_account.key(), true), 
+        AccountMeta::new_readonly(ctx.accounts.owner.key(), true), 
         AccountMeta::new(ctx.accounts.payer.key(), true), 
         AccountMeta::new(ctx.accounts.user_metadata.key(), false), 
         AccountMeta::new_readonly(ctx.accounts.referrer_user_metadata.key(), false),
@@ -47,14 +47,15 @@ pub fn kamino_init_user_metadata(
     invoke_signed(
         &instruction,
         &[
-            ctx.accounts.peach_account.to_account_info(),
+            ctx.accounts.owner.to_account_info(),
             ctx.accounts.payer.to_account_info(),
             ctx.accounts.user_metadata.clone(),
             // ctx.accounts.referrer_user_metadata.clone(), // This is Optional
             ctx.accounts.rent.to_account_info(),
             ctx.accounts.system_program.to_account_info(),
         ],
-        &[&account_seeds.signer_seeds()],    
+        &[]
+        // &[&account_seeds.signer_seeds()],    
     )?;
 
     Ok(())

@@ -19,7 +19,7 @@ const VAULT_SEED = "Vault";
 const MINT_INFO_SEED = "MintInfo";
 
 export async function getUSDCMint(): Promise<PublicKey> {
-  if (provider.connection.rpcEndpoint.includes("mainnet")) {
+  if (program.provider.connection.rpcEndpoint.includes("mainnet") || program.provider.connection.rpcEndpoint.includes("staked")) {
       return USDC_MINT_MAINNET;
   }
   return await createTokenMint(6, envProviderPayer);
@@ -37,6 +37,22 @@ export async function createTokenMint(decimals = 10, owner: Keypair): Promise<Pu
 }
 
 export async function createTokenAccount(mint: PublicKey, owner: Keypair): Promise<PublicKey> {
+  
+  if (program.provider.connection.rpcEndpoint.includes("mainnet") || program.provider.connection.rpcEndpoint.includes("staked")) {
+    try {
+      const tokenATA = await getOrCreateAssociatedTokenAccount(
+        program.provider.connection,
+        owner,
+        mint,
+        owner.publicKey,
+      );
+      return tokenATA.address;
+    }
+    catch (error) {
+      console.error("Error creating associated token account:", error);
+    }
+  }
+
   const getAssociatedTokenAddress = await createAssociatedTokenAccount(
     program.provider.connection,
     owner,
@@ -58,12 +74,6 @@ export async function createTokenAccount(mint: PublicKey, owner: Keypair): Promi
 }
 
 export async function transferToken(mint: PublicKey, sender_ata: PublicKey, sender: Keypair, receiver: Keypair, amount: number) {
-  // const senderAssociatedTokenAddress = await getOrCreateAssociatedTokenAccount(
-  //   program.provider.connection,
-  //   sender,
-  //   mint,
-  //   sender.publicKey,
-  // );
 
   const receipientAssociatedTokenAddress = await createAssociatedTokenAccount(
     program.provider.connection,

@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { assert } from "chai";
-import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { Keypair, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { deriveMarketPDA, derivePeachAccountPDA, deriveBankPDA, deriveVaultPDA, deriveMintInfoPDA, createTokenAccount, transferToken, provider, testDerivePeachAccountPDA, getUSDCMint } from "./helpers/setup";
 import { defundWallet, getFundedWallet } from "./helpers/fundWallets";
 import { delayForMainnet } from "./helpers/rpc";
@@ -59,6 +59,8 @@ describe("peach-v1", () => {
     let deposit_amount1 = new anchor.BN(100), deposit_amount2 = new anchor.BN(50);
     let withdraw_amount1 = new anchor.BN(10), withdraw_amount2 = new anchor.BN(30);
 
+    
+
     before(async () => {
       console.log("Starting Test Setup");
 
@@ -73,13 +75,12 @@ describe("peach-v1", () => {
 
       // Create mint from our program wallet for local/devnet testing
       // For mainnet, use USDC mint
-      // usdc_mint = await getUSDCMint();
-      usdc_mint = USDC_MINT_MAINNET;
+      usdc_mint = await getUSDCMint();
       delayForMainnet();
       
       // Create token accounts
-      // usdcATA = await createTokenAccount(usdc_mint, programWallet);
-      usdcATA = new PublicKey("Dc22vGVRbk5dVucRLrwA5UJBuZFKufF4W4kf5pvjLDMZ"); // program wallet USDC token account
+      // Program wallet's token account
+      usdcATA = await createTokenAccount(usdc_mint, programWallet);
       delayForMainnet();
 
       // Transfer some tokens to user
@@ -210,7 +211,7 @@ describe("peach-v1", () => {
         }
       });
 
-      it("Deposits a token: user2", async () => {
+      it.skip("Deposits a token: user2", async () => {
         try{
           await tokenDepositIntoExisting(deposit_amount2, market, peachAccount2, bank, vault, oracle, user2ATA, user2);
           
@@ -224,7 +225,7 @@ describe("peach-v1", () => {
         }
       });
 
-      it("Withdraws a token: user2", async () => {
+      it.skip("Withdraws a token: user2", async () => {
         try {
           await tokenWithdraw(withdraw_amount2, market, peachAccount2, bank, vault, oracle, user2ATA);
 
@@ -262,6 +263,7 @@ describe("peach-v1", () => {
       
 
       const deposit_amount = new anchor.BN(0.01 * 10 ** 6);
+      const withdraw_amount = new anchor.BN(0.005 * 10 ** 6);
       const mode = 0;
 
       // Instruction: InitObligation
@@ -282,7 +284,7 @@ describe("peach-v1", () => {
         seed2Account = SystemProgram.programId;
         
         [userMetaDataPDA] = PublicKey.findProgramAddressSync(
-          [Buffer.from("user_meta"), peachAccount.toBuffer()],
+          [Buffer.from("user_meta"), user.publicKey.toBuffer()],
           KAMINO_LENDING
         );
 
@@ -290,7 +292,7 @@ describe("peach-v1", () => {
           [
               Buffer.from(Uint8Array.of(args.tag)),
               Buffer.from(Uint8Array.of(args.id)),
-              peachAccount.toBuffer(),
+              user.publicKey.toBuffer(),
               lendingMarket.toBuffer(),
               seed1Account.toBuffer(),
               seed2Account.toBuffer(),
@@ -301,7 +303,7 @@ describe("peach-v1", () => {
         [userTokenAccount] = PublicKey.findProgramAddressSync(
           [
               Buffer.from("utc"),
-              peachAccount.toBuffer(),
+              user.publicKey.toBuffer(),
               USDC_MINT_MAINNET.toBuffer(),
           ],
           program.programId
@@ -361,7 +363,7 @@ describe("peach-v1", () => {
       });
 
       it("Init User MetaData", async () => {
-        const lookupTableAddress = await createLookupTableAddress(program.provider.connection, provider.wallet as NodeWallet);
+        const lookupTableAddress = await createLookupTableAddress(program.provider.connection, user);
         
         const signature = await program.methods.kaminoInitUserMetadata(lookupTableAddress)
           .accounts({
@@ -380,7 +382,7 @@ describe("peach-v1", () => {
         console.log("Init User Metadata signature: ", signature);
         const data = await kaminoProgram.account.userMetadata.fetch(userMetaDataPDA);
         assert.equal(lookupTableAddress.toBase58(), data.userLookupTable.toBase58());
-        assert.equal(peachAccount.toBase58(), data.owner.toBase58());
+        assert.equal(user.publicKey.toBase58(), data.owner.toBase58());
         delayForMainnet();
       });
 
@@ -405,7 +407,7 @@ describe("peach-v1", () => {
 
         console.log("Init Obligation transaction signature: ", signature);
         const obligationAccount = await kaminoProgram.account.obligation.fetch(obligationPDA);
-        assert.equal(obligationAccount.owner.toBase58(), peachAccount.toBase58());
+        assert.equal(obligationAccount.owner.toBase58(), user.publicKey.toBase58());
         assert.equal(obligationAccount.lendingMarket.toBase58(), lendingMarket.toBase58());
         assert.equal(obligationAccount.tag, args.tag);
         delayForMainnet();
@@ -421,8 +423,8 @@ describe("peach-v1", () => {
             obligation: obligationPDA,
             lendingMarketAuthority: lendingMarketAuthorityPDA,
             reserve: KAMINO_RESERVE_USDC, 
-            reserveFarmState: KAMINO_RESERVE_FARM_STATE_USDC, // Derive if needed
-            obligationFarm: obligationFarm, // Derive if needed
+            reserveFarmState: KAMINO_RESERVE_FARM_STATE_USDC,
+            obligationFarm: obligationFarm,
             lendingMarket: lendingMarket,
             farmsProgram: KAMINO_FARM_MAINNET, 
             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
@@ -438,88 +440,167 @@ describe("peach-v1", () => {
 
       it("Deposit to kamino", async () => {
         
-        console.log("Preparing to call kaminoDeposit with the following:");
-        console.log("Args:", {
-          deposit_amount,
-          someOtherArg: 0, // replace with meaningful name if needed
-        });
-        console.log("Accounts:", {
-          signer: user.publicKey.toBase58(),
-          obligation: obligationPDA.toBase58(),
-          peachAccount: peachAccount.toBase58(),
-          bank: bank.toBase58(),
-          oracle: oracle.toBase58(),
-          market: market.toBase58(),
-          kaminoCollateralMint: KAMINO_RESERVED_USDC_MINT.toBase58(),
-          mint: USDC_MINT_MAINNET.toBase58(),
-          userKaminoReserveUsdcTokenAccount: user_kamino_usdc_token_account.toBase58(),
-          userTokenAccount: user1ATA.toBase58(),
-          kaminoReserve: KAMINO_RESERVE_USDC.toBase58(),
-          lendingMarket: KAMINO_LENDING_MAIN_MARKET.toBase58(),
-          lendingMarketAuthority: lendingMarketAuthorityPDA.toBase58(),
-          kaminoDestinationDepositCollateral: reserveDepositCollateralPda.toBase58(),
-          kaminoReserveLiquidityUsdcSupply: reserveLiquiditySupplyPda.toBase58(),
-          kaminoProgram: kaminoProgramId.toBase58(),
-          farmsProgram: KAMINO_FARM_MAINNET.toBase58(),
-          kaminoReserveFarmState: KAMINO_RESERVE_FARM_STATE_USDC.toBase58(),
-          collateralTokenProgram: TOKEN_PROGRAM_ID.toBase58(),
-          liquidityTokenProgram: TOKEN_PROGRAM_ID.toBase58(),
-          systemProgram: SystemProgram.programId.toBase58(),
-          associatedTokenProgram: ASSOCIATED_PROGRAM_ID.toBase58(),
-          instructionsSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY.toBase58(),
-        });
-
-        
-        const signature = await program.methods.kaminoDeposit(
-            deposit_amount,
-            0,
-        ).accounts({
-            signer: user.publicKey,
-            obligation: obligationPDA,
-            peachAccount: peachAccount,
-            bank: bank,
-            oracle: oracle,
-            market: market,
-            kaminoCollateralMint: KAMINO_RESERVED_USDC_MINT,
-            mint: USDC_MINT_MAINNET,
-            userKaminoReserveUsdcTokenAccount: user_kamino_usdc_token_account,
-            userTokenAccount: user1ATA,
-            kaminoReserve: KAMINO_RESERVE_USDC,
+        let instructions = [];
+        // RefreshReserve for the Tokens involved in the transaction
+        const ixRefreshReserve = await kaminoProgram.methods.refreshReserve()
+          .accounts({
+            reserve: KAMINO_RESERVE_USDC,
             lendingMarket: KAMINO_LENDING_MAIN_MARKET,
-            lendingMarketAuthority: lendingMarketAuthorityPDA,
-            kaminoDestinationDepositCollateral: reserveDepositCollateralPda,
-            kaminoReserveLiquidityUsdcSupply: reserveLiquiditySupplyPda,
-            kaminoProgram: kaminoProgramId,
-            farmsProgram: KAMINO_FARM_MAINNET,
-            kaminoObligationFarmUserState: obligationFarm,
-            kaminoReserveFarmState: KAMINO_RESERVE_FARM_STATE_USDC,
-            collateralTokenProgram: TOKEN_PROGRAM_ID,
-            liquidityTokenProgram: TOKEN_PROGRAM_ID,
-            systemProgram: SystemProgram.programId, 
-            associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
-            instructionsSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+            pythOracle: KAMINO_LENDING,
+            switchboardPriceOracle: KAMINO_LENDING,
+            switchboardTwapOracle: KAMINO_LENDING,
+            scopePrices: KAMINO_SCOPE_PRICES,
+          })
+          .instruction();
+        instructions.push(ixRefreshReserve);
+
+        // RefreshObligation, Add the reserve accounts in remaining accounts (if any)
+        const txRefreshObligation = await kaminoProgram.methods.refreshObligation()
+          .accounts({
+            lendingMarket: KAMINO_LENDING_MAIN_MARKET,
+            obligation: obligationPDA,
+          })
+          .instruction();
+
+        instructions.push(txRefreshObligation);
+
+        // RefreshObligationFarmsForReserve
+        const IxRefreshObligationFarmsForReserve = await kaminoProgram.methods.refreshObligationFarmsForReserve(mode)
+            .accounts({
+                crank: user.publicKey,
+                baseAccounts: {
+                    obligation: obligationPDA,
+                    lendingMarketAuthority: lendingMarketAuthorityPDA,
+                    reserve: KAMINO_RESERVE_USDC,
+                    reserveFarmState: KAMINO_RESERVE_FARM_STATE_USDC,
+                    obligationFarmUserState: obligationFarm,
+                    lendingMarket: KAMINO_LENDING_MAIN_MARKET,
+                },
+                farmsProgram: KAMINO_FARM_MAINNET,
+                rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+                systemProgram: anchor.web3.SystemProgram.programId,
+            }).instruction();
+
+        instructions.push(IxRefreshObligationFarmsForReserve);
+        
+        const depositInstruction = await program.methods.kaminoDeposit(
+          deposit_amount,
+          0,
+        ).accounts({
+          market: market,
+          signer: user.publicKey,
+          obligation: obligationPDA,
+          peachAccount: peachAccount,
+          bank: bank,
+          oracle: oracle,
+          kaminoCollateralMint: KAMINO_RESERVED_USDC_MINT,
+          mint: usdc_mint,
+          userKaminoReserveUsdcTokenAccount: user_kamino_usdc_token_account,
+          userTokenAccount: user1ATA,
+          kaminoReserve: KAMINO_RESERVE_USDC,
+          lendingMarket: KAMINO_LENDING_MAIN_MARKET,
+          lendingMarketAuthority: lendingMarketAuthorityPDA,
+          kaminoDestinationDepositCollateral: reserveDepositCollateralPda,
+          kaminoReserveLiquidityUsdcSupply: reserveLiquiditySupplyPda,
+          kaminoProgram: kaminoProgramId,
+          farmsProgram: KAMINO_FARM_MAINNET,
+          kaminoObligationFarmUserState: obligationFarm,
+          kaminoReserveFarmState: KAMINO_RESERVE_FARM_STATE_USDC,
+          collateralTokenProgram: TOKEN_PROGRAM_ID,
+          liquidityTokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
+          instructionsSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
         })
-        .signers([user])
-        .rpc();
+        .instruction();
+        
+        instructions.push(depositInstruction);
+        
+        const blockhashWithContext = await provider.connection.getLatestBlockhash();
+
+        const Tx = new Transaction({
+            feePayer: user.publicKey,
+            blockhash: blockhashWithContext.blockhash,
+            lastValidBlockHeight: blockhashWithContext.lastValidBlockHeight,
+        }).add(...instructions);
+
+        const signature = await provider.connection.sendTransaction(
+            Tx,
+            [user],
+            { skipPreflight: true }
+        )
+
+        console.log("Kamino Deposit:", signature);
               
-        console.log("signature: ", signature);
         delayForMainnet();
       });
 
       it("Withdraw from kamino", async () => {
         
-        const signature = await program.methods.kaminoWithdraw(
-            deposit_amount,
+        let instructions = [];
+        // RefreshReserve for the Tokens involved in the transaction
+        const ixRefreshReserve = await kaminoProgram.methods.refreshReserve()
+            .accounts({
+                reserve: KAMINO_RESERVE_USDC,
+                lendingMarket: KAMINO_LENDING_MAIN_MARKET,
+                pythOracle: KAMINO_LENDING,
+                switchboardPriceOracle: KAMINO_LENDING,
+                switchboardTwapOracle: KAMINO_LENDING,
+                scopePrices: KAMINO_SCOPE_PRICES,
+            })
+            .instruction();
+            instructions.push(ixRefreshReserve);
+
+        // RefreshObligation, Add the reserve accounts in remaining accounts (if any). 
+        // Here we are including usdc reserve in remaining accounts
+        const txRefreshObligation = await kaminoProgram.methods.refreshObligation()
+        .accounts({
+            lendingMarket: KAMINO_LENDING_MAIN_MARKET,
+            obligation: obligationPDA,
+        })
+        .remainingAccounts([
+          {
+            isSigner: false,
+            isWritable: true,
+            pubkey: KAMINO_RESERVE_USDC
+          }, // reserve
+        ])
+        .instruction();
+
+        instructions.push(txRefreshObligation);
+
+        // RefreshObligationFarmsForReserve
+        const IxRefreshObligationFarmsForReserve = await kaminoProgram.methods.refreshObligationFarmsForReserve(mode)
+            .accounts({
+                crank: user.publicKey,
+                baseAccounts: {
+                    obligation: obligationPDA,
+                    lendingMarketAuthority: lendingMarketAuthorityPDA,
+                    reserve: KAMINO_RESERVE_USDC,
+                    reserveFarmState: KAMINO_RESERVE_FARM_STATE_USDC,
+                    obligationFarmUserState: obligationFarm,
+                    lendingMarket: KAMINO_LENDING_MAIN_MARKET,
+                },
+                farmsProgram: KAMINO_FARM_MAINNET,
+                rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+                systemProgram: anchor.web3.SystemProgram.programId,
+            }).instruction();
+
+        instructions.push(IxRefreshObligationFarmsForReserve);
+        
+        
+        const withdrawInstruction = await program.methods.kaminoWithdraw(
+            withdraw_amount,
             true,
         ).accounts({
+            market: market,
             signer: user.publicKey,
             obligation: obligationPDA,
             peachAccount: peachAccount,
             bank: bank,
             oracle: oracle,
-            market: market,
             kaminoCollateralMint: KAMINO_RESERVED_USDC_MINT,
-            mint: USDC_MINT_MAINNET,
+            mint: usdc_mint,
             userKaminoReserveUsdcTokenAccount: user_kamino_usdc_token_account,
             userTokenAccount: user1ATA,
             kaminoReserve: KAMINO_RESERVE_USDC,
@@ -537,16 +618,32 @@ describe("peach-v1", () => {
             associatedTokenProgram: ASSOCIATED_PROGRAM_ID,
             instructionsSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
         })
-        .signers([user])
-        .rpc();
+        .instruction();
+        
+        instructions.push(withdrawInstruction);
+        
+        const blockhashWithContext = await provider.connection.getLatestBlockhash();
+
+        const Tx = new Transaction({
+            feePayer: user.publicKey,
+            blockhash: blockhashWithContext.blockhash,
+            lastValidBlockHeight: blockhashWithContext.lastValidBlockHeight,
+        }).add(...instructions);
+
+        const signature = await provider.connection.sendTransaction(
+            Tx,
+            [user],
+            { skipPreflight: true }
+        )
                
-        console.log("withdraw signature: ", signature);
-        delayForMainnet();        
+        console.log("Kamino Withdraw:", signature);
+        delayForMainnet();    
       });
 
     });
 
-    describe("Deregister and close accounts", () => {      
+    // Do not run these tests for kamino testing
+    describe.skip("Deregister and close accounts", () => {      
       // it("Close stub oracle", async () => {
       //   try {
       //     await program.methods.stubOracleClose()

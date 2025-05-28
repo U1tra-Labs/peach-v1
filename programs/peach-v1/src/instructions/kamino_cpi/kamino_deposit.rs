@@ -1,24 +1,25 @@
+use crate::accounts_zerocopy::AccountInfoRef;
+use crate::constants::KAMINO_PROGRAM_ID;
+use crate::error::*;
+use crate::health::{
+    new_fixed_order_account_retriever_with_optional_banks,
+    new_health_cache_skipping_missing_banks_and_bad_oracles, HealthType,
+};
+use crate::logs::{emit_stack, DepositLog, TokenBalanceLog};
+use crate::require_msg_typed;
+use crate::state::{
+    oracle_state_unchecked, Bank, IxGate, Market, OracleAccountInfos, PeachAccountFixed, PeachAccountLoader
+};
+use crate::util::{clock_now, sighash};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::solana_program::{program::invoke_signed, sysvar};
 use anchor_spl::token::Token;
 use anchor_spl::{
-    associated_token::AssociatedToken, 
-    token_interface::{
-        Mint, 
-        TokenAccount, 
-        TokenInterface, 
-    }
+    associated_token::AssociatedToken,
+    token_interface::{Mint, TokenAccount, TokenInterface},
 };
 use fixed::types::I80F48;
-use crate::accounts_zerocopy::AccountInfoRef;
-use crate::health::{new_fixed_order_account_retriever_with_optional_banks, new_health_cache_skipping_missing_banks_and_bad_oracles, HealthType};
-use crate::logs::{emit_stack, DepositLog, TokenBalanceLog};
-use crate::require_msg_typed;
-use crate::util::{clock_now, sighash};
-use crate::state::{oracle_state_unchecked, Bank, Market, OracleAccountInfos, PeachAccountFixed, PeachAccountLoader};
-use crate::constants::KAMINO_PROGRAM_ID;
-use crate::error::*;
 
 struct DepositCommon<'a, 'info> {
     pub market: &'a AccountLoader<'info, Market>,
@@ -41,10 +42,27 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
         let mut bank = self.bank.load_mut()?;
         let token_index = bank.token_index;
 
+        msg!(
+            "Token index {}", token_index
+        );
+
         let amount_i80f48 = {
             // Get the account's position for that token index
             let account = self.account.load_full()?;
-            let position = account.token_position(token_index)?;
+
+            msg!(
+                "Loading account done {}",
+                account.fixed.net_deposits
+            );
+
+
+            let position = account.token_position_kamino(token_index)?;
+
+            msg!(
+                "Position for token index {}: {:?}",
+                token_index,
+                position
+            );
 
             let amount_i80f48 = if reduce_only || bank.are_deposits_reduce_only() {
                 position
@@ -65,10 +83,17 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
             amount_i80f48
         };
 
+        msg!("Depositing {} into token index {}", amount_i80f48, token_index);
+
         // Get the account's position for that token index
         let mut account = self.account.load_full_mut()?;
 
-        let (position, raw_token_index) = account.token_position_mut(token_index)?;
+        let (position, raw_token_index) = account.token_position_mut_kamino(token_index)?;
+
+        msg!(
+            "Depositing at position {:?}",
+            position
+        );
 
         let position_is_active = {
             bank.deposit(
@@ -77,6 +102,11 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
                 Clock::get()?.unix_timestamp.try_into().unwrap(),
             )?
         };
+
+        msg!(
+            "Position is active: {}",
+            position_is_active
+        );
 
         let indexed_position = position.indexed_position;
 
@@ -89,6 +119,12 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
         )?;
         let unsafe_oracle_price = unsafe_oracle_state.price;
 
+        msg!(
+            "Unsafe oracle price for token index {}: {}",
+            token_index,
+            unsafe_oracle_price
+        );
+
         // If increasing total deposits, check deposit limits
         if indexed_position.is_positive() {
             bank.check_deposit_and_oo_limit()?;
@@ -97,6 +133,11 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
         // Update the net deposits - adjust by price so different tokens are on the same basis (in USD terms)
         let amount_usd = (amount_i80f48 * unsafe_oracle_price).to_num::<i64>();
         account.fixed.net_deposits += amount_usd;
+
+        msg!(
+            "Net deposits after deposit: {}",
+            account.fixed.net_deposits
+        );
 
         emit_stack(TokenBalanceLog {
             peach_market: self.market.key(),
@@ -172,6 +213,10 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
         //
         if allow_token_account_closure && !position_is_active {
             account.deactivate_token_position_and_log(raw_token_index, self.account.key());
+            msg!(
+                "Deactivated token position for token index {}",
+                token_index
+            );
         }
 
         emit_stack(DepositLog {
@@ -185,22 +230,17 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
 
         Ok(())
     }
-
 }
 
 pub fn kamino_deposit<'info>(
     ctx: Context<'_, '_, '_, 'info, DepositKamino<'info>>,
-    deposit_amount: u64, 
-    reduce_only: bool
-    // protocol_index: u8,
+    deposit_amount: u64,
+    reduce_only: bool, // protocol_index: u8,
 ) -> Result<()> {
-    
     require!(deposit_amount > 0, PeachError::InvalidAmount);
 
-    // msg!("Deposit amount: {:?}", deposit_amount);    
-    // msg!("Deposit mint: {:?}", ctx.accounts.mint.key()); 
-
-    // msg!("CPI Tranfer: Kamino - Deposit");
+    msg!("Deposit amount: {:?}", deposit_amount);
+    msg!("Deposit mint: {:?}", ctx.accounts.mint.key());
 
     // Creating/Updating Token Position in our Peach program
     {
@@ -209,7 +249,12 @@ pub fn kamino_deposit<'info>(
 
         let token_position_exists = account
             .all_token_positions()
-            .any(|p| p.is_active_for_token(token_index));
+            .any(|p| p.is_active_for_token(token_index) && p.is_kamino_position());
+
+
+        msg!(
+            "Token position exists: {}", token_position_exists
+        );
 
         // Activating a new token position requires that the oracle is in a good state.
         // Otherwise users could abuse oracle staleness to delay liquidation.
@@ -230,44 +275,36 @@ pub fn kamino_deposit<'info>(
 
             account.ensure_token_position(token_index, 1)?;
         }
-
-        // Update the token position with the new deposit amount
-        DepositCommon {
-            market: &ctx.accounts.market,
-            account: &ctx.accounts.peach_account,
-            bank: &ctx.accounts.bank,
-            // vault: &ctx.accounts.vault,
-            oracle: &ctx.accounts.oracle,
-        }
-        .deposit_into_existing(ctx.remaining_accounts, deposit_amount, reduce_only, true)?; // TODO : add reduce_only and allow_token_account_closure
     }
 
-    // Kamino CPI
-    let (kamino_reserve_liquidity_usdc_supply_pda, _bump) = Pubkey::find_program_address(
-        &[
-            b"reserve_liq_supply",
-            ctx.accounts.lending_market.key().as_ref(),
-            ctx.accounts.mint.key().as_ref(),
-        ],
-        &KAMINO_PROGRAM_ID,  // Kamino program ID here!
-    );
+    // Update the token position with the new deposit amount
+    DepositCommon {
+        market: &ctx.accounts.market,
+        account: &ctx.accounts.peach_account,
+        bank: &ctx.accounts.bank,
+        // vault: &ctx.accounts.vault,
+        oracle: &ctx.accounts.oracle,
+    }
+    .deposit_into_existing(ctx.remaining_accounts, deposit_amount, reduce_only, true)?; // TODO : add reduce_only and allow_token_account_closure
 
-    require_keys_eq!(
-        kamino_reserve_liquidity_usdc_supply_pda,
-        ctx.accounts.kamino_reserve_liquidity_usdc_supply.key(),
-        PeachError::InvalidKaminoReserveLiquiditySupplyAccount
-    );
+    msg!("CPI Tranfer: Kamino - Deposit");
 
     let accounts = vec![
-        AccountMeta::new(ctx.accounts.signer.key(), true), 
-        AccountMeta::new(ctx.accounts.obligation.key(), false), 
-        AccountMeta::new_readonly(ctx.accounts.lending_market.key(), false), 
-        AccountMeta::new_readonly(ctx.accounts.lending_market_authority.key(), false), 
-        AccountMeta::new(ctx.accounts.kamino_reserve.key(), false),     
+        AccountMeta::new(ctx.accounts.signer.key(), true),
+        AccountMeta::new(ctx.accounts.obligation.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.lending_market.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.lending_market_authority.key(), false),
+        AccountMeta::new(ctx.accounts.kamino_reserve.key(), false),
         AccountMeta::new_readonly(ctx.accounts.mint.key(), false),
-        AccountMeta::new(ctx.accounts.kamino_reserve_liquidity_usdc_supply.key(), false),
+        AccountMeta::new(
+            ctx.accounts.kamino_reserve_liquidity_usdc_supply.key(),
+            false,
+        ),
         AccountMeta::new(ctx.accounts.kamino_collateral_mint.key(), false),
-        AccountMeta::new(ctx.accounts.kamino_destination_deposit_collateral.key(), false),
+        AccountMeta::new(
+            ctx.accounts.kamino_destination_deposit_collateral.key(),
+            false,
+        ),
         AccountMeta::new(ctx.accounts.user_token_account.key(), false),
         // AccountMeta::new_readonly(ctx.accounts.user_kamino_reserve_usdc_token_account.key(), false), //placeholder
         AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false), // placeholder used in klend-sdk
@@ -280,60 +317,59 @@ pub fn kamino_deposit<'info>(
         AccountMeta::new_readonly(ctx.accounts.farms_program.key(), false),
     ];
 
-    let discriminator = sighash("global", "deposit_reserve_liquidity_and_obligation_collateral_v2");
+    let discriminator = sighash(
+        "global",
+        "deposit_reserve_liquidity_and_obligation_collateral_v2",
+    );
 
     let mut data = discriminator.to_vec();
     data.extend_from_slice(&deposit_amount.to_le_bytes());
 
-
     let kamino_deposit_ix = Instruction {
-        program_id: ctx.accounts.kamino_program.key(),
+        program_id: KAMINO_PROGRAM_ID,
         accounts,
         data,
     };
 
+    let account_infos = &[
+        ctx.accounts.signer.to_account_info(),
+        ctx.accounts.obligation.clone(),
+        ctx.accounts.lending_market.clone(),
+        ctx.accounts.lending_market_authority.clone(),
+        ctx.accounts.kamino_reserve.clone(),
+        ctx.accounts.mint.to_account_info(),
+        ctx.accounts.kamino_reserve_liquidity_usdc_supply.clone(),
+        ctx.accounts.kamino_collateral_mint.to_account_info(),
+        ctx.accounts.kamino_destination_deposit_collateral.clone(),
+        ctx.accounts.user_token_account.to_account_info(),
+        ctx.accounts.kamino_program.clone(),
+        ctx.accounts.collateral_token_program.to_account_info(),
+        ctx.accounts.liquidity_token_program.to_account_info(),
+        ctx.accounts.instructions_sysvar.to_account_info(),
+        ctx.accounts.kamino_obligation_farm_user_state.clone(),
+        ctx.accounts.kamino_reserve_farm_state.clone(),
+        ctx.accounts.farms_program.clone(),
+        ctx.accounts.kamino_program.clone(),
+    ];
 
-    let _lending_hub_key = ctx.accounts.market.key();
-    let _account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
-
-    
     invoke_signed(
         &kamino_deposit_ix,
-        &[
-            ctx.accounts.signer.to_account_info(),
-            ctx.accounts.obligation.clone(),
-            ctx.accounts.lending_market.clone(),
-            ctx.accounts.lending_market_authority.clone(),
-            ctx.accounts.kamino_reserve.clone(),
-            ctx.accounts.mint.to_account_info(),
-            ctx.accounts.kamino_reserve_liquidity_usdc_supply.clone(),
-            ctx.accounts.kamino_collateral_mint.to_account_info(),
-            ctx.accounts.kamino_destination_deposit_collateral.clone(),
-            ctx.accounts.user_token_account.to_account_info(),
-            // ctx.accounts.user_kamino_reserve_usdc_token_account.to_account_info(), 
-            ctx.accounts.kamino_program.clone(), 
-            ctx.accounts.collateral_token_program.to_account_info(),
-            ctx.accounts.liquidity_token_program.to_account_info(),
-            ctx.accounts.instructions_sysvar.to_account_info(), 
-            ctx.accounts.kamino_obligation_farm_user_state.clone(),
-            ctx.accounts.kamino_reserve_farm_state.clone(),
-            ctx.accounts.farms_program.clone(),
-            // ctx.accounts.kamino_program.clone(),
-        ],
+        account_infos,
         &[],
-        // &[&account_seeds.signer_seeds()],
     )?;
 
     Ok(())
 }
 
-
 #[derive(Accounts)]
 pub struct DepositKamino<'info> {
-
+    #[account(
+        constraint = market.load()?.is_ix_enabled(IxGate::TokenDeposit) @ PeachError::IxIsDisabled,
+    )]
+    pub market: AccountLoader<'info, Market>,
+    
     #[account(
         mut,
-        address = peach_account.load()?.owner,
     )]
     pub signer: Signer<'info>,
 
@@ -343,7 +379,8 @@ pub struct DepositKamino<'info> {
 
     #[account(
         mut,
-        has_one = market
+        has_one = market,
+        // constraint = peach_account.load()?.is_operational() @ PeachError::AccountIsFrozen,
     )]
     pub peach_account: AccountLoader<'info, PeachAccountFixed>,
 
@@ -359,25 +396,13 @@ pub struct DepositKamino<'info> {
 
     // #[account(mut)]
     // pub vault: Account<'info, TokenAccount>,
-
     /// CHECK: The oracle can be one of several different account types
     pub oracle: UncheckedAccount<'info>,
-
-    pub market: AccountLoader<'info, Market>,
 
     #[account(mut)]
     pub kamino_collateral_mint: InterfaceAccount<'info, Mint>,
 
     pub mint: InterfaceAccount<'info, Mint>,
-
-    #[account(
-        init_if_needed,
-        payer = signer,
-        associated_token::mint = kamino_collateral_mint,
-        associated_token::authority = peach_account,
-        associated_token::token_program = collateral_token_program,
-    )]
-    pub user_kamino_reserve_usdc_token_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
@@ -400,10 +425,9 @@ pub struct DepositKamino<'info> {
     /// CHECK: Verified by Kamino program / process method
     pub kamino_reserve_liquidity_usdc_supply: AccountInfo<'info>,
 
-
     #[account(address = KAMINO_PROGRAM_ID)]
     /// CHECK: Kamino program ID
-    pub kamino_program: AccountInfo<'info>, 
+    pub kamino_program: AccountInfo<'info>,
     /// Kamino Farms program
     /// CHECK: Verified by Kamino program
     pub farms_program: AccountInfo<'info>,
@@ -415,13 +439,13 @@ pub struct DepositKamino<'info> {
     #[account(mut)]
     /// CHECK: Verified by Kamino program
     pub kamino_reserve_farm_state: AccountInfo<'info>,
-   
-    pub collateral_token_program: Program<'info, Token>, 
 
-    pub liquidity_token_program: Interface<'info, TokenInterface>, 
+    pub collateral_token_program: Program<'info, Token>,
+
+    pub liquidity_token_program: Interface<'info, TokenInterface>,
 
     pub system_program: Program<'info, System>,
-    
+
     pub associated_token_program: Program<'info, AssociatedToken>,
 
     #[account(address = sysvar::instructions::ID)]

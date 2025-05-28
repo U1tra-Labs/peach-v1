@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 
 export const LAMPORTS_PER_SOL_FOR_TEST_WALLETS = 0.1; // 0.1 SOL for each wallet
 
-export const TEST_ENV = "localhost"; // "devnet" | "localhost" | "mainnet"
+export const TEST_ENV = "mainnet"; // "devnet" | "localhost" | "mainnet"
 
 export const PYTH_USDC_ORACLE = new PublicKey('Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX');
 

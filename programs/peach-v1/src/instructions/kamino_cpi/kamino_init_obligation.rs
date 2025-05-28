@@ -26,10 +26,10 @@ pub fn kamino_init_obligation(
     //      market.as_ref(),
     //      &[ctx.bumps.account],
     //  ];
-    let account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
+    let _account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
  
     let accounts = vec![
-        AccountMeta::new_readonly(ctx.accounts.peach_account.key(), true), 
+        AccountMeta::new_readonly(ctx.accounts.payer.key(), true), 
         AccountMeta::new(ctx.accounts.payer.key(), true), 
         AccountMeta::new(ctx.accounts.obligation.key(), false), 
         AccountMeta::new_readonly(ctx.accounts.lending_market.key(), false), 
@@ -56,7 +56,7 @@ pub fn kamino_init_obligation(
     invoke_signed(
         &instruction,
         &[
-            ctx.accounts.peach_account.to_account_info(),
+            ctx.accounts.payer.to_account_info(),
             ctx.accounts.payer.to_account_info(),
             ctx.accounts.obligation.clone(),
             ctx.accounts.lending_market.clone(),
@@ -67,7 +67,8 @@ pub fn kamino_init_obligation(
             ctx.accounts.system_program.to_account_info(),
             ctx.accounts.kamino_program.clone(), 
         ],
-        &[&account_seeds.signer_seeds()],
+        &[]
+        // &[&account_seeds.signer_seeds()],
     )?;
 
     Ok(())
