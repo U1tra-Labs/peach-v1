@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
+use crate::accounts_zerocopy::AccountInfoRef;
+use crate::custom_types::{F32Bytes, F64Bytes, TokenIndex};
 use crate::error::*;
 use crate::logs::{emit_stack, TokenMetaDataLogV2};
 use crate::state::*;
@@ -14,7 +16,6 @@ use crate::util::fill_from_str;
 // use crate::logs::{emit_stack, TokenMetaDataLogV2};
 
 pub const INDEX_START: I80F48 = I80F48::from_bits(1_000_000 * I80F48::ONE.to_bits());
-
 
 #[allow(clippy::too_many_arguments)]
 pub fn token_register(
@@ -41,7 +42,7 @@ pub fn token_register(
     reduce_only: u8,
     interest_curve_scaling: f32,
     interest_target_utilization: f32,
-    group_insurance_fund: bool,
+    market_insurance_fund: bool,
     deposit_limit: u64,
     zero_util_rate: f32,
     platform_liquidation_fee: f32,
@@ -53,6 +54,7 @@ pub fn token_register(
 
     let now_ts: u64 = Clock::get()?.unix_timestamp.try_into().unwrap();
 
+    msg!("Initializing bank account");
     let mut bank = ctx.accounts.bank.load_init()?;
     *bank = Bank {
         market: ctx.accounts.market.key(),
@@ -60,29 +62,29 @@ pub fn token_register(
         mint: ctx.accounts.mint.key(),
         vault: ctx.accounts.vault.key(),
         oracle: ctx.accounts.oracle.key(),
-        deposit_index: INDEX_START,
-        borrow_index: INDEX_START,
-        indexed_deposits: I80F48::ZERO,
-        indexed_borrows: I80F48::ZERO,
+        deposit_index: INDEX_START.into(),
+        borrow_index: INDEX_START.into(),
+        indexed_deposits: I80F48::ZERO.into(),
+        indexed_borrows: I80F48::ZERO.into(),
         index_last_updated: now_ts,
         bank_rate_last_updated: now_ts,
         // TODO: add a require! verifying relation between the parameters
-        avg_utilization: I80F48::ZERO,
-        adjustment_factor: I80F48::from_num(interest_rate_params.adjustment_factor),
-        util0: I80F48::from_num(interest_rate_params.util0),
-        rate0: I80F48::from_num(interest_rate_params.rate0),
-        util1: I80F48::from_num(interest_rate_params.util1),
-        rate1: I80F48::from_num(interest_rate_params.rate1),
-        max_rate: I80F48::from_num(interest_rate_params.max_rate),
-        collected_fees_native: I80F48::ZERO,
-        loan_origination_fee_rate: I80F48::from_num(loan_origination_fee_rate),
-        loan_fee_rate: I80F48::from_num(loan_fee_rate),
-        maint_asset_weight: I80F48::from_num(maint_asset_weight),
-        init_asset_weight: I80F48::from_num(init_asset_weight),
-        maint_liab_weight: I80F48::from_num(maint_liab_weight),
-        init_liab_weight: I80F48::from_num(init_liab_weight),
-        liquidation_fee: I80F48::from_num(liquidation_fee),
-        dust: I80F48::ZERO,
+        avg_utilization: I80F48::ZERO.into(),
+        adjustment_factor: I80F48::from_num(interest_rate_params.adjustment_factor).into(),
+        util0: I80F48::from_num(interest_rate_params.util0).into(),
+        rate0: I80F48::from_num(interest_rate_params.rate0).into(),
+        util1: I80F48::from_num(interest_rate_params.util1).into(),
+        rate1: I80F48::from_num(interest_rate_params.rate1).into(),
+        max_rate: I80F48::from_num(interest_rate_params.max_rate).into(),
+        collected_fees_native: I80F48::ZERO.into(),
+        loan_origination_fee_rate: I80F48::from_num(loan_origination_fee_rate).into(),
+        loan_fee_rate: I80F48::from_num(loan_fee_rate).into(),
+        maint_asset_weight: I80F48::from_num(maint_asset_weight).into(),
+        init_asset_weight: I80F48::from_num(init_asset_weight).into(),
+        maint_liab_weight: I80F48::from_num(maint_liab_weight).into(),
+        init_liab_weight: I80F48::from_num(init_liab_weight).into(),
+        liquidation_fee: I80F48::from_num(liquidation_fee).into(),
+        dust: I80F48::ZERO.into(),
         token_index,
         bump: ctx.bumps.bank,
         mint_decimals: ctx.accounts.mint.decimals,
@@ -94,65 +96,65 @@ pub fn token_register(
             stable_growth_limit: stable_price_growth_limit,
             ..StablePriceModel::default()
         },
-        min_vault_to_deposits_ratio,
+        min_vault_to_deposits_ratio: F64Bytes::new(min_vault_to_deposits_ratio),
         net_borrow_limit_window_size_ts,
         last_net_borrows_window_start_ts: now_ts / net_borrow_limit_window_size_ts
             * net_borrow_limit_window_size_ts,
         net_borrow_limit_per_window_quote,
         net_borrows_in_window: 0,
-        borrow_weight_scale_start_quote,
-        deposit_weight_scale_start_quote,
+        borrow_weight_scale_start_quote: F64Bytes::new(borrow_weight_scale_start_quote),
+        deposit_weight_scale_start_quote: F64Bytes::new(deposit_weight_scale_start_quote),
         reduce_only,
         force_close: 0,
         disable_asset_liquidation: u8::from(disable_asset_liquidation),
         force_withdraw: 0,
         fees_withdrawn: 0,
-        interest_target_utilization,
-        interest_curve_scaling: interest_curve_scaling.into(),
+        interest_target_utilization: F32Bytes::new(interest_target_utilization),
+        interest_curve_scaling: F64Bytes::new(interest_curve_scaling as f64),
         maint_weight_shift_start: 0,
         maint_weight_shift_end: 0,
-        maint_weight_shift_duration_inv: I80F48::ZERO,
-        maint_weight_shift_asset_target: I80F48::ZERO,
-        maint_weight_shift_liab_target: I80F48::ZERO,
+        maint_weight_shift_duration_inv: I80F48::ZERO.into(),
+        maint_weight_shift_asset_target: I80F48::ZERO.into(),
+        maint_weight_shift_liab_target: I80F48::ZERO.into(),
         fallback_oracle: ctx.accounts.fallback_oracle.key(),
         deposit_limit,
-        zero_util_rate: I80F48::from_num(zero_util_rate),
-        platform_liquidation_fee: I80F48::from_num(platform_liquidation_fee),
-        collected_liquidation_fees: I80F48::ZERO,
-        collected_collateral_fees: I80F48::ZERO,
-        collateral_fee_per_day,
+        zero_util_rate: I80F48::from_num(zero_util_rate).into(),
+        platform_liquidation_fee: I80F48::from_num(platform_liquidation_fee).into(),
+        collected_liquidation_fees: I80F48::ZERO.into(),
+        collected_collateral_fees: I80F48::ZERO.into(),
+        collateral_fee_per_day: F32Bytes::new(collateral_fee_per_day),
         tier: fill_from_str(&tier)?,
-        _padding1: Default::default(),
-        _padding2: Default::default(),
-        _padding3: Default::default(),
+        _padding1: [0; 12],
+        reserved: [0; 12],
     };
 
-    // let oracle_ref = &AccountInfoRef::borrow(ctx.accounts.oracle.as_ref())?;
-    // if let Ok(oracle_price) = bank.oracle_price(&OracleAccountInfos::from_reader(oracle_ref), None)
-    // {
-    //     bank.stable_price_model
-    //         .reset_to_price(oracle_price.to_num(), now_ts);
-    // } else {
-    //     bank.stable_price_model.reset_on_nonzero_price = 1;
-    // }
+    let oracle_ref = &AccountInfoRef::borrow(ctx.accounts.oracle.as_ref())?;
+    if let Ok(oracle_price) = bank.oracle_price(&OracleAccountInfos::from_reader(oracle_ref), None)
+    {
+        bank.stable_price_model
+            .reset_to_price(oracle_price.to_num(), now_ts);
+    } else {
+        bank.stable_price_model.reset_on_nonzero_price = 1;
+    }
 
-    // bank.verify()?;
-    // check_is_valid_fallback_oracle(&AccountInfoRef::borrow(
-    //     ctx.accounts.fallback_oracle.as_ref(),
-    // )?)?;
+    bank.verify()?;
+    check_is_valid_fallback_oracle(&AccountInfoRef::borrow(
+        ctx.accounts.fallback_oracle.as_ref(),
+    )?)?;
 
+    msg!("Initializing mint_info account");
     let mut mint_info = ctx.accounts.mint_info.load_init()?;
     *mint_info = MintInfo {
         market: ctx.accounts.market.key(),
         token_index,
-        group_insurance_fund: if group_insurance_fund { 1 } else { 0 },
+        market_insurance_fund: if market_insurance_fund { 1 } else { 0 },
         padding1: Default::default(),
         mint: ctx.accounts.mint.key(),
         banks: Default::default(),
         vaults: Default::default(),
         oracle: ctx.accounts.oracle.key(),
         fallback_oracle: ctx.accounts.fallback_oracle.key(),
-        registration_time: Clock::get()?.unix_timestamp.try_into().unwrap()
+        registration_time: Clock::get()?.unix_timestamp.try_into().unwrap(),
     };
 
     mint_info.banks[0] = ctx.accounts.bank.key();
@@ -161,7 +163,7 @@ pub fn token_register(
     emit_stack(TokenMetaDataLogV2 {
         market: ctx.accounts.market.key(),
         mint: ctx.accounts.mint.key(),
-        token_index,
+        token_index: token_index.0,
         mint_decimals: ctx.accounts.mint.decimals,
         oracle: ctx.accounts.oracle.key(),
         fallback_oracle: ctx.accounts.fallback_oracle.key(),
@@ -170,7 +172,6 @@ pub fn token_register(
 
     Ok(())
 }
-
 
 #[derive(Accounts)]
 #[instruction(token_index: TokenIndex)]
@@ -187,7 +188,7 @@ pub struct TokenRegister<'info> {
     #[account(
         init,
         // using the token_index in this seed guards against reusing it
-        seeds = [b"Bank".as_ref(), market.key().as_ref(), &token_index.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
+        seeds = [b"Bank".as_ref(), market.key().as_ref(), &token_index.0.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
         bump,
         payer = payer,
         space = 8 + std::mem::size_of::<Bank>(),
@@ -195,12 +196,10 @@ pub struct TokenRegister<'info> {
     pub bank: AccountLoader<'info, Bank>,
 
     #[account(
-        init,
-        seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
+        seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.0.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
         bump,
         token::authority = market,
         token::mint = mint,
-        payer = payer
     )]
     pub vault: Account<'info, TokenAccount>,
 

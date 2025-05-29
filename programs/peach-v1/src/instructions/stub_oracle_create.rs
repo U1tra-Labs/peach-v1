@@ -2,13 +2,16 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 use fixed::types::I80F48;
 
-use crate::{error::PeachError, state::{IxGate, Market, StubOracle}};
+use crate::{error::PeachError, custom_types::fixed_wrapper::FixedWrapper, state::{IxGate, Market, StubOracle}};
 
-pub fn stub_oracle_create(ctx: Context<StubOracleCreate>, price: I80F48) -> Result<()> {
+pub fn stub_oracle_create(
+    ctx: Context<StubOracleCreate>,
+    price: u64
+) -> Result<()> {
     let mut oracle = ctx.accounts.oracle.load_init()?;
-    oracle.group = ctx.accounts.group.key();
+    oracle.market = ctx.accounts.market.key();
     oracle.mint = ctx.accounts.mint.key();
-    oracle.price = price;
+    oracle.price = FixedWrapper::new(I80F48::from(price));
     oracle.last_update_ts = Clock::get()?.unix_timestamp;
 
     Ok(())
@@ -18,9 +21,9 @@ pub fn stub_oracle_create(ctx: Context<StubOracleCreate>, price: I80F48) -> Resu
 pub struct StubOracleCreate<'info> {
     #[account(
         has_one = admin,
-        constraint = group.load()?.is_ix_enabled(IxGate::StubOracleCreate) @ PeachError::IxIsDisabled,
+        constraint = market.load()?.is_ix_enabled(IxGate::StubOracleCreate) @ PeachError::IxIsDisabled,
     )]
-    pub group: AccountLoader<'info, Market>,
+    pub market: AccountLoader<'info, Market>,
 
     #[account(
         init,
