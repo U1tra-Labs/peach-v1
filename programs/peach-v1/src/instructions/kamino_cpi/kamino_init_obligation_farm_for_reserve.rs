@@ -1,23 +1,21 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::solana_program::instruction::Instruction;
 
 use crate::constants::KAMINO_PROGRAM_ID;
 use crate::state::{Market, PeachAccountFixed};
 use crate::util::sighash;
 
+#[cfg(feature="mainnet")]
+use anchor_lang::solana_program::program::invoke;
+
 pub fn kamino_init_obligation_farm_for_reserve(
     ctx: Context<KaminoInitObligationFarmsForReserve>,
     mod_num: u8,
 ) -> Result<()> {
 
-    let _market = ctx.accounts.market.key();
-    let _account_seeds = & ctx.accounts.peach_account.load()?.pda_seeds();
-
-
     let accounts = vec![
-        AccountMeta::new(ctx.accounts.payer.key(), true),
-        AccountMeta::new_readonly(ctx.accounts.payer.key(), false),
+        AccountMeta::new(ctx.accounts.owner.key(), true), // payer
+        AccountMeta::new_readonly(ctx.accounts.owner.key(), false), // owner
         AccountMeta::new(ctx.accounts.obligation.key(), false),
         AccountMeta::new_readonly(ctx.accounts.lending_market_authority.key(), false),
         AccountMeta::new(ctx.accounts.reserve.key(), false),
@@ -27,7 +25,6 @@ pub fn kamino_init_obligation_farm_for_reserve(
         AccountMeta::new_readonly(ctx.accounts.farms_program.key(), false),
         AccountMeta::new_readonly(ctx.accounts.rent.key(), false),
         AccountMeta::new_readonly(ctx.accounts.system_program.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false), // Not sure if this is needed
     ];
 
     let discriminator = sighash("global", "init_obligation_farms_for_reserve");
@@ -41,11 +38,9 @@ pub fn kamino_init_obligation_farm_for_reserve(
         data,
     };
 
-    invoke_signed(
-        &instruction,
-        &[
-            ctx.accounts.payer.to_account_info(),
-            ctx.accounts.payer.to_account_info(),
+    let account_infos = &[
+            ctx.accounts.owner.to_account_info(), // payer
+            ctx.accounts.owner.to_account_info(), // owner
             ctx.accounts.obligation.clone(),
             ctx.accounts.lending_market_authority.clone(),
             ctx.accounts.reserve.clone(),
@@ -55,11 +50,17 @@ pub fn kamino_init_obligation_farm_for_reserve(
             ctx.accounts.farms_program.clone(),
             ctx.accounts.rent.to_account_info(),
             ctx.accounts.system_program.to_account_info(),
-            ctx.accounts.kamino_program.clone(), 
-        ],
-        &[]
-        // &[&account_seeds.signer_seeds()],
-    )?;
+        ];
+
+    #[cfg(feature = "mainnet")]
+    {
+        invoke(&instruction, account_infos)?;
+    }
+
+    #[cfg(not(feature = "mainnet"))]
+    {
+        msg!("skipped CPI invoke for testnet/devnet");
+    }
 
     Ok(())
 }
@@ -69,9 +70,6 @@ pub fn kamino_init_obligation_farm_for_reserve(
 
 #[derive(Accounts)]
 pub struct KaminoInitObligationFarmsForReserve<'info> {
-    
-    #[account(mut)]
-    pub payer: Signer<'info>,
 
     pub market: AccountLoader<'info, Market>,
 
@@ -80,6 +78,9 @@ pub struct KaminoInitObligationFarmsForReserve<'info> {
         has_one = market
     )]
     pub peach_account: AccountLoader<'info, PeachAccountFixed>, 
+
+    #[account(mut)]
+    pub owner: Signer<'info>,
 
     #[account(mut)]
     /// CHECK: Verified by Kamino program
@@ -110,10 +111,6 @@ pub struct KaminoInitObligationFarmsForReserve<'info> {
 
     pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
-
-    /// CHECK: Kamino program ID
-    pub kamino_program: AccountInfo<'info>,
-    
 }
 
 

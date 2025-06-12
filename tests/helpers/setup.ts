@@ -37,45 +37,38 @@ export async function createTokenMint(decimals = 10, owner: Keypair): Promise<Pu
 }
 
 export async function createTokenAccount(mint: PublicKey, owner: Keypair): Promise<PublicKey> {
-  
-  if (program.provider.connection.rpcEndpoint.includes("mainnet") || program.provider.connection.rpcEndpoint.includes("staked")) {
-    try {
-      const tokenATA = await getOrCreateAssociatedTokenAccount(
-        program.provider.connection,
-        owner,
-        mint,
-        owner.publicKey,
-      );
+  try {
+    const tokenATA = await getOrCreateAssociatedTokenAccount(
+          program.provider.connection,
+          owner,
+          mint,
+          owner.publicKey,
+    );
+    
+    if (program.provider.connection.rpcEndpoint.includes("mainnet")) {
       return tokenATA.address;
     }
-    catch (error) {
-      console.error("Error creating associated token account:", error);
-    }
+
+    const transactionSignature = await mintTo(
+      program.provider.connection,
+      owner,
+      mint,
+      tokenATA.address,
+      owner,
+      100 * 10 ** 6,
+      [owner]
+    );
+
+    return tokenATA.address;
   }
-
-  const getAssociatedTokenAddress = await createAssociatedTokenAccount(
-    program.provider.connection,
-    owner,
-    mint,
-    owner.publicKey,
-  );
-
-  const transactionSignature = await mintTo(
-    program.provider.connection,
-    owner,
-    mint,
-    getAssociatedTokenAddress,
-    owner,
-    2000000,
-    [owner]
-  );
-
-  return getAssociatedTokenAddress;
+  catch (error) {
+      console.error("Error creating associated token account:", error);
+  }
 }
 
 export async function transferToken(mint: PublicKey, sender_ata: PublicKey, sender: Keypair, receiver: Keypair, amount: number) {
 
-  const receipientAssociatedTokenAddress = await createAssociatedTokenAccount(
+  const receipientATA = await getOrCreateAssociatedTokenAccount(
     program.provider.connection,
     receiver,
     mint,
@@ -86,12 +79,12 @@ export async function transferToken(mint: PublicKey, sender_ata: PublicKey, send
     program.provider.connection,
     sender,
     sender_ata,
-    receipientAssociatedTokenAddress,
+    receipientATA.address,
     sender,
     amount,
   );
 
-  return receipientAssociatedTokenAddress;
+  return receipientATA.address;
 }
 
 // Function to derive market PDA
@@ -119,17 +112,17 @@ export function testDerivePeachAccountPDA(market: PublicKey, accountNum: number,
 }
 
 // Function to derive bank PDA
-export function deriveBankPDA(market: PublicKey, tokenIndex: number): PublicKey {
+export function deriveBankPDA(market: PublicKey, tokenIndex: number, bankNumber: number): PublicKey {
   return anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from(BANK_SEED), market.toBuffer(), new anchor.BN(tokenIndex).toArrayLike(Buffer, "le", 2), new anchor.BN(0).toArrayLike(Buffer, "le", 4)],
+    [Buffer.from(BANK_SEED), market.toBuffer(), new anchor.BN(tokenIndex).toArrayLike(Buffer, "le", 2), new anchor.BN(bankNumber).toArrayLike(Buffer, "le", 4)],
     program.programId
   )[0];
 }
 
 // Function to derive vault PDA
-export function deriveVaultPDA(market: PublicKey, tokenIndex: number): PublicKey {
+export function deriveVaultPDA(market: PublicKey, tokenIndex: number, vaultNumber: number): PublicKey {
   return anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from(VAULT_SEED), market.toBuffer(), new anchor.BN(tokenIndex).toArrayLike(Buffer, "le", 2), new anchor.BN(0).toArrayLike(Buffer, "le", 4)],
+    [Buffer.from(VAULT_SEED), market.toBuffer(), new anchor.BN(tokenIndex).toArrayLike(Buffer, "le", 2), new anchor.BN(vaultNumber).toArrayLike(Buffer, "le", 4)],
     program.programId
   )[0];
 }

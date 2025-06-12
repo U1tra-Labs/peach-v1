@@ -28,7 +28,7 @@ pub fn token_withdraw(ctx: Context<TokenWithdraw>, amount: u64, allow_borrow: bo
 
     // Health check _after_ the token position is guaranteed to exist
     let pre_health_opt = if !account.fixed.is_in_health_region() {
-        let retriever = new_fixed_order_account_retriever_with_optional_banks(
+        let retriever: FixedOrderAccountRetriever<AccountInfoRef<'_, '_>> = new_fixed_order_account_retriever_with_optional_banks(
             ctx.remaining_accounts,
             &account.borrow(),
             (now_ts, now_slot),
@@ -240,11 +240,7 @@ pub struct TokenWithdraw<'info> {
         mut,
         has_one = market,
         constraint = account.load()?.is_operational() @ PeachError::AccountIsFrozen,
-
-        // Delegates are allowed to call this instruction, but only with significant constraints,
-        // like "must close position", "tiny amount" and "token_account is a owner ATA"
-        // which allows delegated liquidators to close their token positions. See #1
-        // constraint = account.load()?.is_owner_or_delegate(owner.key()),
+        constraint = account.load()?.is_owner(owner.key()),
     )]
     pub account: AccountLoader<'info, PeachAccountFixed>,
     pub owner: Signer<'info>,

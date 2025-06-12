@@ -184,7 +184,7 @@ impl HealthCache {
     pub fn has_token_info(&self, token_index: TokenIndex) -> bool {
         self.token_infos
             .iter()
-            .any(|t| t.token_index == token_index)
+            .any(|t: &TokenInfo| t.token_index == token_index)
     }
 
     /// Changes the cached user account token balance.

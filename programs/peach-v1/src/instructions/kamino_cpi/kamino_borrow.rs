@@ -7,13 +7,13 @@ use crate::health::{
 };
 use crate::logs::{emit_stack, LoanOriginationFeeInstruction, WithdrawLoanLog};
 use crate::state::{
-    oracle_log_context, oracle_state_unchecked, Bank, IxGate, Market, OracleAccountInfos, PeachAccountFixed, PeachAccountLoader
+    oracle_log_context, oracle_state_unchecked, Bank, IxGate, Market, OracleAccountInfos,
+    PeachAccountFixed, PeachAccountLoader,
 };
 use crate::util::{clock_now, sighash};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::solana_program::sysvar;
-use anchor_spl::token::Token;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_interface::{Mint, TokenAccount, TokenInterface},
@@ -23,22 +23,29 @@ use fixed::types::I80F48;
 #[cfg(feature="mainnet")]
 use anchor_lang::solana_program::program::invoke;
 
-pub fn kamino_withdraw<'info>(
-    ctx: Context<'_, '_, '_, 'info, WithdrawKamino<'info>>,
-    withdraw_amount: u64,
+pub fn kamino_borrow<'info>(
+    ctx: Context<'_, '_, '_, 'info, BorrowKamino<'info>>,
+    liquidity_amount: u64,
     allow_borrow: bool,
 ) -> Result<()> {
-    require!(withdraw_amount > 0, PeachError::InvalidAmount);
+    require!(liquidity_amount > 0, PeachError::InvalidAmount);
 
-    msg!("Withdraw amount: {:?}", withdraw_amount);
-    msg!("Withdraw mint: {:?}", ctx.accounts.reserve_liquidity_mint.key());
+    msg!("Borrow amount: {:?}", liquidity_amount);
+    msg!(
+        "Borrow mint: {:?}",
+        ctx.accounts.borrow_reserve_liquidity_mint.key()
+    );
 
     {
         let token_index = ctx.accounts.bank.load()?.token_index;
         let (now_ts, now_slot) = clock_now();
 
         // Create the account's position for that token index
-        let mut account: crate::state::DynamicAccount<crate::state::PeachAccountDynamicHeader, std::cell::RefMut<'_, PeachAccountFixed>, std::cell::RefMut<'_, [u8]>> = ctx.accounts.peach_account.load_full_mut()?;
+        let mut account: crate::state::DynamicAccount<
+            crate::state::PeachAccountDynamicHeader,
+            std::cell::RefMut<'_, PeachAccountFixed>,
+            std::cell::RefMut<'_, [u8]>,
+        > = ctx.accounts.peach_account.load_full_mut()?;
         let (token_position, raw_token_index, _) = account.ensure_token_position(token_index, 1)?;
 
         msg!("Token position: {:?}", token_position);
@@ -64,24 +71,24 @@ pub fn kamino_withdraw<'info>(
 
         let mut bank = ctx.accounts.bank.load_mut()?;
         let position = account.token_position_mut_by_raw_index(raw_token_index);
-        let native_position = position.native(&bank);
+        let kamino_position = position.native(&bank);
 
         // Handle amount special case for withdrawing everything
-        let amount = if withdraw_amount == u64::MAX && !allow_borrow {
-            if !native_position.is_negative() {
+        let amount = if liquidity_amount == u64::MAX && !allow_borrow {
+            if !kamino_position.is_negative() {
                 // TODO: This rounding may mean that if we deposit and immediately withdraw
                 //       we can't withdraw the full amount!
-                native_position.floor().to_num::<u64>()
+                kamino_position.floor().to_num::<u64>()
             } else {
                 return Ok(());
             }
         } else {
-            withdraw_amount
+            liquidity_amount
         };
 
-        msg!("Amount to withdraw: {:?}", amount);
+        msg!("Amount to borrow: {:?}", amount);
 
-        let is_borrow = amount > native_position;
+        let is_borrow = amount > kamino_position;
         require!(allow_borrow || !is_borrow, PeachError::SomeError);
         if bank.are_borrows_reduce_only() {
             require!(!is_borrow, PeachError::TokenInReduceOnlyMode);
@@ -103,9 +110,9 @@ pub fn kamino_withdraw<'info>(
             amount_i80f48,
             Clock::get()?.unix_timestamp.try_into().unwrap(),
         )?;
-        let native_position_after = position.native(&bank);
+        let position_after = position.native(&bank);
 
-        msg!("Native position after withdraw: {:?}", native_position_after);
+        msg!("Kamino position after borrow: {:?}", position_after);
 
         // Avoid getting in trouble because of the mutable bank account borrow later
         drop(bank);
@@ -115,7 +122,7 @@ pub fn kamino_withdraw<'info>(
         let amount_usd = (amount_i80f48 * unsafe_oracle_state.price).to_num::<i64>();
         account.fixed.net_deposits_kamino -= amount_usd;
 
-        msg!("Net deposits after withdraw: {:?}", account.fixed.net_deposits_kamino);
+        msg!("Net deposits after borrow: {:?}", account.fixed.net_deposits_kamino);
 
         //
         // Health check
@@ -124,8 +131,7 @@ pub fn kamino_withdraw<'info>(
             if health_cache.has_token_info(token_index) {
                 // This is the normal case: the health cache knows about the token, we can
                 // compute the health for the new state by adjusting its balance
-                health_cache
-                    .adjust_token_balance(&bank, native_position_after - native_position)?;
+                health_cache.adjust_token_balance(&bank, position_after - kamino_position)?;
                 account.check_health_post(&health_cache, pre_init_health_lower_bound)?;
             } else {
                 // The health cache does not know about the token! It has a bad oracle or wasn't
@@ -174,11 +180,11 @@ pub fn kamino_withdraw<'info>(
 
         // Enforce min vault to deposits ratio and net borrow limits
         if is_borrow {
-            bank.enforce_max_utilization_on_borrow()?;
+            // bank.enforce_max_utilization_on_borrow()?; // Skipped as kamino provides the liquidity
 
             // When borrowing the price has be trustworthy, so we can do a reasonable
             // net borrow check.
-            let now_opt = Some(Clock::get().map(|c| (c.unix_timestamp as u64, c.slot as u64))?);
+            let now_opt: Option<(u64, u64)> = Some(Clock::get().map(|c| (c.unix_timestamp as u64, c.slot as u64))?);
             unsafe_oracle_state
                 .check_confidence_and_maybe_staleness(&bank.oracle_config, now_opt)
                 .with_context(|| {
@@ -199,56 +205,47 @@ pub fn kamino_withdraw<'info>(
         // bank.withdraw_with_fee(&ctx.accounts.mint.key(), withdraw_amount)?;
     }
 
-    msg!("CPI Tranfer: Kamino - Withdraw");
+    msg!("CPI Tranfer: Kamino - Borrow");
 
     let accounts = vec![
-        AccountMeta::new(ctx.accounts.owner.key(), true),
-        AccountMeta::new(ctx.accounts.obligation.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.lending_market.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.lending_market_authority.key(), false),
-        AccountMeta::new(ctx.accounts.withdraw_reserve.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.reserve_liquidity_mint.key(), false),
-        AccountMeta::new(ctx.accounts.reserve_source_collateral.key(), false),
-        AccountMeta::new(ctx.accounts.reserve_collateral_mint.key(), false),
-        AccountMeta::new(ctx.accounts.reserve_liquidity_supply.key(), false),
-        AccountMeta::new(ctx.accounts.user_destination_liquidity.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false), // placeholder_user_destination_collateral
-        AccountMeta::new_readonly(ctx.accounts.collateral_token_program.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.liquidity_token_program.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.instruction_sysvar_account.key(), false),
-        AccountMeta::new(ctx.accounts.obligation_farm_user_state.key(), false),
-        AccountMeta::new(ctx.accounts.reserve_farm_state.key(), false),
-        AccountMeta::new_readonly(ctx.accounts.farms_program.key(), false),
+        AccountMeta::new(ctx.accounts.owner.key(), true), // owner
+        AccountMeta::new(ctx.accounts.obligation.key(), false), // obligation
+        AccountMeta::new_readonly(ctx.accounts.lending_market.key(), false), // lending_market
+        AccountMeta::new_readonly(ctx.accounts.lending_market_authority.key(), false), // lending_market_authority
+        AccountMeta::new(ctx.accounts.borrow_reserve.key(), false), // borrow_reserve
+        AccountMeta::new_readonly(ctx.accounts.borrow_reserve_liquidity_mint.key(), false), // borrow_reserve_liquidity_mint
+        AccountMeta::new(ctx.accounts.reserve_source_liquidity.key(), false), // reserve_source_liquidity
+        AccountMeta::new(ctx.accounts.borrow_reserve_liquidity_fee_receiver.key(), false,), // borrow_reserve_liquidity_fee_receiver
+        AccountMeta::new(ctx.accounts.user_destination_liquidity.key(), false), //         // user_destination_liquidity
+        AccountMeta::new_readonly(ctx.accounts.token_program.key(), false),     // token_program
+        AccountMeta::new_readonly(ctx.accounts.instruction_sysvar_account.key(), false), // instruction_sysvar_account
+        AccountMeta::new(ctx.accounts.obligation_farm_user_state.key(), false), // obligation_farm_user_state
+        AccountMeta::new(ctx.accounts.reserve_farm_state.key(), false), // reserve_farm_state
+        AccountMeta::new_readonly(ctx.accounts.farms_program.key(), false),    // farms_program
     ];
 
-    let discriminator = sighash(
-        "global",
-        "withdraw_obligation_collateral_and_redeem_reserve_collateral_v2",
-    );
+    let discriminator = sighash("global", "borrow_obligation_liquidity_v2");
 
     let mut data = discriminator.to_vec();
-    data.extend_from_slice(&withdraw_amount.to_le_bytes());
+    data.extend_from_slice(&liquidity_amount.to_le_bytes());
 
-    let kamino_withdraw_ix = Instruction {
+    let kamino_borrow_ix = Instruction {
         program_id: KAMINO_PROGRAM_ID,
         accounts,
         data,
     };
 
-    let account_infos = &[
+    let account_info = &[
         ctx.accounts.owner.to_account_info(),
         ctx.accounts.obligation.clone(),
         ctx.accounts.lending_market.clone(),
         ctx.accounts.lending_market_authority.clone(),
-        ctx.accounts.withdraw_reserve.clone(),
-        ctx.accounts.reserve_liquidity_mint.to_account_info(),
-        ctx.accounts.reserve_source_collateral.clone(),
-        ctx.accounts.reserve_collateral_mint.to_account_info(),
-        ctx.accounts.reserve_liquidity_supply.clone(),
+        ctx.accounts.borrow_reserve.clone(),
+        ctx.accounts.borrow_reserve_liquidity_mint.to_account_info(),
+        ctx.accounts.reserve_source_liquidity.to_account_info(),
+        ctx.accounts.borrow_reserve_liquidity_fee_receiver.to_account_info(),
         ctx.accounts.user_destination_liquidity.to_account_info(),
-        ctx.accounts.kamino_program.to_account_info(), // placeholder_user_destination_collateral
-        ctx.accounts.collateral_token_program.to_account_info(),
-        ctx.accounts.liquidity_token_program.to_account_info(),
+        ctx.accounts.token_program.to_account_info(), 
         ctx.accounts.instruction_sysvar_account.to_account_info(),
         ctx.accounts.obligation_farm_user_state.clone(),
         ctx.accounts.reserve_farm_state.clone(),
@@ -258,7 +255,7 @@ pub fn kamino_withdraw<'info>(
 
     #[cfg(feature = "mainnet")]
     {
-        invoke(&kamino_withdraw_ix, account_infos)?;
+        invoke(&kamino_borrow_ix, account_info)?;
     }
 
     #[cfg(not(feature = "mainnet"))]
@@ -270,7 +267,7 @@ pub fn kamino_withdraw<'info>(
 }
 
 #[derive(Accounts)]
-pub struct WithdrawKamino<'info> {
+pub struct BorrowKamino<'info> {
     #[account(
         constraint = market.load()?.is_ix_enabled(IxGate::TokenDeposit) @ PeachError::IxIsDisabled,
     )]
@@ -311,34 +308,25 @@ pub struct WithdrawKamino<'info> {
 
     #[account(mut)]
     /// CHECK: Verified by Kamino program
-    pub withdraw_reserve: AccountInfo<'info>,
+    pub borrow_reserve: AccountInfo<'info>,
 
-    pub reserve_liquidity_mint: InterfaceAccount<'info, Mint>,
-
-    #[account(mut)]
-    /// CHECK: Verified by Kamino program / process method
-    pub reserve_source_collateral: AccountInfo<'info>,
-
-    #[account(mut)]
-    pub reserve_collateral_mint: InterfaceAccount<'info, Mint>,
+    pub borrow_reserve_liquidity_mint: InterfaceAccount<'info, Mint>,
 
     #[account(mut)]
     /// CHECK: Verified by Kamino program / process method
-    pub reserve_liquidity_supply: AccountInfo<'info>,
+    pub reserve_source_liquidity: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub borrow_reserve_liquidity_fee_receiver: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
-        token::mint = reserve_liquidity_mint,
+        token::mint = borrow_reserve_liquidity_mint,
         token::authority = owner,
     )]
     pub user_destination_liquidity: InterfaceAccount<'info, TokenAccount>,
 
-    #[account(address = KAMINO_PROGRAM_ID)]
-    /// CHECK: Kamino program ID
-    pub kamino_program: AccountInfo<'info>,
-    
-    pub collateral_token_program: Program<'info, Token>,
-    pub liquidity_token_program: Interface<'info, TokenInterface>,
+    pub token_program: Interface<'info, TokenInterface>,
 
     #[account(address = sysvar::instructions::ID)]
     /// CHECK: This is sysvar instructions account.
@@ -356,9 +344,11 @@ pub struct WithdrawKamino<'info> {
     /// CHECK: Verified by Kamino program
     pub farms_program: AccountInfo<'info>,
 
+    #[account(address = KAMINO_PROGRAM_ID)]
+    /// CHECK: Kamino program ID
+    pub kamino_program: AccountInfo<'info>,
+
     pub system_program: Program<'info, System>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
-
-
 }

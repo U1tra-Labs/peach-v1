@@ -20,6 +20,7 @@ anchor-debug = []
 custom-heap = []
 custom-panic = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+mainnet = []
 
 [dependencies]
 anchor-lang = { version = "0.31.1", default-features = false, features = ["derive", "init-if-needed", "event-cpi"] }

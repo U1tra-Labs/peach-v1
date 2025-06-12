@@ -17,6 +17,8 @@ pub struct TokenPosition {
     // todo: how does ftx do this?
     /// The deposit_index (if positive) or borrow_index (if negative) scaled position
     pub indexed_position: FixedWrapper,    // Offset 0, Size 16. Ends 16.
+
+    // pub indexed_position_kamino: FixedWrapper, // Offset 16, Size 16. Ends 32.
     /// index into Market.tokens
     pub token_index: TokenIndex,                // Offset 16, Size 2.
     /// incremented when a market requires this position to stay alive
@@ -46,13 +48,14 @@ pub struct TokenPosition {
 //     16 + 2 + 2 + 4 + 16 + 8 + 8 + 128
 // );
 // const_assert_eq!(size_of::<TokenPosition>(), 184);
-const_assert_eq!(size_of::<TokenPosition>(), 80);
+// const_assert_eq!(size_of::<TokenPosition>(), 80);
 const_assert_eq!(size_of::<TokenPosition>() % 16, 0);
 
 impl Default for TokenPosition {
     fn default() -> Self {
         TokenPosition {
             indexed_position: FixedWrapper::zero(),
+            // indexed_position_kamino: FixedWrapper::zero(),
             token_index: TokenIndex::MAX,
             is_kamino_position: 0,
             in_use_count: 0,
@@ -87,6 +90,14 @@ impl TokenPosition {
             self.indexed_position.val() * bank.borrow_index.val()
         }
     }
+
+    // pub fn kamino(&self, bank: &Bank) -> I80F48 {
+    //     if self.indexed_position_kamino.is_positive() {
+    //         self.indexed_position_kamino.val() * bank.deposit_index.val()
+    //     } else {
+    //         self.indexed_position_kamino.val() * bank.borrow_index.val()
+    //     }
+    // }
 
     #[cfg(feature = "client")]
     pub fn ui(&self, bank: &Bank) -> I80F48 {

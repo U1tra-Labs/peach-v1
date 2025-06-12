@@ -3,200 +3,136 @@ import { program, provider } from "../helpers/setup";
 import * as anchor from "@coral-xyz/anchor";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
+import { Token } from "../objects/token";
+import { token } from "@coral-xyz/anchor/dist/cjs/utils";
+import { User } from "../objects/user";
+import { TokenRegisterParams } from "../objects/token_register_params";
 
-export async function tokenRegister(tokenIndex: number, usdc_mint: PublicKey, marketPDA: PublicKey, vaultPDA: PublicKey, mintInfoPDA: PublicKey, bankPDA: PublicKey, oracle: PublicKey, admin: Keypair) {
-    const ix1 = await program.methods.tokenVaultCreate(tokenIndex)
-      .accounts({
-        market: marketPDA,
-        admin: admin.publicKey,
-        mint: usdc_mint,
-        vault: vaultPDA,
-        payer: admin.publicKey, // This is the payer
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      })
-      .instruction();
+export async function tokenRegister(
+  marketPDA: PublicKey,
+  token: Token,
+  oracle: PublicKey,
+  admin: Keypair,
+  params: TokenRegisterParams
+) {
+  const ix1 = await program.methods.tokenVaultCreate(token.tokenIndex)
+    .accounts({
+      market: marketPDA,
+      admin: admin.publicKey,
+      mint: token.mint,
+      vault: token.vault[0],
+      payer: admin.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+    })
+    .instruction();
 
     const ix2 = await program.methods.tokenRegister(
-      tokenIndex,
-      "USDC",
-      {
-        confFilter: 0.01,
-        // This should be low, but as we are using a stub oracle, it needs to be high enough. 
-        // TODO: Change it to a real value when using mainnet
-        maxStalenessSlots: 500000000, 
-      },
-      {
-        util0: 0.8,
-        rate0: 0.02,
-        util1: 0.9,
-        rate1: 0.05,
-        maxRate: 0.1,
-        adjustmentFactor: 0.01,
-      },
-      0.002,
-      0.001,
-      0.8,
-      0.7,
-      1.2,
-      1.3,
-      0.05,
-      60,
-      0.02,
-      0.03,
-      0.1,
-      new anchor.BN(600),
-      new anchor.BN(1000000),
-      50000,
-      50000,
-      0,
-      1,
-      0.8,
-      true,
-      new anchor.BN(1000000),
-      0.01,
-      0.02,
-      false,
-      0.001,
-      "tier",
+      token.tokenIndex,
+      token.name,
+      params.oracleConfig,
+      params.interestRateParams,
+      params.loanFeeRate,
+      params.loanOriginationFeeRate,
+      params.maintAssetWeight,
+      params.initAssetWeight,
+      params.maintLiabWeight,
+      params.initLiabWeight,
+      params.liquidationFee,
+      params.stablePriceDelayIntervalSeconds,
+      params.stablePriceDelayGrowthLimit,
+      params.stablePriceGrowthLimit,
+      params.minVaultToDepositsRatio,
+      params.netBorrowLimitPerWindowQuote,
+      params.netBorrowLimitWindowSizeTs,
+      params.borrowWeightScaleStartQuote,
+      params.depositWeightScaleStartQuote,
+      params.reduceOnly,
+      params.interestCurveScaling,
+      params.interestTargetUtilization,
+      params.depositLimit,
+      params.zeroUtilRate,
+      params.platformLiquidationFee,
+      params.disableAssetLiquidation,
+      params.collateralFeePerDay,
+      params.tier
     )
-      .accounts({
-        market: marketPDA,
-        admin: admin.publicKey,
-        mint: usdc_mint,
-        bank: bankPDA,
-        vault: vaultPDA,
-        mintInfo: mintInfoPDA,
-        oracle: oracle,
-        fallbackOracle: oracle,
-        payer: admin.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      }).instruction();
+    .accounts({
+      market: marketPDA,
+      admin: admin.publicKey,
+      mint: token.mint,
+      bank: token.bank[0],
+      vault: token.vault[0],
+      mintInfo: token.mint_info,
+      oracle: oracle,
+      fallbackOracle: oracle,
+      payer: admin.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+    })
+    .instruction();
 
-    const tx = new anchor.web3.Transaction();
-    tx.add(ix1);
-    tx.add(ix2);
+  const tx = new anchor.web3.Transaction();
+  tx.add(ix1);
+  tx.add(ix2);
 
-    const sig = await anchor.web3.sendAndConfirmTransaction(
-      provider.connection, tx, [admin]
-    );
+  const sig = await anchor.web3.sendAndConfirmTransaction(
+    provider.connection, tx, [admin]
+  );
 
-    return sig;
-
+  return sig;
 }
 
-export async function tokenDeposit(deposit_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, oracle: PublicKey, tokenAccount: PublicKey, user: Keypair) {    
-    const tx = await program.methods
-        .tokenDeposit(deposit_amount, false)
-        .accounts({
-        market: marketPDA,
-        account: peachAccountPDA,
-        owner: user.publicKey,
-        bank: bankPDA,
-        vault: vaultPDA,
-        oracle: oracle,
-        tokenAccount: tokenAccount,
-        tokenAuthority: user.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .signers([user])
-        .rpc();
-    
-    return tx;
-}
-
-export async function tokenDepositIntoExisting(deposit_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, oracle: PublicKey, tokenAccount: PublicKey, user: Keypair) {    
-    const tx = await program.methods
-        .tokenDeposit(deposit_amount, false)
-        .accounts({
-        market: marketPDA,
-        account: peachAccountPDA,
-        owner: user.publicKey,
-        bank: bankPDA,
-        vault: vaultPDA,
-        oracle: oracle,
-        tokenAccount: tokenAccount,
-        tokenAuthority: user.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .signers([user])
-        .rpc();
-    
-    return tx;
-}
-
-export async function tokenForceWithdraw(marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, oracle: PublicKey, tokenAccount: PublicKey) {
-    const envProviderPayer = (provider.wallet as NodeWallet).payer;
-
-    const tx = await program.methods
-        .tokenForceWithdraw()
-        .accounts({
-        market: marketPDA,
-        account: peachAccountPDA,
-        ownerAtaTokenAccount: tokenAccount,
-        alternateOwnerTokenAccount: tokenAccount,
-        bank: bankPDA,
-        vault: vaultPDA,
-        oracle: oracle,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .signers([envProviderPayer])
-        .rpc();
-    
-    return tx;
-}
-
-export async function tokenWithdraw(withdraw_amount: anchor.BN, marketPDA: PublicKey, peachAccountPDA: PublicKey, bankPDA: PublicKey, vaultPDA: PublicKey, oracle: PublicKey, tokenAccount: PublicKey) {
-    const envProviderPayer = (provider.wallet as NodeWallet).payer;
-
-    const tx = await program.methods
-        .tokenWithdraw(withdraw_amount, true)
-        .accounts({
-        market: marketPDA,
-        account: peachAccountPDA,
-        owner: provider.wallet.publicKey,
-        bank: bankPDA,
-        vault: vaultPDA,
-        oracle: oracle,
-        tokenAccount: tokenAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .signers([envProviderPayer])
-        .rpc();
-    
-    return tx;
-}
-
-export async function tokenChargeCollateralFees(marketPDA: PublicKey, peachAccountPDA: PublicKey) {
-    const tx = await program.methods.tokenChargeCollateralFees()
-      .accounts({
-        market: marketPDA,
-        account: peachAccountPDA,
-      })
-        .rpc();
-    
-    return tx;
-}
-
-export async function tokenDeregister(market: PublicKey, admin: Keypair, mintInfo: PublicKey, dustVault: PublicKey, solDestination: PublicKey, bank: PublicKey, vault: PublicKey) {
-    const tx = await program.methods.tokenDeregister()
+export async function tokenAddBank(token: Token, market: PublicKey, admin: Keypair) {
+  const tx = await program.methods.tokenAddBank(token.tokenIndex, 1)
     .accounts({
       market: market,
       admin: admin.publicKey,
-      mintInfo: mintInfo,
+      mint: token.mint,
+      existingBank: token.bank[0], // Use the first bank from the token object
+      bank: token.bank[1], // Use the first bank from the token object
+      vault: token.vault[1], // Use the first vault from the token object  
+      mintInfo: token.mint_info,
+      payer: admin.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+    })
+    .signers([admin])
+    .rpc();
+  
+  return tx;
+}
+
+export async function tokenDeregister(market: PublicKey, admin: Keypair, token: Token, dustVault: PublicKey, solDestination: PublicKey) {
+
+  if(token.bank.length !== token.vault.length) {
+    throw new Error("Bank and vault arrays must be of the same length");
+  }
+
+  const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = [];
+
+  const len = token.bank.length; // bank and vault arrays are of the same length
+
+  for (let i = 0; i < len; i++) {
+    if (token.bank[i]) remainingAccounts.push({ pubkey: token.bank[i], isWritable: true, isSigner: false });
+    if (token.vault[i]) remainingAccounts.push({ pubkey: token.vault[i], isWritable: true, isSigner: false });
+  }
+
+  const tx = await program.methods.tokenDeregister()
+    .accounts({
+      market: market,
+      admin: admin.publicKey,
+      mintInfo: token.mint_info,
       dustVault: dustVault,
       solDestination: solDestination,
       tokenProgram: TOKEN_PROGRAM_ID
     })
-    .remainingAccounts([
-      { pubkey: bank, isWritable: true, isSigner: false },
-      { pubkey: vault, isWritable: true, isSigner: false },
-    ])
+    .remainingAccounts(remainingAccounts)
     .signers([admin])
-      .rpc();
-  
+    .rpc();
+
   return tx;
 }

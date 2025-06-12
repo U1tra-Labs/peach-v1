@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use instructions::*;
 use state::OracleConfigParams;
-use custom_types::token_index::TokenIndex;
 
 #[macro_use]
 pub mod util;
@@ -16,12 +15,10 @@ pub mod accounts_zerocopy;
 pub mod health;
 pub mod constants;
 
-declare_id!("DsLASEbqzgRGjyFJJQbjK1SWnmjjpCrjfkGNcoP3tc5t");
+declare_id!("EYz3GPbE1qoXS3i4ziRmfyTQgVjZt3ymMxYKZZiEaEED");
 
 #[program]
 pub mod peach_v1 {
-
-    use crate::custom_types::TokenIndex;
 
     use super::*;
 
@@ -57,7 +54,7 @@ pub mod peach_v1 {
     #[allow(clippy::too_many_arguments)]
     pub fn token_register(
         ctx: Context<TokenRegister>,
-        token_index: TokenIndex,
+        token_index: u16,
         name: String,
         oracle_config: OracleConfigParams,
         interest_rate_params: InterestRateParams,
@@ -79,7 +76,7 @@ pub mod peach_v1 {
         reduce_only: u8,
         interest_curve_scaling: f32,
         interest_target_utilization: f32,
-        market_insurance_fund: bool,
+        // market_insurance_fund: bool,
         deposit_limit: u64,
         zero_util_rate: f32,
         platform_liquidation_fee: f32,
@@ -111,7 +108,7 @@ pub mod peach_v1 {
             reduce_only,
             interest_curve_scaling,
             interest_target_utilization,
-            market_insurance_fund,
+            // market_insurance_fund,
             deposit_limit,
             zero_util_rate,
             platform_liquidation_fee,
@@ -124,7 +121,7 @@ pub mod peach_v1 {
 
     pub fn token_vault_create(
         ctx: Context<TokenVaultCreate>,
-        token_index: TokenIndex,
+        token_index: u16,
     ) -> Result<()> {
         instructions::token_vault_create(ctx, token_index)?;
         Ok(())
@@ -244,12 +241,12 @@ pub mod peach_v1 {
         Ok(())
     }
 
-    pub fn token_register_trustless(ctx: Context<TokenRegisterTrustless>, token_index: TokenIndex, name: String) -> Result<()> {    
+    pub fn token_register_trustless(ctx: Context<TokenRegisterTrustless>, token_index: u16, name: String) -> Result<()> {    
         instructions::token_register_trustless(ctx, token_index, name)?;
         Ok(())    
     }
 
-    pub fn token_add_bank(ctx: Context<TokenAddBank>, token_index: TokenIndex, bank_num: u32) -> Result<()> {
+    pub fn token_add_bank(ctx: Context<TokenAddBank>, token_index: u16, bank_num: u32) -> Result<()> {
         instructions::token_add_bank(ctx, token_index, bank_num)?;
         Ok(())    
     }
@@ -408,10 +405,26 @@ pub mod peach_v1 {
     // Kamino Cpi Call - Withdraw
     pub fn kamino_withdraw<'info> (
         ctx: Context<'_, '_, '_, 'info, WithdrawKamino<'info>>,
-        withdraw_amount: u64,
-        allow_borrow: bool,
+        withdraw_amount: u64
     ) -> Result<()> {
-        instructions::kamino_withdraw(ctx, withdraw_amount, allow_borrow)
+        instructions::kamino_withdraw(ctx, withdraw_amount, false)
     }
+
+    // Kamino Cpi Call - Borrow
+    pub fn kamino_borrow<'info> (
+        ctx: Context<'_, '_, '_, 'info, BorrowKamino<'info>>,
+        borrow_amount: u64
+    ) -> Result<()> {
+        instructions::kamino_borrow(ctx, borrow_amount, true)
+    }
+
+    // Kamino Cpi Call - Repay
+    pub fn kamino_repay<'info> (
+        ctx: Context<'_, '_, '_, 'info, RepayKamino<'info>>,
+        repay_amount: u64
+    ) -> Result<()> {
+        instructions::kamino_repay(ctx, repay_amount, true)
+    }
+    
 
 }

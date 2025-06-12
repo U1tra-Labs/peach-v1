@@ -7,16 +7,16 @@ const FIRST_BANK_NUM: u32 = 0;
 
 pub fn token_vault_create(
     _ctx: Context<TokenVaultCreate>,
-    token_index: TokenIndex,
+    token_index: u16,
 ) -> Result<()> {
-    require_neq!(token_index, TokenIndex::MAX);
+    require_neq!(token_index, TokenIndex::MAX.0);
 
     Ok(())
 }
 
 
 #[derive(Accounts)]
-#[instruction(token_index: TokenIndex)]
+#[instruction(token_index: u16)]
 pub struct TokenVaultCreate<'info> {
     #[account(
         has_one = admin,
@@ -29,7 +29,7 @@ pub struct TokenVaultCreate<'info> {
 
     #[account(
         init,
-        seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.0.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
+        seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
         bump,
         token::authority = market,
         token::mint = mint,

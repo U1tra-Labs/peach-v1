@@ -2,22 +2,22 @@ use std::cell::Ref;
 use std::cell::RefMut;
 use std::mem::size_of;
 
-use anchor_lang::zero_copy;
-use anchor_lang::prelude::*;
-use anchor_lang::Discriminator;
-use arrayref::array_ref;
-use fixed::types::I80F48;
-use anchor_lang::solana_program::program_memory::sol_memmove;
-use static_assertions::const_assert_eq;
+use crate::custom_types::fixed_wrapper::FixedWrapper;
 use crate::error::Contextable;
 use crate::error::PeachError;
 use crate::error_msg_typed;
-use crate::custom_types::fixed_wrapper::FixedWrapper;
 use crate::health::HealthCache;
 use crate::health::HealthType;
 use crate::logs::emit_stack;
 use crate::logs::DeactivateTokenPositionLog;
 use crate::state::*;
+use anchor_lang::prelude::*;
+use anchor_lang::solana_program::program_memory::sol_memmove;
+use anchor_lang::zero_copy;
+use anchor_lang::Discriminator;
+use arrayref::array_ref;
+use fixed::types::I80F48;
+use static_assertions::const_assert_eq;
 
 use crate::custom_types::TokenIndex;
 
@@ -50,23 +50,7 @@ impl PeachAccountPdaSeeds {
 // This struct definition is only for clients e.g. typescript, so that they can easily use out of the box
 // deserialization and not have to do custom deserialization
 // On chain, we would prefer zero-copying to optimize for compute
-//
-// The PeachAccount binary data has changed over time:
-// - v1: The original version, many mainnet accounts still are this version.
-//       The PeachAccount struct below describes v1 to make sure reading by IDL works for all live
-//       accounts.
-// - v2: Introduced in v0.18.0 to add token conditional swaps at the end. Users using account
-//       resizing before v0.20.0 would migrate to this version.
-// - v3: Introduced in v0.20.0 to add 64 zero bytes at the end for future expansion.
-//       Users will migrate to this version when resizing their accounts. Also the
-//       AccountSizeMigration instruction was used to bring all accounts to
-//       this version after v0.20.0 was deployed.
-//
-// Version v0.22.0 drops idl support for v1 and v2 accounts by extending the PeachAccount idl with the
-// new fields.
-//
-// When not reading via idl, PeachAccount binary data is backwards compatible: when ignoring trailing bytes,
-// a v2 account can be read as a v1 account and a v3 account can be read as v1 or v2 etc.
+
 #[account]
 #[derive(Debug, PartialEq)]
 pub struct PeachAccount {
@@ -110,10 +94,16 @@ pub struct PeachAccount {
     // using USD prices at the time of the deposit/withdraw
     // in USD units with 6 decimals
     pub net_deposits: i64,
+
+    // (Display only)
+    // Cumulative (deposits - withdraws)
+    // using USD prices at the time of the deposit/withdraw
+    // in USD units with 6 decimals
+    pub net_deposits_kamino: i64,
+
     // (Display only)
     // Cumulative transfers from perp to spot positions
     // pub perp_spot_transfers: i64,
-
     /// Init health as calculated during HealthReginBegin, rounded up.
     pub health_region_begin_init_health: i64,
 
@@ -129,7 +119,6 @@ pub struct PeachAccount {
 
     /// Next id to use when adding a token condition swap
     // pub next_token_conditional_swap_id: u64,
-
     pub temporary_delegate: Pubkey,
     pub temporary_delegate_expiry: u64,
 
@@ -147,37 +136,24 @@ pub struct PeachAccount {
     // that is active on this PeachAccount.
     pub tokens: Vec<TokenPosition>,
     pub padding5: u32,
-    // Maps serum_market_index -> open orders for each serum market
-    // that is active on this PeachAccount.
-    // pub serum3: Vec<Serum3Orders>,
-    // #[derivative(Debug = "ignore")]
-    // pub padding6: u32,
-    // pub perps: Vec<PerpPosition>,
-    // #[derivative(Debug = "ignore")]
-    // pub padding7: u32,
-    // pub perp_open_orders: Vec<PerpOpenOrder>,
-    // #[derivative(Debug = "ignore")]
-    // pub padding8: u32,
-    // pub token_conditional_swaps: Vec<TokenConditionalSwap>,
 
     pub reserved_dynamic: [u8; 64],
 }
 
 impl PeachAccount {
-
     /// Number of bytes needed for the PeachAccount, including the discriminator
     pub fn space(token_count: u8) -> usize {
-        8 + size_of::<PeachAccountFixed>()
-            + Self::dynamic_size(token_count)
+        8 + size_of::<PeachAccountFixed>() + Self::dynamic_size(token_count)
     }
 
     pub fn dynamic_token_vec_offset() -> usize {
         8 // header version + padding
-            + BORSH_VEC_PADDING_BYTES 
+            + BORSH_VEC_PADDING_BYTES
     }
 
     pub fn dynamic_reserved_bytes_offset(token_count: u8) -> usize {
-        Self::dynamic_token_vec_offset() + (BORSH_VEC_SIZE_BYTES) 
+        Self::dynamic_token_vec_offset()
+            + (BORSH_VEC_SIZE_BYTES)
             + (BORSH_VEC_SIZE_BYTES + size_of::<TokenPosition>() * usize::from(token_count))
             + BORSH_VEC_PADDING_BYTES
     }
@@ -199,6 +175,7 @@ pub struct PeachAccountFixed {
     pub bump: u8,
     pub sequence_number: u8,
     pub net_deposits: i64,
+    pub net_deposits_kamino: i64,
     pub health_region_begin_init_health: i64,
     pub frozen_until: u64,
     pub last_collateral_fee_charge: u64,
@@ -215,6 +192,10 @@ impl PeachAccountFixed {
     pub fn is_operational(&self) -> bool {
         let now_ts: u64 = Clock::get().unwrap().unix_timestamp.try_into().unwrap();
         self.frozen_until < now_ts
+    }
+
+    pub fn is_owner(&self, owner: Pubkey) -> bool {
+        self.owner == owner
     }
 
     pub fn being_liquidated(&self) -> bool {
@@ -252,29 +233,6 @@ impl PeachAccountFixed {
             bump_bytes: [self.bump],
         }
     }
-
-    // pub fn update_protocol_assignment(
-    //     &mut self,
-    //     mint: &Pubkey,
-    //     protocol: u8,
-    // ) -> Result<()> {
-    //     msg!("Updating protocol assignment for deposit");
-
-    //     let lending_account = &mut self.market;
-
-    //     if let Some(deposit_info) = lending_account.deposits.iter_mut()
-    //         .find(|deposit| deposit.mint_key == *mint && deposit.active)
-    //     {
-    //         msg!("DepositInfo found, updating protocol assignment");
-    //         deposit_info.protocol_assign = protocol;
-    //     } else {
-    //         msg!("DepositInfo not found, cannot update protocol assignment");
-    //         return Err(PeachError::DepositNotFound.into());
-    //     }
-
-    //     Ok(())
-    // }
-
 }
 
 impl Owner for PeachAccountFixed {
@@ -292,13 +250,9 @@ impl anchor_lang::ZeroCopy for PeachAccountFixed {}
 #[derive(Clone, Debug)]
 pub struct PeachAccountDynamicHeader {
     pub token_count: u8,
-    // pub serum3_count: u8,
-    // pub perp_count: u8,
-    // pub perp_oo_count: u8,
-    // pub token_conditional_swap_count: u8,
 }
 
-impl DynamicHeader for PeachAccountDynamicHeader{
+impl DynamicHeader for PeachAccountDynamicHeader {
     fn from_bytes(dynamic_data: &[u8]) -> Result<Self> {
         let header_version = u8::from_le_bytes(*array_ref![dynamic_data, 0, size_of::<u8>()]);
 
@@ -311,13 +265,7 @@ impl DynamicHeader for PeachAccountDynamicHeader{
                 ]))
                 .unwrap();
 
-                Ok(Self {
-                    token_count,
-                    // serum3_count: 0,
-                    // perp_count: 0,  
-                    // perp_oo_count: 0,
-                    // token_conditional_swap_count: 0
-                })
+                Ok(Self { token_count })
             }
             _ => err!(PeachError::NotImplementedError).context("unexpected header version number"),
         }
@@ -339,15 +287,8 @@ fn get_helper_mut<T: bytemuck::Pod>(data: &mut [u8], index: usize) -> &mut T {
 }
 
 impl PeachAccountDynamicHeader {
-
     pub fn account_size(&self) -> usize {
-        PeachAccount::space(
-            self.token_count,
-        //     self.serum3_count,
-        //     self.perp_count,
-        //     self.perp_oo_count,
-        //     self.token_conditional_swap_count,
-        )
+        PeachAccount::space(self.token_count)
     }
 
     // offset into dynamic data where 1st TokenPosition would be found
@@ -361,23 +302,17 @@ impl PeachAccountDynamicHeader {
     fn reserved_bytes_offset(&self) -> usize {
         PeachAccount::dynamic_reserved_bytes_offset(self.token_count)
     }
-    
+
     pub fn token_count(&self) -> usize {
         self.token_count.into()
     }
 
     pub fn zero() -> Self {
-        Self {
-            token_count: 0,
-            // serum3_count: 0,
-            // perp_count: 0,
-            // perp_oo_count: 0,
-            // token_conditional_swap_count: 0,
-        }
+        Self { token_count: 0 }
     }
 
     pub fn expected_health_accounts(&self) -> usize {
-        self.token_count() * 2 //  + self.serum3_count() + self.perp_count() * 2
+        self.token_count() * 2
     }
 
     pub fn max_health_accounts() -> usize {
@@ -397,14 +332,6 @@ impl PeachAccountDynamicHeader {
         if new_health_accounts > prev_health_accounts {
             require_gte!(Self::max_health_accounts(), new_health_accounts);
         }
-
-        // if self.perp_oo_count > prev.perp_oo_count {
-        //     require_gte!(64, self.perp_oo_count);
-        // }
-
-        // if self.token_conditional_swap_count > prev.token_conditional_swap_count {
-        //     require_gte!(64, self.token_conditional_swap_count);
-        // }
 
         Ok(())
     }
@@ -485,7 +412,10 @@ impl<
     ) -> Result<(&TokenPosition, usize)> {
         self.all_token_positions()
             .enumerate()
-            .find_map(|(raw_index, p)| p.is_active_for_token(token_index).then_some((p, raw_index)))
+            .find_map(|(raw_index, p)| {
+                (p.is_active_for_token(token_index) && !p.is_kamino_position())
+                    .then_some((p, raw_index))
+            })
             .ok_or_else(|| {
                 error_msg_typed!(
                     PeachError::TokenPositionDoesNotExist,
@@ -504,7 +434,10 @@ impl<
     ) -> Result<(&TokenPosition, usize)> {
         self.all_token_positions()
             .enumerate()
-            .find_map(|(raw_index, p)| (p.is_active_for_token(token_index) && p.is_kamino_position()).then_some((p, raw_index)))
+            .find_map(|(raw_index, p)| {
+                (p.is_active_for_token(token_index) && p.is_kamino_position())
+                    .then_some((p, raw_index))
+            })
             .ok_or_else(|| {
                 error_msg_typed!(
                     PeachError::TokenPositionDoesNotExist,
@@ -587,7 +520,9 @@ impl<
         let raw_index = self
             .all_token_positions()
             .enumerate()
-            .find_map(|(raw_index, p)|  p.is_active_for_token(token_index).then_some(raw_index))
+            .find_map(|(raw_index, p)| {
+                (p.is_active_for_token(token_index) && !p.is_kamino_position()).then_some(raw_index)
+            })
             .ok_or_else(|| {
                 error_msg_typed!(
                     PeachError::TokenPositionDoesNotExist,
@@ -608,7 +543,9 @@ impl<
         let raw_index = self
             .all_token_positions()
             .enumerate()
-            .find_map(|(raw_index, p)|  (p.is_active_for_token(token_index) && p.is_kamino_position()).then_some(raw_index))
+            .find_map(|(raw_index, p)| {
+                (p.is_active_for_token(token_index) && p.is_kamino_position()).then_some(raw_index)
+            })
             .ok_or_else(|| {
                 error_msg_typed!(
                     PeachError::TokenPositionDoesNotExist,
@@ -637,16 +574,19 @@ impl<
     ) -> Result<(&mut TokenPosition, usize, usize)> {
         let mut active_index = 0;
         let mut match_or_free = None;
+        msg!("Ensuring token position for token index: {}", token_index);
         for (raw_index, position) in self.all_token_positions().enumerate() {
-            if position.is_active_for_token(token_index) && is_kamino_position == 1 && position.is_kamino_position() {
+            if position.is_active_for_token(token_index) {
                 // Can't return early because of lifetimes
-                match_or_free = Some((raw_index, active_index));
-                break;
-            }
-            else if position.is_active_for_token(token_index) && is_kamino_position == 0 {
-                // Can't return early because of lifetimes
-                match_or_free = Some((raw_index, active_index));
-                break;
+                if is_kamino_position == 1 && position.is_kamino_position() {
+                    match_or_free = Some((raw_index, active_index));
+                    msg!("Found existing kamino position: {:?}", &position);
+                    break;
+                } else if is_kamino_position == 0 && !position.is_kamino_position() {
+                    match_or_free = Some((raw_index, active_index));
+                    msg!("Found existing position: {:?}", &position);
+                    break;
+                }
             }
             if position.is_active() {
                 active_index += 1;
@@ -656,6 +596,11 @@ impl<
         }
         if let Some((raw_index, bank_index)) = match_or_free {
             let v = self.token_position_mut_by_raw_index(raw_index);
+            msg!(
+                "Using position at rawIndex: {}, bankIndex: {}",
+                raw_index,
+                bank_index
+            );
             if !v.is_active_for_token(token_index) {
                 *v = TokenPosition {
                     indexed_position: FixedWrapper::zero(),
@@ -669,9 +614,17 @@ impl<
                     cumulative_borrow_interest: 0.0,
                     _struct_padding_for_pod: [0; 16],
                 };
+                msg!(
+                    "Initialized new token position for token index: {}",
+                    token_index
+                );
             }
             Ok((v, raw_index, bank_index))
         } else {
+            msg!(
+                "No free token position found for token index: {}",
+                token_index
+            );
             err!(PeachError::NoFreeTokenPositionIndex)
                 .context(format!("when looking for token index {}", token_index))
         }
@@ -786,20 +739,9 @@ impl<
         Ok(())
     }
 
-    pub fn resize_dynamic_content(
-        &mut self,
-        new_token_count: u8,
-        // new_serum3_count: u8,
-        // new_perp_count: u8,
-        // new_perp_oo_count: u8,
-        // new_token_conditional_swap_count: u8,
-    ) -> Result<()> {
+    pub fn resize_dynamic_content(&mut self, new_token_count: u8) -> Result<()> {
         let new_header = PeachAccountDynamicHeader {
             token_count: new_token_count,
-            // serum3_count: new_serum3_count,
-            // perp_count: new_perp_count,
-            // perp_oo_count: new_perp_oo_count,
-            // token_conditional_swap_count: new_token_conditional_swap_count,
         };
         let old_header = self.header().clone();
 
@@ -847,220 +789,14 @@ impl<
             active_token_positions += 1;
         }
 
-        // let mut active_serum3_orders = 0;
-        // for i in 0..old_header.serum3_count() {
-        //     let src = old_header.serum3_offset(i);
-        //     let pos: &Serum3Orders = get_helper(dynamic, src);
-        //     if !pos.is_active() {
-        //         continue;
-        //     }
-        //     if i != active_serum3_orders {
-        //         let dst = old_header.serum3_offset(active_serum3_orders);
-        //         unsafe {
-        //             sol_memmove(
-        //                 &mut dynamic[dst],
-        //                 &mut dynamic[src],
-        //                 size_of::<Serum3Orders>(),
-        //             );
-        //         }
-        //     }
-        //     active_serum3_orders += 1;
-        // }
-
-        // let mut active_perp_positions = 0;
-        // for i in 0..old_header.perp_count() {
-        //     let src = old_header.perp_offset(i);
-        //     let pos: &PerpPosition = get_helper(dynamic, src);
-        //     if !pos.is_active() {
-        //         continue;
-        //     }
-        //     if i != active_perp_positions {
-        //         let dst = old_header.perp_offset(active_perp_positions);
-        //         unsafe {
-        //             sol_memmove(
-        //                 &mut dynamic[dst],
-        //                 &mut dynamic[src],
-        //                 size_of::<PerpPosition>(),
-        //             );
-        //         }
-        //     }
-        //     active_perp_positions += 1;
-        // }
-
-        // Can't rearrange perp oo because LeafNodes store indexes, so the equivalent
-        // to the "active" count for the other blocks is the max active index + 1.
-        // let mut blocked_perp_oo = 0;
-        // for i in 0..old_header.perp_oo_count() {
-        //     let idx = old_header.perp_oo_count() - 1 - i;
-        //     let src = old_header.perp_oo_offset(idx);
-        //     let pos: &PerpOpenOrder = get_helper(dynamic, src);
-        //     if pos.is_active() {
-        //         blocked_perp_oo = idx + 1;
-        //         break;
-        //     }
-        // }
-
-        // let mut active_tcs = 0;
-        // for i in 0..old_header.token_conditional_swap_count() {
-        //     let src = old_header.token_conditional_swap_offset(i);
-        //     let pos: &TokenConditionalSwap = get_helper(dynamic, src);
-        //     if !pos.is_configured() {
-        //         continue;
-        //     }
-        //     if i != active_tcs {
-        //         let dst = old_header.token_conditional_swap_offset(active_tcs);
-        //         unsafe {
-        //             sol_memmove(
-        //                 &mut dynamic[dst],
-        //                 &mut dynamic[src],
-        //                 size_of::<TokenConditionalSwap>(),
-        //             );
-        //         }
-        //     }
-        //     active_tcs += 1;
-        // }
-
         // Check that the new allocations can fit the existing data
         require_gte!(new_header.token_count(), active_token_positions);
-        // require_gte!(new_header.serum3_count(), active_serum3_orders);
-        // require_gte!(new_header.perp_count(), active_perp_positions);
-        // require_gte!(new_header.perp_oo_count(), blocked_perp_oo);
-        // require_gte!(new_header.token_conditional_swap_count(), active_tcs);
-
-        // First move pass: go left-to-right and move any blocks that need to be moved
-        // to the left. This will never overwrite other data, because:
-        // - moving to the left can only overwrite data to the left
-        // - the left of the target location is >= the right of the previous data location
-        //   because either the previous was already moved to the left (clearly good),
-        //   or still needs to be moved to the right (the new end will be <= the target start)
-        // {
-        //     // Token positions never move
-
-        //     let old_serum3_start = old_header.serum3_offset(0);
-        //     let new_serum3_start = new_header.serum3_offset(0);
-        //     if new_serum3_start < old_serum3_start && active_serum3_orders > 0 {
-        //         unsafe {
-        //             sol_memmove(
-        //                 &mut dynamic[new_serum3_start],
-        //                 &mut dynamic[old_serum3_start],
-        //                 size_of::<Serum3Orders>() * active_serum3_orders,
-        //             );
-        //         }
-        //     }
-
-        //     let old_perp_start = old_header.perp_offset(0);
-        //     let new_perp_start = new_header.perp_offset(0);
-        //     if new_perp_start < old_perp_start && active_perp_positions > 0 {
-        //         unsafe {
-        //             sol_memmove(
-        //                 &mut dynamic[new_perp_start],
-        //                 &mut dynamic[old_perp_start],
-        //                 size_of::<PerpPosition>() * active_perp_positions,
-        //             );
-        //         }
-        //     }
-
-        //     let old_perp_oo_start = old_header.perp_oo_offset(0);
-        //     let new_perp_oo_start = new_header.perp_oo_offset(0);
-        //     if new_perp_oo_start < old_perp_oo_start && blocked_perp_oo > 0 {
-        //         unsafe {
-        //             sol_memmove(
-        //                 &mut dynamic[new_perp_oo_start],
-        //                 &mut dynamic[old_perp_oo_start],
-        //                 size_of::<PerpOpenOrder>() * blocked_perp_oo,
-        //             );
-        //         }
-        //     }
-
-        //     let old_tcs_start = old_header.token_conditional_swap_offset(0);
-        //     let new_tcs_start = new_header.token_conditional_swap_offset(0);
-        //     if new_tcs_start < old_tcs_start && active_tcs > 0 {
-        //         unsafe {
-        //             sol_memmove(
-        //                 &mut dynamic[new_tcs_start],
-        //                 &mut dynamic[old_tcs_start],
-        //                 size_of::<TokenConditionalSwap>() * active_tcs,
-        //             );
-        //         }
-        //     }
-        // }
-
-        // Second move pass: Go right-to-left and move everything to the right if needed.
-        // This will never overwrite other data:
-        // - because of moving right, it could only overwrite a block to the right
-        // - if the block to the right needed moving to the right, that was already done
-        // - if the block to the right was moved to the left, we know that its start will
-        //   be >= our block's end
-        // {
-        //     let old_tcs_start = old_header.token_conditional_swap_offset(0);
-        //     let new_tcs_start = new_header.token_conditional_swap_offset(0);
-        //     if new_tcs_start > old_tcs_start && active_tcs > 0 {
-        //         unsafe {
-        //             sol_memmove(
-        //                 &mut dynamic[new_tcs_start],
-        //                 &mut dynamic[old_tcs_start],
-        //                 size_of::<TokenConditionalSwap>() * active_tcs,
-        //             );
-        //         }
-        //     }
-
-        //     let old_perp_oo_start = old_header.perp_oo_offset(0);
-        //     let new_perp_oo_start = new_header.perp_oo_offset(0);
-        //     if new_perp_oo_start > old_perp_oo_start && blocked_perp_oo > 0 {
-        //         unsafe {
-        //             sol_memmove(
-        //                 &mut dynamic[new_perp_oo_start],
-        //                 &mut dynamic[old_perp_oo_start],
-        //                 size_of::<PerpOpenOrder>() * blocked_perp_oo,
-        //             );
-        //         }
-        //     }
-
-        //     let old_perp_start = old_header.perp_offset(0);
-        //     let new_perp_start = new_header.perp_offset(0);
-        //     if new_perp_start > old_perp_start && active_perp_positions > 0 {
-        //         unsafe {
-        //             sol_memmove(
-        //                 &mut dynamic[new_perp_start],
-        //                 &mut dynamic[old_perp_start],
-        //                 size_of::<PerpPosition>() * active_perp_positions,
-        //             );
-        //         }
-        //     }
-
-        //     let old_serum3_start = old_header.serum3_offset(0);
-        //     let new_serum3_start = new_header.serum3_offset(0);
-        //     if new_serum3_start > old_serum3_start && active_serum3_orders > 0 {
-        //         unsafe {
-        //             sol_memmove(
-        //                 &mut dynamic[new_serum3_start],
-        //                 &mut dynamic[old_serum3_start],
-        //                 size_of::<Serum3Orders>() * active_serum3_orders,
-        //             );
-        //         }
-        //     }
-
-        //     // Token positions never move
-        // }
 
         // Defaulting pass: The blocks are in their final positions, clear out all unused slots
         {
             for i in active_token_positions..new_header.token_count() {
                 *get_helper_mut(dynamic, new_header.token_offset(i)) = TokenPosition::default();
             }
-            // for i in active_serum3_orders..new_header.serum3_count() {
-            //     *get_helper_mut(dynamic, new_header.serum3_offset(i)) = Serum3Orders::default();
-            // }
-            // for i in active_perp_positions..new_header.perp_count() {
-            //     *get_helper_mut(dynamic, new_header.perp_offset(i)) = PerpPosition::default();
-            // }
-            // for i in blocked_perp_oo..new_header.perp_oo_count() {
-            //     *get_helper_mut(dynamic, new_header.perp_oo_offset(i)) = PerpOpenOrder::default();
-            // }
-            // for i in active_tcs..new_header.token_conditional_swap_count() {
-            //     *get_helper_mut(dynamic, new_header.token_conditional_swap_offset(i)) =
-            //         TokenConditionalSwap::default();
-            // }
         }
         {
             let offset = new_header.reserved_bytes_offset();
@@ -1073,10 +809,6 @@ impl<
 
         // write new lengths to the dynamic data (uses header)
         self.write_token_length();
-        // self.write_serum3_length();
-        // self.write_perp_length();
-        // self.write_perp_oo_length();
-        // self.write_token_conditional_swap_length();
 
         Ok(())
     }

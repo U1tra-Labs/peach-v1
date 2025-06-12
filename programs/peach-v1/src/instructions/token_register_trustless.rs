@@ -16,11 +16,11 @@ const FIRST_BANK_NUM: u32 = 0;
 #[allow(clippy::too_many_arguments)]
 pub fn token_register_trustless(
     ctx: Context<TokenRegisterTrustless>,
-    token_index: TokenIndex,
+    token_index: u16,
     name: String,
 ) -> Result<()> {
-    require_neq!(token_index, QUOTE_TOKEN_INDEX);
-    require_neq!(token_index, TokenIndex::MAX);
+    require_neq!(token_index, QUOTE_TOKEN_INDEX.0);
+    require_neq!(token_index, TokenIndex::MAX.0);
 
     let now_ts: u64 = Clock::get()?.unix_timestamp.try_into().unwrap();
 
@@ -59,7 +59,7 @@ pub fn token_register_trustless(
         liquidation_fee: I80F48::from_num(0.05).into(),
         platform_liquidation_fee: I80F48::from_num(0.05).into(),
         dust: I80F48::ZERO.into(),
-        token_index,
+        token_index: TokenIndex(token_index),
         bump: ctx.bumps.bank,
         mint_decimals: ctx.accounts.mint.decimals,
         bank_num: 0,
@@ -110,7 +110,7 @@ pub fn token_register_trustless(
     let mut mint_info = ctx.accounts.mint_info.load_init()?;
     *mint_info = MintInfo {
         market: ctx.accounts.market.key(),
-        token_index,
+        token_index: TokenIndex(token_index),
         market_insurance_fund: 0,
         padding1: Default::default(),
         mint: ctx.accounts.mint.key(),
@@ -127,7 +127,7 @@ pub fn token_register_trustless(
     emit_stack(TokenMetaDataLogV2 {
         market: ctx.accounts.market.key(),
         mint: ctx.accounts.mint.key(),
-        token_index: token_index.0,
+        token_index: token_index,
         mint_decimals: ctx.accounts.mint.decimals,
         oracle: ctx.accounts.oracle.key(),
         fallback_oracle: ctx.accounts.fallback_oracle.key(),
@@ -140,7 +140,7 @@ pub fn token_register_trustless(
 
 
 #[derive(Accounts)]
-#[instruction(token_index: TokenIndex)]
+#[instruction(token_index: u16)]
 pub struct TokenRegisterTrustless<'info> {
     #[account(
         mut,
@@ -155,7 +155,7 @@ pub struct TokenRegisterTrustless<'info> {
     #[account(
         init,
         // using the token_index in this seed guards against reusing it
-        seeds = [b"Bank".as_ref(), market.key().as_ref(), &token_index.0.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
+        seeds = [b"Bank".as_ref(), market.key().as_ref(), &token_index.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
         bump,
         payer = payer,
         space = 8 + std::mem::size_of::<Bank>(),
@@ -164,7 +164,7 @@ pub struct TokenRegisterTrustless<'info> {
 
     #[account(
         init_if_needed,
-        seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.0.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
+        seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
         bump,
         token::authority = market,
         token::mint = mint,

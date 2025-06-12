@@ -20,7 +20,7 @@ pub const INDEX_START: I80F48 = I80F48::from_bits(1_000_000 * I80F48::ONE.to_bit
 #[allow(clippy::too_many_arguments)]
 pub fn token_register(
     ctx: Context<TokenRegister>,
-    token_index: TokenIndex,
+    token_index: u16,
     name: String,
     oracle_config: OracleConfigParams,
     interest_rate_params: InterestRateParams,
@@ -42,7 +42,7 @@ pub fn token_register(
     reduce_only: u8,
     interest_curve_scaling: f32,
     interest_target_utilization: f32,
-    market_insurance_fund: bool,
+    // market_insurance_fund: bool,
     deposit_limit: u64,
     zero_util_rate: f32,
     platform_liquidation_fee: f32,
@@ -50,7 +50,7 @@ pub fn token_register(
     collateral_fee_per_day: f32,
     tier: String,
 ) -> Result<()> {
-    require_neq!(token_index, TokenIndex::MAX);
+    require_neq!(token_index, TokenIndex::MAX.0);
 
     let now_ts: u64 = Clock::get()?.unix_timestamp.try_into().unwrap();
 
@@ -85,7 +85,7 @@ pub fn token_register(
         init_liab_weight: I80F48::from_num(init_liab_weight).into(),
         liquidation_fee: I80F48::from_num(liquidation_fee).into(),
         dust: I80F48::ZERO.into(),
-        token_index,
+        token_index: TokenIndex(token_index),
         bump: ctx.bumps.bank,
         mint_decimals: ctx.accounts.mint.decimals,
         bank_num: 0,
@@ -146,8 +146,8 @@ pub fn token_register(
     let mut mint_info = ctx.accounts.mint_info.load_init()?;
     *mint_info = MintInfo {
         market: ctx.accounts.market.key(),
-        token_index,
-        market_insurance_fund: if market_insurance_fund { 1 } else { 0 },
+        token_index: TokenIndex(token_index),
+        market_insurance_fund: 0, // No insurance fund for any token
         padding1: Default::default(),
         mint: ctx.accounts.mint.key(),
         banks: Default::default(),
@@ -163,7 +163,7 @@ pub fn token_register(
     emit_stack(TokenMetaDataLogV2 {
         market: ctx.accounts.market.key(),
         mint: ctx.accounts.mint.key(),
-        token_index: token_index.0,
+        token_index: token_index,
         mint_decimals: ctx.accounts.mint.decimals,
         oracle: ctx.accounts.oracle.key(),
         fallback_oracle: ctx.accounts.fallback_oracle.key(),
@@ -174,7 +174,7 @@ pub fn token_register(
 }
 
 #[derive(Accounts)]
-#[instruction(token_index: TokenIndex)]
+#[instruction(token_index: u16)]
 pub struct TokenRegister<'info> {
     #[account(
         has_one = admin,
@@ -188,7 +188,7 @@ pub struct TokenRegister<'info> {
     #[account(
         init,
         // using the token_index in this seed guards against reusing it
-        seeds = [b"Bank".as_ref(), market.key().as_ref(), &token_index.0.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
+        seeds = [b"Bank".as_ref(), market.key().as_ref(), &token_index.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
         bump,
         payer = payer,
         space = 8 + std::mem::size_of::<Bank>(),
@@ -196,7 +196,7 @@ pub struct TokenRegister<'info> {
     pub bank: AccountLoader<'info, Bank>,
 
     #[account(
-        seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.0.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
+        seeds = [b"Vault".as_ref(), market.key().as_ref(), &token_index.to_le_bytes(), &FIRST_BANK_NUM.to_le_bytes()],
         bump,
         token::authority = market,
         token::mint = mint,
