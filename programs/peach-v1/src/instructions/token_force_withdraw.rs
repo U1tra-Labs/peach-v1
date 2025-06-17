@@ -2,12 +2,14 @@ use crate::accounts_zerocopy::AccountInfoRef;
 use crate::error::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token;
+use anchor_spl::token_interface;
+// use anchor_spl::token;
 use fixed::types::I80F48;
 
 use anchor_spl::associated_token::get_associated_token_address;
-use anchor_spl::token::Token;
-use anchor_spl::token::TokenAccount;
+// use anchor_spl::token::Token;
+// use anchor_spl::token::TokenAccount;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::logs::{emit_stack, ForceWithdrawLog, TokenBalanceLog};
 
@@ -50,17 +52,19 @@ pub fn token_force_withdraw(ctx: Context<TokenForceWithdraw>) -> Result<()> {
 
     // Transfer the actual tokens
     let market_seeds = market_seeds!(market);
-    token::transfer(
+    token_interface::transfer_checked(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
-            token::Transfer {
+            token_interface::TransferChecked {
                 from: ctx.accounts.vault.to_account_info(),
                 to: withdraw_target.clone(),
                 authority: ctx.accounts.market.to_account_info(),
+                mint: ctx.accounts.mint.to_account_info(),
             },
         )
         .with_signer(&[market_seeds]),
         amount,
+        bank.mint_decimals,
     )?;
 
     emit_stack(TokenBalanceLog {
@@ -117,6 +121,11 @@ pub struct TokenForceWithdraw<'info> {
     pub account: AccountLoader<'info, PeachAccountFixed>,
 
     #[account(
+        mint::token_program = token_program,
+    )]
+    pub mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
         mut,
         has_one = market,
         has_one = vault,
@@ -127,7 +136,7 @@ pub struct TokenForceWithdraw<'info> {
     pub bank: AccountLoader<'info, Bank>,
 
     #[account(mut)]
-    pub vault: Box<Account<'info, TokenAccount>>,
+    pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// CHECK: The oracle can be one of several different account types
     pub oracle: UncheckedAccount<'info>,
@@ -137,14 +146,14 @@ pub struct TokenForceWithdraw<'info> {
         address = get_associated_token_address(&account.load()?.owner, &vault.mint),
         // NOTE: the owner may have been changed (before immutable owner was a thing)
     )]
-    pub owner_ata_token_account: Box<Account<'info, TokenAccount>>,
+    pub owner_ata_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// Only for the unusual case where the owner_ata account is not owned by account.owner
     #[account(
         mut,
         constraint = alternate_owner_token_account.owner == account.load()?.owner,
     )]
-    pub alternate_owner_token_account: Box<Account<'info, TokenAccount>>,
+    pub alternate_owner_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
 }

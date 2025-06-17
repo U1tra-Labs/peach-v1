@@ -25,6 +25,7 @@ pub fn kamino_init_obligation_farm_for_reserve(
         AccountMeta::new_readonly(ctx.accounts.farms_program.key(), false),
         AccountMeta::new_readonly(ctx.accounts.rent.key(), false),
         AccountMeta::new_readonly(ctx.accounts.system_program.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false), // Not sure if this is needed
     ];
 
     let discriminator = sighash("global", "init_obligation_farms_for_reserve");
@@ -50,6 +51,7 @@ pub fn kamino_init_obligation_farm_for_reserve(
             ctx.accounts.farms_program.clone(),
             ctx.accounts.rent.to_account_info(),
             ctx.accounts.system_program.to_account_info(),
+            ctx.accounts.kamino_program.clone(), 
         ];
 
     #[cfg(feature = "mainnet")]
@@ -111,6 +113,9 @@ pub struct KaminoInitObligationFarmsForReserve<'info> {
 
     pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
+
+    /// CHECK: Kamino program ID
+    pub kamino_program: AccountInfo<'info>,
 }
 
 

@@ -1,11 +1,8 @@
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { program, provider } from "../helpers/setup";
 import * as anchor from "@coral-xyz/anchor";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import { Token } from "../objects/token";
 import { token } from "@coral-xyz/anchor/dist/cjs/utils";
-import { User } from "../objects/user";
 import { TokenRegisterParams } from "../objects/token_register_params";
 
 export async function tokenRegister(
@@ -22,12 +19,12 @@ export async function tokenRegister(
       mint: token.mint,
       vault: token.vault[0],
       payer: admin.publicKey,
-      tokenProgram: TOKEN_PROGRAM_ID,
+      tokenProgram: token.programId,
       systemProgram: SystemProgram.programId,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
     })
     .instruction();
-
+  
     const ix2 = await program.methods.tokenRegister(
       token.tokenIndex,
       token.name,
@@ -68,7 +65,7 @@ export async function tokenRegister(
       oracle: oracle,
       fallbackOracle: oracle,
       payer: admin.publicKey,
-      tokenProgram: TOKEN_PROGRAM_ID,
+      tokenProgram: token.programId,
       systemProgram: SystemProgram.programId,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
     })
@@ -96,7 +93,7 @@ export async function tokenAddBank(token: Token, market: PublicKey, admin: Keypa
       vault: token.vault[1], // Use the first vault from the token object  
       mintInfo: token.mint_info,
       payer: admin.publicKey,
-      tokenProgram: TOKEN_PROGRAM_ID,
+      tokenProgram: token.programId,
       systemProgram: SystemProgram.programId,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
     })
@@ -128,7 +125,7 @@ export async function tokenDeregister(market: PublicKey, admin: Keypair, token: 
       mintInfo: token.mint_info,
       dustVault: dustVault,
       solDestination: solDestination,
-      tokenProgram: TOKEN_PROGRAM_ID
+      tokenProgram: token.programId
     })
     .remainingAccounts(remainingAccounts)
     .signers([admin])

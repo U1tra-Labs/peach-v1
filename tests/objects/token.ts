@@ -78,10 +78,12 @@ export class Token {
   vault: PublicKey[];
   mint_info: PublicKey;
   tokenIndex: number;
+  programId: PublicKey;
 
   // Optional Kamino-related fields
   kaminoReserveMint?: PublicKey;
-  kaminReserveFarmState?: PublicKey;
+  kaminReserveFarmStateCollateral?: PublicKey;
+  kaminReserveFarmStateDebt?: PublicKey;
   reserve?: PublicKey;
   reserve_liquidity_mint?: PublicKey;
   reserve_liquidity_supply?: PublicKey;
@@ -97,8 +99,10 @@ export class Token {
     vault?: PublicKey[];
     name?: string;
     tokenIndex: number;
+    programId: PublicKey;
     kaminoReserveMint?: PublicKey;
-    kaminReserveFarmState?: PublicKey;
+    kaminReserveFarmStateCollateral?: PublicKey;
+    kaminReserveFarmStateDebt?: PublicKey;   
     reserve?: PublicKey;
     reserve_liquidity_mint?: PublicKey;
     reserve_liquidity_supply?: PublicKey;
@@ -113,8 +117,10 @@ export class Token {
     this.vault = params.vault ?? [];
     this.name = params.name;
     this.tokenIndex = params.tokenIndex;
+    this.programId = params.programId;
     this.kaminoReserveMint = params.kaminoReserveMint;
-    this.kaminReserveFarmState = params.kaminReserveFarmState;
+    this.kaminReserveFarmStateCollateral = params.kaminReserveFarmStateCollateral; 
+    this.kaminReserveFarmStateDebt = params.kaminReserveFarmStateDebt;             
     this.reserve = params.reserve;
     this.reserve_liquidity_mint = params.reserve_liquidity_mint;
     this.reserve_liquidity_supply = params.reserve_liquidity_supply;
@@ -130,6 +136,7 @@ export class Token {
     console.log('Mint:', this.mint.toBase58());
     console.log('Mint Info:', this.mint_info.toBase58());
     console.log('Token Index:', this.tokenIndex);
+    console.log('Program ID:', this.programId.toBase58());
     if (this.bank.length > 0) {
       console.log('Banks:', this.bank.map((b, i) => `  [${i}]: ${b.toBase58()}`).join(','));
     }
@@ -139,8 +146,11 @@ export class Token {
     if (this.kaminoReserveMint) {
       console.log('Kamino Reserve Mint:', this.kaminoReserveMint.toBase58());
     }
-    if (this.kaminReserveFarmState) {
-      console.log('Kamin Reserve Farm State:', this.kaminReserveFarmState.toBase58());
+    if (this.kaminReserveFarmStateCollateral) {
+      console.log('Kamin Reserve Farm State Collateral:', this.kaminReserveFarmStateCollateral.toBase58());
+    }
+    if (this.kaminReserveFarmStateDebt) {
+      console.log('Kamin Reserve Farm State Debt:', this.kaminReserveFarmStateDebt.toBase58());
     }
     if (this.reserve) {
       console.log('Reserve:', this.reserve.toBase58());
@@ -165,6 +175,49 @@ export class Token {
     }
   }
 
+  /**
+   * Extend this token with Kamino reserve mint and farm state.
+   */
+  extendToKamino(
+    reserve: PublicKey,
+    reserveFarmStateCollateral: PublicKey,
+    reserveFarmStateDebt: PublicKey
+  ): this {
+    this.reserve = reserve;
+    this.kaminReserveFarmStateCollateral = reserveFarmStateCollateral;
+    this.kaminReserveFarmStateDebt = reserveFarmStateDebt;
+    this.reserve_liquidity_mint = this.mint;
+
+    [this.reserve_liquidity_supply] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("reserve_liq_supply"),
+        KAMINO_LENDING_MAIN_MARKET.toBuffer(),
+        this.mint.toBuffer(),
+      ],
+      KAMINO_LENDING
+    );
+
+    [this.reserve_collateral_mint] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("reserve_coll_mint"),
+        KAMINO_LENDING_MAIN_MARKET.toBuffer(),
+        this.mint.toBuffer(),
+      ],
+      KAMINO_LENDING
+    );
+
+    [this.reserve_collateral_supply] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("reserve_coll_supply"),
+        KAMINO_LENDING_MAIN_MARKET.toBuffer(),
+        this.mint.toBuffer(),
+      ],
+      KAMINO_LENDING
+    );
+
+    return this;
+  }
+
   // Derive and set bank, vault, mint_info PDAs for a given market and tokenIndex
   deriveAndAppendPDAs(market: PublicKey, tokenIndex: number) {
     const bankPDA = deriveBankPDA(market, tokenIndex, 0);
@@ -184,53 +237,6 @@ export class Token {
     this.vault.push(vault);
   }
 
-  /**
-   * Extend this token with Kamino reserve mint and farm state.
-   */
-  extendToKamino(reserve: PublicKey, reserveFarmState: PublicKey): this {
-    // this.kaminoReserveMint = kaminoReserveMint;
-    this.reserve = reserve;
-    this.kaminReserveFarmState = reserveFarmState;
-
-    this.reserve_liquidity_mint = this.mint;
-
-    [this.reserve_liquidity_supply] = PublicKey.findProgramAddressSync( 
-      [
-        Buffer.from("reserve_liq_supply"),
-        KAMINO_LENDING_MAIN_MARKET.toBuffer(),
-        this.mint.toBuffer(),
-      ],
-      KAMINO_LENDING
-    );
-
-    [this.reserve_collateral_mint] = PublicKey.findProgramAddressSync( 
-      [
-        Buffer.from("reserve_coll_mint"),
-        KAMINO_LENDING_MAIN_MARKET.toBuffer(),
-        this.mint.toBuffer(),
-      ],
-      KAMINO_LENDING
-    );
-
-    [this.reserve_collateral_supply] = PublicKey.findProgramAddressSync(
-      [ 
-        Buffer.from("reserve_coll_supply"),
-        KAMINO_LENDING_MAIN_MARKET.toBuffer(),
-        this.mint.toBuffer(),
-      ],
-      KAMINO_LENDING
-    );
-
-    return this;
-  }
-
-  addBank(market: PublicKey, bankNum: number): this {
-    this.bank.push(deriveBankPDA(market, this.tokenIndex, bankNum));
-    this.vault.push(deriveVaultPDA(market, this.tokenIndex, bankNum));
-
-    return this;
-  }
-
   static builder() {
     return new TokenBuilder();
   }
@@ -240,6 +246,9 @@ export class TokenBuilder {
   private _name?: string;
   private _market?: PublicKey;
   private _tokenIndex?: number;
+  private _programId?: PublicKey;
+  private _kaminReserveFarmStateCollateral?: PublicKey;
+  private _kaminReserveFarmStateDebt?: PublicKey;     
 
   /**
    * Set the token name (e.g. "USDC", "PYUSD")
@@ -266,6 +275,23 @@ export class TokenBuilder {
   }
 
   /**
+   * Set the programId for this token.
+   */
+  programId(programId: PublicKey): this {
+    this._programId = programId;
+    return this;
+  }
+
+  kaminReserveFarmStateCollateral(pubkey: PublicKey): this {
+    this._kaminReserveFarmStateCollateral = pubkey;
+    return this;
+  }
+  kaminReserveFarmStateDebt(pubkey: PublicKey): this {
+    this._kaminReserveFarmStateDebt = pubkey;
+    return this;
+  }
+
+  /**
    * Build the Token object.
    * - Uses process.env.TEST_ENV for environment.
    * - Uses program wallet as payer for devnet/localnet.
@@ -275,6 +301,7 @@ export class TokenBuilder {
     if (!this._name) throw new Error("Token name is required");
     if (!this._market) throw new Error("Market PDA is required");
     if (this._tokenIndex === undefined) throw new Error("Token index is required");
+    if (!this._programId) throw new Error("programId is required");
 
     // Determine cluster from program.provider.connection.rpcEndpoint
     const endpoint = program.provider.connection.rpcEndpoint;
@@ -304,6 +331,9 @@ export class TokenBuilder {
       vault,
       name: this._name,
       tokenIndex: this._tokenIndex,
+      programId: this._programId,
+      kaminReserveFarmStateCollateral: this._kaminReserveFarmStateCollateral,
+      kaminReserveFarmStateDebt: this._kaminReserveFarmStateDebt,           
     });
   }
 }

@@ -38,7 +38,7 @@ Change cluster to mainnet (with api-key if using custom rpc) in Anchor.toml
 #### 4. Build the Program
 
 ```bash
-anchor build
+anchor build -- --features mainnet
 ```
 
 #### 5. Deploy to Mainnet
@@ -93,3 +93,5 @@ After testing, close the program and buffer accounts to reclaim SOL:
 solana program close <PROGRAM_ID> --bypass warnings
 solana program close --buffers
 ```
+
+> **Note:** For a detailed explanation of the test structure, environment-specific considerations, and Kamino integration, **refer to `tests/Mechanism.md`**.

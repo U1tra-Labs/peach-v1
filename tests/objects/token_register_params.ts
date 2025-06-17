@@ -15,8 +15,6 @@ export interface OracleConfigParams {
 }
 
 export interface TokenRegisterParams {
-  // tokenIndex: number;
-  // name: string;
   oracleConfig: OracleConfigParams;
   interestRateParams: InterestRateParams;
   loanFeeRate: number;

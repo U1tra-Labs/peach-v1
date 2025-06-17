@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token;
-use anchor_spl::token::Token;
-use anchor_spl::token::TokenAccount;
+use anchor_spl::token_interface;
+// use anchor_spl::token;
+// use anchor_spl::token::Token;
+// use anchor_spl::token::TokenAccount;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::error::*;
 use crate::state::*;
@@ -102,9 +104,10 @@ pub fn token_withdraw(ctx: Context<TokenWithdraw>, amount: u64, allow_borrow: bo
 
     // Transfer the actual tokens
     let market_seeds = market_seeds!(market);
-    token::transfer(
+    token_interface::transfer_checked(
         ctx.accounts.transfer_ctx().with_signer(&[market_seeds]),
         amount,
+        bank.mint_decimals,
     )?;
 
     emit_stack(TokenBalanceLog {
@@ -246,6 +249,11 @@ pub struct TokenWithdraw<'info> {
     pub owner: Signer<'info>,
 
     #[account(
+        mint::token_program = token_program,
+    )]
+    pub mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
         mut,
         has_one = market,
         has_one = vault,
@@ -256,24 +264,25 @@ pub struct TokenWithdraw<'info> {
     pub bank: AccountLoader<'info, Bank>,
 
     #[account(mut)]
-    pub vault: Account<'info, TokenAccount>,
+    pub vault: InterfaceAccount<'info, TokenAccount>,
 
     /// CHECK: The oracle can be one of several different account types
     pub oracle: UncheckedAccount<'info>,
 
     #[account(mut)]
-    pub token_account: Box<Account<'info, TokenAccount>>,
+    pub token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
 }
 
 impl<'info> TokenWithdraw<'info> {
-    pub fn transfer_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
+    pub fn transfer_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token_interface::TransferChecked<'info>> {
         let program = self.token_program.to_account_info();
-        let accounts = token::Transfer {
+        let accounts = token_interface::TransferChecked {
             from: self.vault.to_account_info(),
             to: self.token_account.to_account_info(),
             authority: self.market.to_account_info(),
+            mint: self.mint.to_account_info(),
         };
         CpiContext::new(program, accounts)
     }

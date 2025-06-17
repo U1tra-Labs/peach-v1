@@ -47,7 +47,7 @@ pub fn kamino_init_user_metadata(
         ctx.accounts.owner.to_account_info(),
         ctx.accounts.owner.to_account_info(),
         ctx.accounts.user_metadata.clone(),
-        // ctx.accounts.referrer_user_metadata.clone(), // This is Optional
+        ctx.accounts.referrer_user_metadata.clone(), // This is Optional
         ctx.accounts.rent.to_account_info(),
         ctx.accounts.system_program.to_account_info(),
     ];

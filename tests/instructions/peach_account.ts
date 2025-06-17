@@ -1,5 +1,5 @@
-import { program, provider } from "../helpers/setup";
-import { PublicKey, Keypair } from "@solana/web3.js";
+import { program } from "../helpers/setup";
+import { PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { User } from "../objects/user";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";

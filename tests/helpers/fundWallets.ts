@@ -77,7 +77,7 @@ export async function transferSol(sender: Keypair, receiver: PublicKey, amount: 
 export async function getFundedWallet(walletId: number): Promise<Keypair | null> {
   const wallet = getOrCreateKeypair(walletId);
   const balance = await provider.connection.getBalance(wallet.publicKey);
-  if (balance < 0.5 * LAMPORTS_PER_SOL) {
+  if (balance < 0.05 * LAMPORTS_PER_SOL) {
     const transferSuccess = await transferSol(envProviderPayer, wallet.publicKey, LAMPORTS_PER_SOL_FOR_TEST_WALLETS * LAMPORTS_PER_SOL);
     return transferSuccess ? wallet : null;
   }
@@ -96,4 +96,3 @@ export async function defundWallet(walletId: number) {
     console.log(`Defunding wallet ${wallet.publicKey} failed ` + e);
   }
 }
-

@@ -217,6 +217,7 @@ pub fn kamino_borrow<'info>(
         AccountMeta::new(ctx.accounts.reserve_source_liquidity.key(), false), // reserve_source_liquidity
         AccountMeta::new(ctx.accounts.borrow_reserve_liquidity_fee_receiver.key(), false,), // borrow_reserve_liquidity_fee_receiver
         AccountMeta::new(ctx.accounts.user_destination_liquidity.key(), false), //         // user_destination_liquidity
+        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false), // referrer_token_state
         AccountMeta::new_readonly(ctx.accounts.token_program.key(), false),     // token_program
         AccountMeta::new_readonly(ctx.accounts.instruction_sysvar_account.key(), false), // instruction_sysvar_account
         AccountMeta::new(ctx.accounts.obligation_farm_user_state.key(), false), // obligation_farm_user_state
@@ -245,6 +246,7 @@ pub fn kamino_borrow<'info>(
         ctx.accounts.reserve_source_liquidity.to_account_info(),
         ctx.accounts.borrow_reserve_liquidity_fee_receiver.to_account_info(),
         ctx.accounts.user_destination_liquidity.to_account_info(),
+        ctx.accounts.kamino_program.clone(),
         ctx.accounts.token_program.to_account_info(), 
         ctx.accounts.instruction_sysvar_account.to_account_info(),
         ctx.accounts.obligation_farm_user_state.clone(),

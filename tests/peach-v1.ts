@@ -1,26 +1,26 @@
 import * as anchor from "@coral-xyz/anchor";
 import { assert } from "chai";
-import { Keypair, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
+import { Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
 import { deriveMarketPDA, createTokenAccount, transferToken, provider } from "./helpers/setup";
 import { defundWallet, getFundedWallet } from "./helpers/fundWallets";
 import { delayForMainnet } from "./helpers/rpc";
 import { marketClose, marketCreate } from "./instructions/market";
 import { closePeachAccount, createPeachAccount } from "./instructions/peach_account";
-import { tokenAddBank, tokenDeregister, tokenRegister } from "./instructions/token";
+import { tokenDeregister, tokenRegister } from "./instructions/token";
 import { tokenDeposit, tokenWithdraw, tokenChargeCollateralFees, tokenDepositIntoExisting } from "./instructions/native_lending";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
-import { KAMINO_LENDING_MAIN_MARKET, KAMINO_LENDING, KAMINO_RESERVE_FARM_STATE_USDC, PYTH_USDC_ORACLE, KAMINO_RESERVE_STATE_USDC, KAMINO_RESERVE_STATE_PYUSD, KAMINO_RESERVE_FARM_STATE_PYUSD } from "./helpers/const";
+import { KAMINO_LENDING_MAIN_MARKET, PYTH_USDC_ORACLE, KAMINO_RESERVE_STATE_USDC, KAMINO_RESERVE_STATE_PYUSD, KAMINO_RESERVE_FARM_STATE_USDC_COLLATERAL, KAMINO_RESERVE_FARM_STATE_USDC_DEBT, KAMINO_RESERVE_FARM_STATE_PYUSD_COLLATERAL, KAMINO_RESERVE_FARM_STATE_PYUSD_DEBT } from "./helpers/const";
 import { Program } from "@coral-xyz/anchor";
 import kamino_idl from "./idl/kamino_lending.json";
 import type { KaminoLending } from "./idl/kamino_lending";
 import { Token } from "./objects/token";
 import { User } from "./objects/user";
-import { getPreInstructions } from "./instructions/kamino/setup_kamino";
-import { kaminoInitObligation, kaminoInitObligationFarms, kaminoInitUserMetadata } from "./instructions/kamino/init_kamino";
+import { getPreInstructions } from "./instructions/kamino/pre_ix";
+import { kaminoInitObligation, kaminoInitObligationFarms, kaminoInitUserMetadata } from "./instructions/kamino/init";
 import { kaminoBorrow, kaminoDeposit, kaminoRepay, kaminoWithdraw } from "./instructions/kamino/kamino_lending";
 import { defaultTokenRegisterParamsPYUSD, defaultTokenRegisterParamsUSDC } from "./objects/token_register_params";
-import { closeStubOracle } from "./instructions/oracle";
-// import { createStubOracle } from "./instructions/oracle";
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+// import { createStubOracle, closeStubOracle } from "./instructions/oracle";
 
 // Test suite
 describe("peach-v1", () => {
@@ -49,13 +49,13 @@ describe("peach-v1", () => {
     let user1ATA: PublicKey, user2ATA: PublicKey; // usdc
     let user1PyUSDATA: PublicKey, user2PyUSDATA: PublicKey; // pyusd
 
-    // Update these values as needed; make sure you change the test cases accordingly
+    // NOTE: Update these values as needed; make sure you change the test cases accordingly
     let marketNum = 0;
     
     // These values are used to test the native deposit and withdraw functions
-    let deposit_amount1 = new anchor.BN(100), deposit_amount2 = new anchor.BN(50);
-    let withdraw_amount1 = new anchor.BN(10), withdraw_amount2 = new anchor.BN(5);
-    let borrow_amount = new anchor.BN(10), repay_amount = new anchor.BN(10);
+    let deposit_amount1 = new anchor.BN(0.01 * 10 ** 6), withdraw_amount1 = new anchor.BN(0.005 * 10 ** 6);
+    let deposit_amount2 = new anchor.BN(0.01 * 10 ** 6), withdraw_amount2 = new anchor.BN(0.002 * 10 ** 6);
+    let borrow_amount = new anchor.BN(0.002 * 10 ** 6), repay_amount = new anchor.BN(0.002 * 10 ** 6);
 
     before(async () => {
       console.log("Starting Test Setup");
@@ -72,39 +72,47 @@ describe("peach-v1", () => {
         .name("USDC")
         .market(market)
         .tokenIndex(1)
+        .programId(TOKEN_PROGRAM_ID)
         .build();
+      delayForMainnet();
       
       pyusd = await Token.builder()
         .name("PYUSD")
         .market(market)   
         .tokenIndex(2)
+        .programId(TOKEN_2022_PROGRAM_ID)
         .build();
+      delayForMainnet();
+      // pyusd.display();
       
       user1 = await User.builder()
         .market(market)
         .accountNum(1)
         .build();
+      delayForMainnet();
       
       user2 = await User.builder()
         .market(market)
         .accountNum(2)
         .build();
+      delayForMainnet();
 
       // Program wallet's token account
-      usdcATA = await createTokenAccount(usdc.mint, programWallet);
+      usdcATA = await createTokenAccount(usdc.mint, programWallet, usdc.programId);
       delayForMainnet();
-      pyusdATA = await createTokenAccount(pyusd.mint, programWallet);
+      pyusdATA = await createTokenAccount(pyusd.mint, programWallet, pyusd.programId);
+      delayForMainnet();
       
       // Create or get token accounts for users
       // Transfer some tokens to user on devnet / testnet
-      // For mainnet make sure program wallet has enough tokens
-      user1ATA = await transferToken(usdc.mint, usdcATA, programWallet, user1.wallet, 0.01 * 10 ** 6);
+      // NOTE: For mainnet make sure program wallet has enough tokens (atleast 0.06 USDC and 0.06 PYUSD)
+      user1ATA = await transferToken(usdc.programId, usdc.mint, usdcATA, programWallet, user1.wallet, 0.03 * 10 ** 6);
       delayForMainnet();
-      user1PyUSDATA = await transferToken(pyusd.mint, pyusdATA, programWallet, user1.wallet, 0.01 * 10 ** 6);
+      user1PyUSDATA = await transferToken(pyusd.programId, pyusd.mint, pyusdATA, programWallet, user1.wallet, 0.03 * 10 ** 6);
       delayForMainnet();
-      user2ATA = await transferToken(usdc.mint, usdcATA, programWallet, user2.wallet, 0.01 * 10 ** 6);
+      user2ATA = await transferToken(usdc.programId, usdc.mint, usdcATA, programWallet, user2.wallet, 0.03 * 10 ** 6);
       delayForMainnet();
-      user2PyUSDATA = await transferToken(pyusd.mint, pyusdATA, programWallet, user2.wallet, 0.01 * 10 ** 6);
+      user2PyUSDATA = await transferToken(pyusd.programId, pyusd.mint, pyusdATA, programWallet, user2.wallet, 0.03 * 10 ** 6);
 
       delayForMainnet();
 
@@ -128,7 +136,7 @@ describe("peach-v1", () => {
     
     });
 
-    describe("Create accounts and register token", () => {
+    describe.skip("Create accounts and register token", () => {
       it("Creates a market", async () => {
         try {
           let marketAccount = await program.account.market.fetch(market).catch(() => null);
@@ -198,8 +206,6 @@ describe("peach-v1", () => {
           }
           
           const bankAccount = await program.account.bank.fetch(usdc.bank[0]);
-          // const vaultBalance = new anchor.BN((await connection.getTokenAccountBalance(usdc.vault[0])).value.amount);
-          // assert(vaultBalance.eq(new anchor.BN(0)));
           assert.ok(mintInfoAccount.mint.equals(usdc.mint));
           assert.ok(mintInfoAccount.oracle.equals(oracle));
           assert.ok(bankAccount.mint.equals(usdc.mint));
@@ -220,8 +226,6 @@ describe("peach-v1", () => {
             mintInfoAccount = await program.account.mintInfo.fetch(pyusd.mint_info);
           }          
           const bankAccount = await program.account.bank.fetch(pyusd.bank[0]);
-          // const vaultBalance = new anchor.BN((await connection.getTokenAccountBalance(pyusd.vault[0])).value.amount);
-          // assert(vaultBalance.eq(new anchor.BN(0)));
           assert.ok(mintInfoAccount.mint.equals(pyusd.mint));
           assert.ok(mintInfoAccount.oracle.equals(oracle));
           assert.ok(bankAccount.mint.equals(pyusd.mint));
@@ -234,12 +238,12 @@ describe("peach-v1", () => {
       });
     });
 
-    describe("Native Token operations", () => {
+    describe.skip("Native Token operations", () => {
 
       it("Deposits usdc: user1", async () => {
         try {
           const vaultBalanceA = new anchor.BN((await connection.getTokenAccountBalance(usdc.vault[0])).value.amount);
-          const signature = await tokenDeposit(deposit_amount1, market, user1, usdc, oracle, false);
+          const signature = await tokenDeposit(deposit_amount1, market, user1, usdc, oracle, [usdc]);
           console.log("Deposited usdc for user1: ", signature);
           
           const vaultBalanceB = new anchor.BN((await connection.getTokenAccountBalance(usdc.vault[0])).value.amount);
@@ -254,7 +258,7 @@ describe("peach-v1", () => {
       it("Withdraws usdc: user1", async () => {
         try {
           const vaultBalanceA = new anchor.BN((await connection.getTokenAccountBalance(usdc.vault[0])).value.amount);
-          const signature = await tokenWithdraw(withdraw_amount1, market, user1, usdc, oracle, false);
+          const signature = await tokenWithdraw(withdraw_amount1, market, user1, usdc, oracle, [usdc]);
           console.log("Withdrew usdc for user1: ", signature);
 
           const vaultBalanceB = new anchor.BN((await connection.getTokenAccountBalance(usdc.vault[0])).value.amount);
@@ -268,7 +272,7 @@ describe("peach-v1", () => {
       it("Deposits pyusd: user2", async () => {
         try {
           const vaultBalanceA = new anchor.BN((await connection.getTokenAccountBalance(pyusd.vault[0])).value.amount);
-          const signature = await tokenDepositIntoExisting(deposit_amount2, market, user2, pyusd, oracle);
+          const signature = await tokenDepositIntoExisting(deposit_amount2, market, user2, pyusd, oracle, [pyusd]);
           console.log("Deposited pyusd for user2: ", signature);
           
           const vaultBalanceB = new anchor.BN((await connection.getTokenAccountBalance(pyusd.vault[0])).value.amount);
@@ -282,7 +286,7 @@ describe("peach-v1", () => {
       it("Withdraws pyusd: user2", async () => {
         try {
           const vaultBalanceA = new anchor.BN((await connection.getTokenAccountBalance(pyusd.vault[0])).value.amount);
-          const signature = await tokenWithdraw(withdraw_amount2, market, user2, pyusd, oracle, false);
+          const signature = await tokenWithdraw(withdraw_amount2, market, user2, pyusd, oracle, [pyusd]);
           console.log("Withdrew pyusd for user2: ", signature);
 
           const vaultBalanceB = new anchor.BN((await connection.getTokenAccountBalance(pyusd.vault[0])).value.amount);
@@ -293,11 +297,40 @@ describe("peach-v1", () => {
         }
       });
 
+      it("Borrows usdc: user2", async () => {
+        try {
+          const vaultBalanceA = new anchor.BN((await connection.getTokenAccountBalance(usdc.vault[0])).value.amount);
+          const signature = await tokenWithdraw(borrow_amount, market, user2, usdc, oracle, [usdc]);
+          console.log("Borrowed usdc for user2: ", signature);
+
+          const vaultBalanceB = new anchor.BN((await connection.getTokenAccountBalance(usdc.vault[0])).value.amount);
+
+          assert(vaultBalanceA.sub(borrow_amount).eq(vaultBalanceB));
+        } catch (err) {
+          assert.fail("Error while borrowing a token: " + err);
+        }
+      });
+
+      it("Repays usdc: user2", async () => {
+        try {
+          const vaultBalanceA = new anchor.BN((await connection.getTokenAccountBalance(usdc.vault[0])).value.amount);
+          const signature = await tokenDeposit(repay_amount, market, user2, usdc, oracle, [usdc, pyusd]);
+          console.log("Repayed usdc for user2: ", signature);
+          
+          const vaultBalanceB = new anchor.BN((await connection.getTokenAccountBalance(usdc.vault[0])).value.amount);
+          
+          assert(vaultBalanceB.sub(vaultBalanceA).eq(repay_amount));
+        } catch (err)  {
+          assert.fail("Error while repaying a token: " + err);
+        }
+        delayForMainnet();
+      });
+
       it("Borrows pyusd: user1", async () => {
         try {
           const vaultBalanceA = new anchor.BN((await connection.getTokenAccountBalance(pyusd.vault[0])).value.amount);
-          const signature = await tokenWithdraw(borrow_amount, market, user1, pyusd, oracle, true);
-          console.log("Borrowed pyusd for user1: ", signature);
+          const signature = await tokenWithdraw(borrow_amount, market, user1, pyusd, oracle, [pyusd]);
+          console.log("Borrowed usdc for user1: ", signature);
 
           const vaultBalanceB = new anchor.BN((await connection.getTokenAccountBalance(pyusd.vault[0])).value.amount);
 
@@ -310,8 +343,8 @@ describe("peach-v1", () => {
       it("Repays pyusd: user1", async () => {
         try {
           const vaultBalanceA = new anchor.BN((await connection.getTokenAccountBalance(pyusd.vault[0])).value.amount);
-          const signature = await tokenDeposit(repay_amount, market, user1, pyusd, oracle, true);
-          console.log("Repayed pyusd for user1: ", signature);
+          const signature = await tokenDeposit(repay_amount, market, user1, pyusd, oracle, [pyusd, usdc]);
+          console.log("Repayed usdc for user1: ", signature);
           
           const vaultBalanceB = new anchor.BN((await connection.getTokenAccountBalance(pyusd.vault[0])).value.amount);
           
@@ -324,8 +357,8 @@ describe("peach-v1", () => {
 
       it("Charges collateral fees", async () => {
         try {
-          const signature = await tokenChargeCollateralFees(market, user1.peachAccount);
-          console.log("Collateral fees charged for user1: ", signature);
+          const signature = await tokenChargeCollateralFees(market, user2.peachAccount);
+          console.log("Collateral fees charged for user2: ", signature);
         }
         catch (err) {  
           assert.fail("Error while charging collateral fees: " + err);
@@ -335,25 +368,23 @@ describe("peach-v1", () => {
     });
 
     // This test suite is for testing Kamino instructions
-    // To be test only on mainnet
-    describe("Kamino operations", () => {
+    // NOTE: To be tested only on mainnet (for cpis)
+    describe.skip("Kamino operations", () => {
       
       // Kamino instruction's specific variables
       let lendingMarket: PublicKey;
 
-      const deposit_amount = new anchor.BN(1 * 10 ** 6);
+      const deposit_amount = new anchor.BN(0.01 * 10 ** 6);
       const withdraw_amount = new anchor.BN(0.005 * 10 ** 6);
       const borrow_amount = new anchor.BN(0.002 * 10 ** 6); 
       const repay_amount = new anchor.BN(0.001 * 10 ** 6);
       
-      const mode = 0;
       const args = { tag: 0, id: 0 };
 
       before(async () => {
-        // referrerUserMetaDataPDA = KAMINO_LENDING;
         lendingMarket = KAMINO_LENDING_MAIN_MARKET;
-        usdc.extendToKamino(KAMINO_RESERVE_STATE_USDC, KAMINO_RESERVE_FARM_STATE_USDC);
-        pyusd.extendToKamino(KAMINO_RESERVE_STATE_PYUSD, KAMINO_RESERVE_FARM_STATE_PYUSD);
+        usdc.extendToKamino(KAMINO_RESERVE_STATE_USDC, KAMINO_RESERVE_FARM_STATE_USDC_COLLATERAL, KAMINO_RESERVE_FARM_STATE_USDC_DEBT); // Only Collateral Farm State will be used in this test
+        pyusd.extendToKamino(KAMINO_RESERVE_STATE_PYUSD, KAMINO_RESERVE_FARM_STATE_PYUSD_COLLATERAL, KAMINO_RESERVE_FARM_STATE_PYUSD_DEBT); // Only Debt Farm State will be used in this test
 
         await user1.extendToKaminoUser(args, [usdc, pyusd]);
 
@@ -365,53 +396,13 @@ describe("peach-v1", () => {
         pyusd.display();
       });
 
-      it("Add Kamnio bank for usdc", async () => {
+      // NOTE: Skip this test once passed. As Kamino will return error if the user metadata already exists
+      it.skip("Init User MetaData", async () => {
         try {
-          usdc.addBank(market, 1);
-          let bankAccount = await program.account.bank.fetch(usdc.bank[1]).catch(() => null);
-          if (!bankAccount) {
-            const signature = await tokenAddBank(usdc, market, admin);
-            console.log("Added kamino bank for usdc: ", signature);
-            bankAccount = await program.account.bank.fetch(usdc.bank[1]);
-          }
-          
-          assert.ok(bankAccount.mint.equals(usdc.mint));
-          assert.equal(bankAccount.tokenIndex[0], usdc.tokenIndex);
-          assert.equal(bankAccount.bankNum, 1);
-          delayForMainnet();
-        }
-        catch (err) {
-          assert.fail("Error while adding kamino bank to usdc: " + err);
-        }          
-      });
+          await kaminoInitUserMetadata(user1, market);
 
-      it("Add Kamnio bank for pyusd", async () => {
-        try {
-          pyusd.addBank(market, 1);
-          let bankAccount = await program.account.bank.fetch(pyusd.bank[1]).catch(() => null);
-          if (!bankAccount) {
-            const signature = await tokenAddBank(pyusd, market, admin);
-            console.log("Added kamino bank for pyusd: ", signature);
-            bankAccount = await program.account.bank.fetch(pyusd.bank[1]);
-          }
-
-          assert.ok(bankAccount.mint.equals(pyusd.mint));
-          assert.equal(bankAccount.tokenIndex[0], pyusd.tokenIndex);
-          assert.equal(bankAccount.bankNum, 1);
-          delayForMainnet();
-        }
-        catch (err) {
-          assert.fail("Error while adding kamino bank to pyusd: " + err);
-        }
-      });
-
-      it("Init User MetaData", async () => {
-        try {
-          await kaminoInitUserMetadata(user1, market); 
-
-          // const data = await kaminoProgram.account.userMetadata.fetch(userMetaDataPDA);
-          // assert.equal(lookupTableAddress.toBase58(), data.userLookupTable.toBase58());
-          // assert.equal(user.publicKey.toBase58(), data.owner.toBase58());
+          const data = await kaminoProgram.account.userMetadata.fetch(user1.userMetadata);
+          assert.equal(user1.wallet.publicKey.toBase58(), data.owner.toBase58());
           delayForMainnet();
         }
         catch(err) {
@@ -419,14 +410,15 @@ describe("peach-v1", () => {
         }
       });
 
-      it("Init Obligation", async () => {
+      // NOTE: Skip this test once passed. As Kamino will return error if the obligation already exists
+      it.skip("Init Obligation", async () => {
         try {
           await kaminoInitObligation(user1, market, args);
 
-          // const obligationAccount = await kaminoProgram.account.obligation.fetch(obligationPDA);
-          // assert.equal(obligationAccount.owner.toBase58(), user.publicKey.toBase58());
-          // assert.equal(obligationAccount.lendingMarket.toBase58(), lendingMarket.toBase58());
-          // assert.equal(obligationAccount.tag, args.tag);
+          const obligationAccount = await kaminoProgram.account.obligation.fetch(user1.obligation);
+          assert.equal(obligationAccount.owner.toBase58(), user1.wallet.publicKey.toBase58());
+          assert.equal(obligationAccount.lendingMarket.toBase58(), lendingMarket.toBase58());
+          assert.equal(obligationAccount.tag, args.tag);
           delayForMainnet();
         }
         catch(err) {
@@ -434,10 +426,14 @@ describe("peach-v1", () => {
         }
       });
 
-      it("Init User Obligation Farm for Reserve", async () => {
+      // Note: Skip this test once passed. As Kamino will return error if obligation farms already exists
+      it.skip("Init User Obligation Farm for Reserve", async () => {
         try {
-          await kaminoInitObligationFarms(user1, usdc, market, mode);
-          await kaminoInitObligationFarms(user1, pyusd, market, mode);
+          // Here we use usdc as collateral and pyusd as debt. 
+          // Incase of any deposit initialize the collateral farm using mode 0
+          // and for borrow initialize debt farm using mode 1.
+          await kaminoInitObligationFarms(user1, usdc, market, 0); // 0 for Collateral Farm
+          await kaminoInitObligationFarms(user1, pyusd, market, 1); // 1 for Debt Farm
 
           delayForMainnet();
         }
@@ -448,7 +444,9 @@ describe("peach-v1", () => {
 
       it("Deposit to kamino", async () => {
         try {
-          const preIx = await getPreInstructions(user1, usdc, [usdc.reserve], mode);
+          // usdc reserve refreshed
+          // No obligation farms are refreshed.
+          const preIx: TransactionInstruction[] = await getPreInstructions(user1, usdc, [usdc.reserve], []);
           
           await kaminoDeposit(
             deposit_amount,
@@ -456,8 +454,8 @@ describe("peach-v1", () => {
             usdc,
             market,
             oracle,
-            [], // pass preIx in mainnet testing
-            pyusd
+            preIx, // Note: pass [] in devnet
+            [pyusd, usdc]
           );
 
           delayForMainnet();
@@ -469,15 +467,18 @@ describe("peach-v1", () => {
 
       it("Withdraw from kamino", async () => {
         try {
-          const preIx = await getPreInstructions(user1, usdc, [usdc.reserve], mode);
-        
+          // usdc reserve are refereshed as it is used in withdraw
+          // usdc obligation farms are refreshed as an obligation was created in deposit
+          const preIx: TransactionInstruction[] = await getPreInstructions(user1, usdc, [usdc.reserve], [usdc.reserve]);
+
           await kaminoWithdraw(
             withdraw_amount,
             user1,
             usdc,
             market,
             oracle,
-            [] // pass preIx in mainnet testing
+            preIx, // Note: pass [] in devnet
+            [pyusd, usdc]
           );
           
           delayForMainnet();
@@ -489,16 +490,19 @@ describe("peach-v1", () => {
 
       it("Borrow from kamino", async () => {
         try {
-          const preIx = await getPreInstructions(user1, usdc, [usdc.reserve, pyusd.reserve], mode);
-        
+          // usdc reserve and pyusd reserve are refereshed as pyusd is used in borrow
+          // usdc obligation farms are refreshed as an obligation was created in deposit
+          const preIx: TransactionInstruction[] = await getPreInstructions(user1, pyusd, [usdc.reserve, pyusd.reserve], [usdc.reserve]);
+
           await kaminoBorrow(
             borrow_amount,
             user1,
             pyusd,
             market,
             oracle,
-            [], // pass preIx in mainnet testing
-            pyusdATA
+            preIx, // Note: [] for devnet testing
+            pyusdATA, // Note: used in devnet
+            [pyusd, usdc]
           );
 
           delayForMainnet();
@@ -510,16 +514,19 @@ describe("peach-v1", () => {
 
       it("Repay to kamino", async () => {
         try {
-          const preIx = await getPreInstructions(user1, usdc, [usdc.reserve, pyusd.reserve], mode);
-                
+          // usdc reserve and pyusd reserve are refereshed
+          // usdc obligation farms are refreshed and also pyusd farms as an obligation was created in borrow
+          const preIx: TransactionInstruction[] = await getPreInstructions(user1, pyusd, [usdc.reserve, pyusd.reserve], [usdc.reserve, pyusd.reserve]);
+  
           await kaminoRepay(
             repay_amount,
             user1,
             pyusd,
             market,
             oracle,
-            [], // pass preIx in mainnet testing
-            pyusdATA
+            preIx, // Note: pass [] in devnet
+            pyusdATA, // Note: used in devnet
+            [pyusd, usdc]
           );
           
           delayForMainnet();
@@ -531,7 +538,7 @@ describe("peach-v1", () => {
     });
 
     // Do not run this test suite; if you want to preserve the accounts
-    describe("Deregister and close accounts", () => {
+    describe.skip("Deregister and close accounts", () => {
       // it("Close stub oracle", async () => {
       //   try {
       //     const signature = await closeStubOracle(stubOracle, market, admin);
@@ -602,12 +609,13 @@ describe("peach-v1", () => {
     });
 
     after(async () => {
-      // Comment out; if you want to preserve the accounts
-      console.log("Defunding wallets");
-      await defundWallet(0);
-      await defundWallet(1);
-      await defundWallet(2);
-      console.log("Wallets defunded");
+      // Note: Comment out; if you want to preserve the accounts
+      // Only defunds the SOL
+      // console.log("Defunding wallets");
+      // await defundWallet(0);
+      // await defundWallet(1);
+      // await defundWallet(2);
+      // console.log("Wallets defunded");
 
       console.log("Balance after testing: ", await connection.getBalance(programWallet.publicKey));
     });

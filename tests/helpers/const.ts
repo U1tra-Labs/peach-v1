@@ -39,8 +39,12 @@ export const KAMINO_RESERVE_STATE_USDC =  new PublicKey(
     "D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59"
 );
 
-export const KAMINO_RESERVE_FARM_STATE_USDC = new PublicKey(
+export const KAMINO_RESERVE_FARM_STATE_USDC_COLLATERAL = new PublicKey(
     "JAvnB9AKtgPsTEoKmn24Bq64UMoYcrtWtq42HHBdsPkh");
+
+// TODO: Add the correct USDC debt farm state public key
+export const KAMINO_RESERVE_FARM_STATE_USDC_DEBT = new PublicKey(
+"JAvnB9AKtgPsTEoKmn24Bq64UMoYcrtWtq42HHBdsPkh");
 
 
 // PYUSD
@@ -51,7 +55,11 @@ export const PYUSD_MINT_MAINNET = new PublicKey(
 export const KAMINO_RESERVE_STATE_PYUSD = new PublicKey(
     "2gc9Dm1eB6UgVYFBUN9bWks6Kes9PbWSaPaa9DqyvEiN");
 
-export const KAMINO_RESERVE_FARM_STATE_PYUSD = new PublicKey(
+export const KAMINO_RESERVE_FARM_STATE_PYUSD_COLLATERAL = new PublicKey(
+    "DEe2NZ5dAXGxC7M8Gs9Esd9wZRPdQzG8jNamXqhL5yku"
+);
+
+export const KAMINO_RESERVE_FARM_STATE_PYUSD_DEBT = new PublicKey(
     "GmJ2vXsDt8R5DNimAZc7Rtphr4oqecBVAx1psaTcVtrX");
 
 export const KAMINO_RESERVE_LIQUIDITY_FEE_VAULT_PYUSD = new PublicKey(

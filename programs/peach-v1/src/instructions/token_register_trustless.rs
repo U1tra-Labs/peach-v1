@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+// use anchor_spl::token_interface::TokenInterface;
 use fixed::types::I80F48;
 
 use crate::accounts_zerocopy::AccountInfoRef;
@@ -9,7 +10,9 @@ use crate::state::*;
 use crate::util::fill_from_str;
 
 use crate::logs::{emit_stack, TokenMetaDataLogV2};
-use anchor_spl::token::{Mint, Token, TokenAccount};
+// use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+
 
 const FIRST_BANK_NUM: u32 = 0;
 
@@ -150,7 +153,10 @@ pub struct TokenRegisterTrustless<'info> {
     pub market: AccountLoader<'info, Market>,
     pub admin: Signer<'info>,
 
-    pub mint: Account<'info, Mint>,
+    #[account(
+        mint::token_program = token_program,
+    )]
+    pub mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         init,
@@ -168,9 +174,10 @@ pub struct TokenRegisterTrustless<'info> {
         bump,
         token::authority = market,
         token::mint = mint,
+        token::token_program = token_program,
         payer = payer
     )]
-    pub vault: Account<'info, TokenAccount>,
+    pub vault: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init,
@@ -191,7 +198,7 @@ pub struct TokenRegisterTrustless<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
 }

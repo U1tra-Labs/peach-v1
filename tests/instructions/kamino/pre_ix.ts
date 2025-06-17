@@ -4,34 +4,32 @@ import { provider } from "../../helpers/setup";
 import { Program } from "@coral-xyz/anchor";
 import { KaminoLending } from "../../idl/kamino_lending";
 import kamino_idl from "../../idl/kamino_lending.json";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, TransactionInstruction } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { Token } from "../../objects/token";
 
 const kaminoProgram = new Program<KaminoLending>(kamino_idl, provider);
 const kaminoProgramId = kaminoProgram.programId;
 
-export async function getPreInstructions(user: User, token: Token, reserves: PublicKey[], mode: number) {    
+export async function getPreInstructions(user: User, token: Token, reserves: PublicKey[], reserves_obligation: PublicKey[]): Promise<TransactionInstruction[]> {    
 
-    const ixRefreshReserve = refreshReserve(token, reserves);
+  const ixRefreshReserve: TransactionInstruction[] = await refreshReserve(token, reserves);
 
     // RefreshObligation, Add the reserve accounts in remaining accounts (if any)
-    const txRefreshObligation = refreshObligation(user, reserves);
+  const txRefreshObligation: TransactionInstruction = await refreshObligation(user, reserves_obligation);
+  
+  ixRefreshReserve.push(txRefreshObligation);
 
     // RefreshObligationFarmsForReserve
     // const IxRefreshObligationFarmsForReserve = refreshObligationFarmsForReserve(user, token, mode); 
     
-    return [
-        ixRefreshReserve,
-        txRefreshObligation,
-        // IxRefreshObligationFarmsForReserve
-    ];
+  return ixRefreshReserve;
 }
 
-function refreshReserve(token: Token, reserves: PublicKey[]) {
-  let ixs: anchor.web3.TransactionInstruction[] = [];
+async function refreshReserve(token: Token, reserves: PublicKey[]): Promise<TransactionInstruction[]> {
+  let ixs: TransactionInstruction[] = [];
   for (const reserve of reserves) {
-    const ix = kaminoProgram.methods.refreshReserve()
+    const ix = await kaminoProgram.methods.refreshReserve()
       .accounts({
         reserve: reserve,
         lendingMarket: KAMINO_LENDING_MAIN_MARKET,
@@ -46,8 +44,8 @@ function refreshReserve(token: Token, reserves: PublicKey[]) {
   return ixs;
 }
 
-function refreshObligation(user: User, reserves: PublicKey[]) {
-  return kaminoProgram.methods.refreshObligation()
+async function refreshObligation(user: User, reserves: PublicKey[]): Promise<TransactionInstruction> {
+  return await kaminoProgram.methods.refreshObligation()
       .accounts({
           lendingMarket: KAMINO_LENDING_MAIN_MARKET,
           obligation: user.obligation,
@@ -62,15 +60,15 @@ function refreshObligation(user: User, reserves: PublicKey[]) {
       .instruction();
 } 
 
-function refreshObligationFarmsForReserve(user: User, token: Token, mode: number) {
-    return kaminoProgram.methods.refreshObligationFarmsForReserve(mode)
+async function refreshObligationFarmsForReserve(user: User, token: Token, mode: number): Promise<TransactionInstruction> {
+    return await kaminoProgram.methods.refreshObligationFarmsForReserve(mode)
         .accounts({
         crank: user.wallet.publicKey,
         baseAccounts: {
             obligation: user.obligation,
             lendingMarketAuthority: KAMINO_LENDING_MAIN_MARKET_AUTHORITY,
             reserve: token.reserve,
-            reserveFarmState: token.kaminReserveFarmState,
+            reserveFarmState: mode === 0 ? token.kaminReserveFarmStateCollateral : token.kaminReserveFarmStateDebt,
             obligationFarmUserState: user.getObligationFarmForToken(token.tokenIndex), // change this
             lendingMarket: KAMINO_LENDING_MAIN_MARKET,
         },
@@ -78,5 +76,5 @@ function refreshObligationFarmsForReserve(user: User, token: Token, mode: number
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         systemProgram: anchor.web3.SystemProgram.programId,
         })
-    .instruction();
+      .instruction();
 }

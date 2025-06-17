@@ -24,13 +24,14 @@ pub fn kamino_init_obligation(
     let accounts = vec![
         AccountMeta::new_readonly(ctx.accounts.owner.key(), true), // obligation_owner
         AccountMeta::new(ctx.accounts.owner.key(), true),  // fee_payer
-        AccountMeta::new(ctx.accounts.obligation.key(), false), 
+        AccountMeta::new(ctx.accounts.obligation.key(), false),
         AccountMeta::new_readonly(ctx.accounts.lending_market.key(), false), 
         AccountMeta::new_readonly(ctx.accounts.seed_one_account.key(), false), 
         AccountMeta::new_readonly(ctx.accounts.seed_two_account.key(), false),
         AccountMeta::new_readonly(ctx.accounts.owner_user_metadata.key(), false),
         AccountMeta::new_readonly(ctx.accounts.rent.key(), false), 
-        AccountMeta::new_readonly(ctx.accounts.system_program.key(), false), 
+        AccountMeta::new_readonly(ctx.accounts.system_program.key(), false),
+        AccountMeta::new_readonly(ctx.accounts.kamino_program.key(), false), // Not sure if this is needed 
     ];
 
     let discriminator = sighash("global", "init_obligation");
@@ -55,6 +56,7 @@ pub fn kamino_init_obligation(
         ctx.accounts.owner_user_metadata.clone(),   
         ctx.accounts.rent.to_account_info(),
         ctx.accounts.system_program.to_account_info(),
+        ctx.accounts.kamino_program.clone(), 
     ];
 
     #[cfg(feature = "mainnet")]
@@ -103,5 +105,8 @@ pub struct KaminoInitObligation<'info> {
     pub owner_user_metadata: AccountInfo<'info>,
 
     pub rent: Sysvar<'info, Rent>,     
-    pub system_program: Program<'info, System>
+    pub system_program: Program<'info, System>,
+
+    /// CHECK: Kamino program ID
+    pub kamino_program: AccountInfo<'info>,
 }

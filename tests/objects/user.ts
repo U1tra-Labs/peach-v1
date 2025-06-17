@@ -1,7 +1,6 @@
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { derivePeachAccountPDA } from "../helpers/setup";
 import { getFundedWallet } from "../helpers/fundWallets";
-import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { KAMINO_LENDING, KAMINO_FARM_MAINNET, KAMINO_LENDING_MAIN_MARKET, SEED1_Account, SEED2_Account } from "../helpers/const";
 import { Token } from "./token";
 
@@ -11,6 +10,11 @@ export interface InitObligationArgs {
   id: number;
 }
 
+export interface ObligationFarms {
+  colalteralFarm: PublicKey;
+  debtFarm: PublicKey;
+}
+
 export class User {
   wallet: Keypair;
   peachAccount: PublicKey;
@@ -18,7 +22,7 @@ export class User {
   accountNum: number;
   obligation?: PublicKey;
   userMetadata?: PublicKey;
-  obligationFarms: PublicKey[];
+  obligationFarms: ObligationFarms[];
 
   constructor(params: {
     wallet: Keypair;
@@ -27,7 +31,7 @@ export class User {
     tokenAccounts?: PublicKey[];
     obligation?: PublicKey;
     userMetadata?: PublicKey;
-    obligationFarms?: PublicKey[];
+    obligationFarms?: ObligationFarms[];
   }) {
     this.wallet = params.wallet;
     this.peachAccount = params.peachAccount;
@@ -54,17 +58,17 @@ export class User {
     this.userMetadata = userMetadata;
   }
 
-  addObligationFarm(obligationFarm: PublicKey) {
+  addObligationFarm(obligationFarm: ObligationFarms) {
     if (!this.obligationFarms) this.obligationFarms = [];
     this.obligationFarms.push(obligationFarm);
   }
 
-  addObligationFarms(obligationFarms: PublicKey[]) {
+  addObligationFarms(obligationFarms: ObligationFarms[]) {
     if (!this.obligationFarms) this.obligationFarms = [];
     this.obligationFarms.push(...obligationFarms);
   }
 
-  getObligationFarmForToken(tokenIndex: number): PublicKey | undefined {
+  getObligationFarmForToken(tokenIndex: number): ObligationFarms | undefined {
     return this.obligationFarms[tokenIndex-1];
   }
 
@@ -104,17 +108,32 @@ export class User {
 
     const obligationFarms = [];
     for (const token of tokens) {
-      if (!token.reserve || !token.kaminReserveFarmState) {
+      if (!token.reserve || !token.kaminReserveFarmStateCollateral || !token.kaminReserveFarmStateDebt) {
         throw new Error("Token must have reserve and kaminReserveFarmState set");
       }
-      const [obligationFarm] = PublicKey.findProgramAddressSync(
+      const [obligationFarmCollateral] = PublicKey.findProgramAddressSync(
         [
           Buffer.from("user"),
-          token.kaminReserveFarmState.toBuffer(),
+          token.kaminReserveFarmStateCollateral.toBuffer(),
           this.obligation.toBuffer(),
         ],
         KAMINO_FARM_MAINNET
       );
+
+      const [obligationFarmDebt] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("user"),
+          token.kaminReserveFarmStateDebt.toBuffer(),
+          this.obligation.toBuffer(),
+        ],
+        KAMINO_FARM_MAINNET
+      );
+
+      const obligationFarm: ObligationFarms = {
+        colalteralFarm: obligationFarmCollateral,
+        debtFarm: obligationFarmDebt,
+      };
+
       obligationFarms.push(obligationFarm);
     }
 
@@ -136,9 +155,10 @@ export class User {
     );
     if (this.obligationFarms.length > 0) {
       console.log("Obligation Farms:");
-      this.obligationFarms.forEach((of, i) =>
-        console.log(`  [${i}]: ${of.toBase58()}`)
-      );
+      this.obligationFarms.forEach((of, i) => {
+        console.log(`  [${i}] Collateral Farm: ${of.colalteralFarm.toBase58()}`);
+        console.log(`  [${i}] Debt Farm:       ${of.debtFarm.toBase58()}`);
+      });
     }
   }
 

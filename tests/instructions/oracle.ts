@@ -1,6 +1,5 @@
-import { program, provider } from "../helpers/setup";
+import { program } from "../helpers/setup";
 import { PublicKey, Keypair } from "@solana/web3.js";
-import { I80F48 } from "../helpers/I80F48";
 import { BN } from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 

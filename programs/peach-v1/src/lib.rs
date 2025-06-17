@@ -15,7 +15,7 @@ pub mod accounts_zerocopy;
 pub mod health;
 pub mod constants;
 
-declare_id!("EYz3GPbE1qoXS3i4ziRmfyTQgVjZt3ymMxYKZZiEaEED");
+declare_id!("EpQgoikyN55Tj5dZy4Ts1QLpfxjqWjPqfj9ibt68Pd2s");
 
 #[program]
 pub mod peach_v1 {

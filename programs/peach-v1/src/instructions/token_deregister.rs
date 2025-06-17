@@ -1,6 +1,8 @@
 use crate::{error::PeachError, state::*};
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, CloseAccount, Token, TokenAccount};
+use anchor_spl::token::{self, CloseAccount};
+use anchor_spl::token_interface::{TokenAccount, TokenInterface};
+
 
 use crate::accounts_zerocopy::LoadZeroCopyRef;
 use anchor_lang::AccountsClose;
@@ -37,7 +39,7 @@ pub fn token_deregister<'key, 'accounts, 'remaining: 'info, 'info>(
         }
 
         // transfer dust to another token account
-        let amount = Account::<TokenAccount>::try_from(vault_ai).unwrap().amount;
+        let amount = InterfaceAccount::<TokenAccount>::try_from(vault_ai).unwrap().amount;
         if amount > 0 {
             token::transfer(
                 {
@@ -100,11 +102,11 @@ pub struct TokenDeregister<'info> {
     pub mint_info: AccountLoader<'info, MintInfo>,
 
     #[account(mut)]
-    pub dust_vault: Account<'info, TokenAccount>,
+    pub dust_vault: InterfaceAccount<'info, TokenAccount>,
 
     #[account(mut)]
     /// CHECK: target for account rent needs no checks
     pub sol_destination: UncheckedAccount<'info>,
 
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
 }

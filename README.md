@@ -18,4 +18,5 @@ cd peach-v1
 
 ### 📜 Documentation
 - [Testing](TESTING.md) – Guide to running tests.
+- [Mechanism](tests/Mechanism.md) – Detailed explanation of test structure, environment-specific considerations, and Kamino integration.
 

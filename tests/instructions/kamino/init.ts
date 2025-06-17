@@ -6,6 +6,7 @@ import { createLookupTableAddress } from "../../helpers/create_alt";
 import { Token } from "../../objects/token";
 import * as anchor from "@coral-xyz/anchor";
 
+
 export async function kaminoInitUserMetadata(user: User, market: PublicKey) {
     const lookupTableAddress = await createLookupTableAddress(program.provider.connection, user.wallet);
         
@@ -29,42 +30,47 @@ export async function kaminoInitUserMetadata(user: User, market: PublicKey) {
 export async function kaminoInitObligation(user: User, market: PublicKey, args: InitObligationArgs) {
     const signature = await program.methods.kaminoInitObligation(args)
         .accounts({
-        market: market,
-        peachAccount: user.peachAccount,
-        owner: user.wallet.publicKey,
-        obligation: user.obligation,
-        lendingMarket: KAMINO_LENDING_MAIN_MARKET,
-        seedOneAccount: SEED1_Account,
-        seedTwoAccount: SEED1_Account,
-        ownerUserMetadata: user.userMetadata,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: SystemProgram.programId
+            market: market,
+            peachAccount: user.peachAccount,
+            owner: user.wallet.publicKey,
+            obligation: user.obligation,
+            lendingMarket: KAMINO_LENDING_MAIN_MARKET,
+            seedOneAccount: SEED1_Account,
+            seedTwoAccount: SEED1_Account,
+            ownerUserMetadata: user.userMetadata,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+            systemProgram: SystemProgram.programId,
+                    kaminoProgram: KAMINO_LENDING
+
         })
         .signers([user.wallet])
         .rpc();
-
+    
     console.log("Init Obligation transaction signature: ", signature);
 }
 
 export async function kaminoInitObligationFarms(user: User, token: Token, market: PublicKey, mode: number) {
     
+    const obligationFarm = user.getObligationFarmForToken(token.tokenIndex);
+    
     const signature = await program.methods.kaminoInitObligationFarmForReserve(mode)
         .accounts({
-        market: market,
-        peachAccount: user.peachAccount,
-        owner: user.wallet.publicKey,
-        obligation: user.obligation,
-        lendingMarketAuthority: KAMINO_LENDING_MAIN_MARKET_AUTHORITY,
-        reserve: token.reserve,
-        reserveFarmState: token.kaminReserveFarmState,
-        obligationFarm: user.getObligationFarmForToken(token.tokenIndex),
-        lendingMarket: KAMINO_LENDING_MAIN_MARKET,
-        farmsProgram: KAMINO_FARM_MAINNET,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: SystemProgram.programId,
+            market: market,
+            peachAccount: user.peachAccount,
+            owner: user.wallet.publicKey,
+            obligation: user.obligation,
+            lendingMarketAuthority: KAMINO_LENDING_MAIN_MARKET_AUTHORITY,
+            reserve: token.reserve,
+            reserveFarmState: mode === 0 ? token.kaminReserveFarmStateCollateral : token.kaminReserveFarmStateDebt,
+            obligationFarm: mode === 0 ? obligationFarm.colalteralFarm : obligationFarm.debtFarm,
+            lendingMarket: KAMINO_LENDING_MAIN_MARKET,
+            farmsProgram: KAMINO_FARM_MAINNET,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+            systemProgram: SystemProgram.programId,
+            kaminoProgram: KAMINO_LENDING
         })
         .signers([user.wallet])
         .rpc();
-    
+            
     console.log("Init Obligation Farms transaction signature: ", signature);
 }

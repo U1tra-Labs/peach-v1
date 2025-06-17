@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token;
-use anchor_spl::token::Token;
-use anchor_spl::token::TokenAccount;
+use anchor_spl::token_interface;
+// use anchor_spl::token;
+// use anchor_spl::token::Token;
+// use anchor_spl::token::TokenAccount;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use fixed::types::I80F48;
 
 use crate::health::*;
@@ -15,21 +17,23 @@ use crate::util::clock_now;
 struct DepositCommon<'a, 'info> {
     pub market: &'a AccountLoader<'info, Market>,
     pub account: &'a AccountLoader<'info, PeachAccountFixed>,
+    pub mint: &'a InterfaceAccount<'info, Mint>,
     pub bank: &'a AccountLoader<'info, Bank>,
-    pub vault: &'a Account<'info, TokenAccount>,
+    pub vault: &'a InterfaceAccount<'info, TokenAccount>,
     pub oracle: &'a UncheckedAccount<'info>,
-    pub token_account: &'a Box<Account<'info, TokenAccount>>,
+    pub token_account: &'a Box<InterfaceAccount<'info, TokenAccount>>,
     pub token_authority: &'a Signer<'info>,
-    pub token_program: &'a Program<'info, Token>,
+    pub token_program: &'a Interface<'info, TokenInterface>,
 }
 
 impl<'a, 'info> DepositCommon<'a, 'info> {
-    fn transfer_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token::Transfer<'info>> {
+    fn transfer_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token_interface::TransferChecked<'info>> {
         let program = self.token_program.to_account_info();
-        let accounts = token::Transfer {
+        let accounts = token_interface::TransferChecked {
             from: self.token_account.to_account_info(),
             to: self.vault.to_account_info(),
             authority: self.token_authority.to_account_info(),
+            mint: self.mint.to_account_info(),
         };
         CpiContext::new(program, accounts)
     }
@@ -87,7 +91,7 @@ impl<'a, 'info> DepositCommon<'a, 'info> {
         if !kamino_cpi{
             // Transfer the actual tokens to our vault. Incase of a kamino_cpi, the
             // tokens are already transferred via the kamino cpi.
-            token::transfer(self.transfer_ctx(), amount_i80f48.to_num::<u64>())?;
+            token_interface::transfer_checked(self.transfer_ctx(), amount_i80f48.to_num::<u64>(), bank.mint_decimals)?;
         }
 
         let indexed_position = position.indexed_position;
@@ -232,6 +236,7 @@ pub fn token_deposit(ctx: Context<TokenDeposit>, amount: u64, reduce_only: bool)
     DepositCommon {
         market: &ctx.accounts.market,
         account: &ctx.accounts.account,
+        mint: &ctx.accounts.mint,
         bank: &ctx.accounts.bank,
         vault: &ctx.accounts.vault,
         oracle: &ctx.accounts.oracle,
@@ -250,6 +255,7 @@ pub fn token_deposit_into_existing(
     DepositCommon {
         market: &ctx.accounts.market,
         account: &ctx.accounts.account,
+        mint: &ctx.accounts.mint,
         bank: &ctx.accounts.bank,
         vault: &ctx.accounts.vault,
         oracle: &ctx.accounts.oracle,
@@ -276,6 +282,11 @@ pub struct TokenDepositIntoExisting<'info> {
     pub account: AccountLoader<'info, PeachAccountFixed>,
 
     #[account(
+        mint::token_program = token_program,
+    )]
+    pub mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
         mut,
         has_one = market,
         has_one = vault,
@@ -286,16 +297,16 @@ pub struct TokenDepositIntoExisting<'info> {
     pub bank: AccountLoader<'info, Bank>,
 
     #[account(mut)]
-    pub vault: Account<'info, TokenAccount>,
+    pub vault: InterfaceAccount<'info, TokenAccount>,
 
     /// CHECK: The oracle can be one of several different account types
     pub oracle: UncheckedAccount<'info>,
 
     #[account(mut)]
-    pub token_account: Box<Account<'info, TokenAccount>>,
+    pub token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     pub token_authority: Signer<'info>,
 
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
 }
 
 #[derive(Accounts)]
@@ -315,6 +326,11 @@ pub struct TokenDeposit<'info> {
     pub owner: Signer<'info>,
 
     #[account(
+        mint::token_program = token_program,
+    )]
+    pub mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
         mut,
         has_one = market,
         has_one = vault,
@@ -325,14 +341,14 @@ pub struct TokenDeposit<'info> {
     pub bank: AccountLoader<'info, Bank>,
 
     #[account(mut)]
-    pub vault: Account<'info, TokenAccount>,
+    pub vault: InterfaceAccount<'info, TokenAccount>,
 
     /// CHECK: The oracle can be one of several different account types
     pub oracle: UncheckedAccount<'info>,
 
     #[account(mut)]
-    pub token_account: Box<Account<'info, TokenAccount>>,
+    pub token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     pub token_authority: Signer<'info>,
 
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
 }

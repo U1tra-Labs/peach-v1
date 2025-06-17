@@ -1,4 +1,3 @@
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { program, provider } from "../helpers/setup";
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
@@ -7,33 +6,36 @@ import { Token } from "../objects/token";
 import { token } from "@coral-xyz/anchor/dist/cjs/utils";
 import { User } from "../objects/user";
 
-export async function tokenDeposit(deposit_amount: anchor.BN, marketPDA: PublicKey, user: User, token: Token, oracle: PublicKey, is_repay: boolean) {    
-    
+export async function tokenDeposit(deposit_amount: anchor.BN, marketPDA: PublicKey, user: User, token: Token, oracle: PublicKey, active_positions: Token[]) {    
   const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = [];
-
-  remainingAccounts.push({
-    pubkey: token.bank[0], // Use the first token account from the user's token accounts
-    isWritable: true,
-    isSigner: false,
-  });
-  remainingAccounts.push({
-    pubkey: oracle, // Use the first token account from the user's token accounts
-    isWritable: true,
-    isSigner: false,
-  });
+  if (active_positions.length > 0) {
+    for (const position of active_positions) {
+      remainingAccounts.push({
+        pubkey: position.bank[0], // Use the first bank from the token object
+        isWritable: true,
+        isSigner: false,
+      });
+      remainingAccounts.push({
+        pubkey: oracle, // Use the first vault from the token object
+        isWritable: true,
+        isSigner: false,
+      });
+    }
+  }
 
   const tx = await program.methods
         .tokenDeposit(deposit_amount, false)
         .accounts({
         market: marketPDA,
         account: user.peachAccount,
-        owner: user.wallet.publicKey,
+          owner: user.wallet.publicKey,
+        mint: token.mint, // Use the mint from the token object
         bank: token.bank[0], // Use the first bank from the token object
         vault: token.vault[0], // Use the first vault from the token object
         oracle: oracle,
         tokenAccount: user.tokenAccounts[token.tokenIndex-1], // Use the first token account from the user's token accounts
         tokenAuthority: user.wallet.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: token.programId,
         })
         .remainingAccounts(remainingAccounts)
         .signers([user.wallet])
@@ -42,18 +44,22 @@ export async function tokenDeposit(deposit_amount: anchor.BN, marketPDA: PublicK
     return tx;
 }
 
-export async function tokenDepositIntoExisting(deposit_amount: anchor.BN, marketPDA: PublicKey, user: User, token: Token, oracle: PublicKey) {    
+export async function tokenDepositIntoExisting(deposit_amount: anchor.BN, marketPDA: PublicKey, user: User, token: Token, oracle: PublicKey, active_positions: Token[]) {    
   const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = [];
-  remainingAccounts.push({
-    pubkey: token.bank[0], // Use the first token account from the user's token accounts
-    isWritable: true,
-    isSigner: false,
-  });
-  remainingAccounts.push({
-    pubkey: oracle, // Use the first token account from the user's token accounts
-    isWritable: true,
-    isSigner: false,
-  });
+  if (active_positions.length > 0) {
+    for (const position of active_positions) {
+      remainingAccounts.push({
+        pubkey: position.bank[0], // Use the first bank from the token object
+        isWritable: true,
+        isSigner: false,
+      });
+      remainingAccounts.push({
+        pubkey: oracle, // Use the first vault from the token object
+        isWritable: true,
+        isSigner: false,
+      });
+    }
+  }
 
   const tx = await program.methods
       .tokenDeposit(deposit_amount, false)
@@ -61,12 +67,13 @@ export async function tokenDepositIntoExisting(deposit_amount: anchor.BN, market
       market: marketPDA,
       account: user.peachAccount,
       owner: user.wallet.publicKey,
+      mint: token.mint, // Use the mint from the token object
       bank: token.bank[0], // Use the first bank from the token object
       vault: token.vault[0], // Use the first vault from the token object
       oracle: oracle,
       tokenAccount: user.tokenAccounts[token.tokenIndex-1], 
       tokenAuthority: user.wallet.publicKey,
-      tokenProgram: TOKEN_PROGRAM_ID,
+      tokenProgram: token.programId,
       })
     .remainingAccounts(remainingAccounts)
       .signers([user.wallet])
@@ -75,8 +82,24 @@ export async function tokenDepositIntoExisting(deposit_amount: anchor.BN, market
   return tx;
 }
 
-export async function tokenForceWithdraw(marketPDA: PublicKey, user: User, token: Token, oracle: PublicKey) {
-    const envProviderPayer = (provider.wallet as NodeWallet).payer;
+export async function tokenForceWithdraw(marketPDA: PublicKey, user: User, token: Token, oracle: PublicKey, active_positions: Token[]) {
+  const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = [];
+  if (active_positions.length > 0) {
+    for (const position of active_positions) {
+      remainingAccounts.push({
+        pubkey: position.bank[0], // Use the first bank from the token object
+        isWritable: true,
+        isSigner: false,
+      });
+      remainingAccounts.push({
+        pubkey: oracle, // Use the first vault from the token object
+        isWritable: true,
+        isSigner: false,
+      });
+    }
+  }  
+
+  const envProviderPayer = (provider.wallet as NodeWallet).payer;
 
     const tx = await program.methods
         .tokenForceWithdraw()
@@ -84,11 +107,12 @@ export async function tokenForceWithdraw(marketPDA: PublicKey, user: User, token
         market: marketPDA,
         account: user.peachAccount,
         ownerAtaTokenAccount: user.tokenAccounts[token.tokenIndex-1],
-        alternateOwnerTokenAccount: user.tokenAccounts[token.tokenIndex-1],
+        alternateOwnerTokenAccount: user.tokenAccounts[token.tokenIndex - 1],
+        mint: token.mint, // Use the mint from the token object
         bank: token.bank[0], // Use the first bank from the token object
         vault: token.vault[0], // Use the first vault from the token object
         oracle: oracle,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: token.programId,
         })
         .signers([envProviderPayer])
         .rpc();
@@ -96,22 +120,23 @@ export async function tokenForceWithdraw(marketPDA: PublicKey, user: User, token
     return tx;
 }
 
-export async function tokenWithdraw(withdraw_amount: anchor.BN, marketPDA: PublicKey, user: User, token: Token, oracle: PublicKey, is_borrw: boolean) {
+export async function tokenWithdraw(withdraw_amount: anchor.BN, marketPDA: PublicKey, user: User, token: Token, oracle: PublicKey, active_positions: Token[]) {
   const envProviderPayer = (provider.wallet as NodeWallet).payer;
   
-  let remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = [];
-  if(is_borrw) {
-    // If is_borrw is true, we need to add the user's token account as a writable account
-    remainingAccounts.push({
-      pubkey: token.bank[0], // Use the first token account from the user's token accounts
-      isWritable: true,
-      isSigner: false,
-    });
-    remainingAccounts.push({
-      pubkey: oracle, // Use the first token account from the user's token accounts
-      isWritable: true,
-      isSigner: false,
-    });
+  const remainingAccounts: { pubkey: PublicKey; isWritable: boolean; isSigner: boolean }[] = [];
+  if (active_positions.length > 0) {
+    for (const position of active_positions) {
+      remainingAccounts.push({
+        pubkey: position.bank[0], // Use the first bank from the token object
+        isWritable: true,
+        isSigner: false,
+      });
+      remainingAccounts.push({
+        pubkey: oracle, // Use the first vault from the token object
+        isWritable: true,
+        isSigner: false,
+      });
+    }
   }
 
     const tx = await program.methods
@@ -120,11 +145,12 @@ export async function tokenWithdraw(withdraw_amount: anchor.BN, marketPDA: Publi
         market: marketPDA,
         account: user.peachAccount,
         owner: user.wallet.publicKey,
+        mint: token.mint, // Use the mint from the token object
         bank: token.bank[0], // Use the first bank from the token object
         vault: token.vault[0], // Use the first vault from the token object
         oracle: oracle,
         tokenAccount: user.tokenAccounts[token.tokenIndex-1], // Use the first token account from the user's token accounts
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: token.programId,
         })
         .remainingAccounts(remainingAccounts)
         .signers([user.wallet])
