@@ -13,7 +13,26 @@ no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
-default = []
+default = ["idl-build"]
+solana-sdk = []
+client = []
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+mainnet = []
 
 [dependencies]
-anchor-lang = "0.29.0"
+anchor-lang = { version = "0.31.1", default-features = false, features = ["derive", "init-if-needed", "event-cpi"] }
+anchor-spl = "0.31.1"
+bytemuck = { version = "^1.7.2", features = ["min_const_generics"] }
+derivative = "2.2.0"
+fixed = { git = "https://github.com/blockworks-foundation/fixed.git", branch = "v1.11.0-borsh0_10-mango", features = ["serde", "borsh", "debug-assert-in-release"] }
+static_assertions = "1.1"
+arrayref = "0.3.6"
+pyth-sdk-solana = "0.10.0"
+pyth-solana-receiver-sdk = "0.3.0"
+proc-macro2 = "^1.0.89"
+
+[dev-dependencies]
+num = "0.4.0"

@@ -1,0 +1,354 @@
+use anchor_lang::prelude::*;
+use anchor_spl::token_interface;
+// use anchor_spl::token;
+// use anchor_spl::token::Token;
+// use anchor_spl::token::TokenAccount;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use fixed::types::I80F48;
+
+use crate::health::*;
+use crate::accounts_zerocopy::AccountInfoRef;
+use crate::error::*;
+use crate::state::*;
+
+use crate::logs::*;
+use crate::util::clock_now;
+
+struct DepositCommon<'a, 'info> {
+    pub market: &'a AccountLoader<'info, Market>,
+    pub account: &'a AccountLoader<'info, PeachAccountFixed>,
+    pub mint: &'a InterfaceAccount<'info, Mint>,
+    pub bank: &'a AccountLoader<'info, Bank>,
+    pub vault: &'a InterfaceAccount<'info, TokenAccount>,
+    pub oracle: &'a UncheckedAccount<'info>,
+    pub token_account: &'a Box<InterfaceAccount<'info, TokenAccount>>,
+    pub token_authority: &'a Signer<'info>,
+    pub token_program: &'a Interface<'info, TokenInterface>,
+}
+
+impl<'a, 'info> DepositCommon<'a, 'info> {
+    fn transfer_ctx(&self) -> CpiContext<'_, '_, '_, 'info, token_interface::TransferChecked<'info>> {
+        let program = self.token_program.to_account_info();
+        let accounts = token_interface::TransferChecked {
+            from: self.token_account.to_account_info(),
+            to: self.vault.to_account_info(),
+            authority: self.token_authority.to_account_info(),
+            mint: self.mint.to_account_info(),
+        };
+        CpiContext::new(program, accounts)
+    }
+
+    fn deposit_into_existing(
+        &self,
+        remaining_accounts: &[AccountInfo],
+        amount: u64,
+        reduce_only: bool,
+        allow_token_account_closure: bool,
+        kamino_cpi: bool,
+    ) -> Result<()> {
+        require!(amount > 0, PeachError::InvalidAmount);
+
+        let mut bank = self.bank.load_mut()?;
+        let token_index = bank.token_index;
+
+        let amount_i80f48 = {
+            // Get the account's position for that token index
+            let account = self.account.load_full()?;
+            let position = account.token_position(token_index)?;
+
+            let amount_i80f48 = if reduce_only || bank.are_deposits_reduce_only() {
+                position
+                    .native(&bank)
+                    .min(I80F48::ZERO)
+                    .abs()
+                    .ceil()
+                    .min(I80F48::from(amount))
+            } else {
+                I80F48::from(amount)
+            };
+            if bank.are_deposits_reduce_only() {
+                require!(
+                    reduce_only || amount_i80f48 == I80F48::from(amount),
+                    PeachError::TokenInReduceOnlyMode
+                );
+            }
+            amount_i80f48
+        };
+
+        // Get the account's position for that token index
+        let mut account = self.account.load_full_mut()?;
+
+        let (position, raw_token_index) = account.token_position_mut(token_index)?;
+
+        let position_is_active = {
+            bank.deposit(
+                position,
+                amount_i80f48,
+                Clock::get()?.unix_timestamp.try_into().unwrap(),
+            )?
+        };
+
+        if !kamino_cpi{
+            // Transfer the actual tokens to our vault. Incase of a kamino_cpi, the
+            // tokens are already transferred via the kamino cpi.
+            token_interface::transfer_checked(self.transfer_ctx(), amount_i80f48.to_num::<u64>(), bank.mint_decimals)?;
+        }
+
+        let indexed_position = position.indexed_position;
+
+        // Get the oracle price, even if stale or unconfident: We want to allow users
+        // to deposit to close borrows or do other fixes even if the oracle is bad.
+        let oracle_ref = &AccountInfoRef::borrow(self.oracle.as_ref())?;
+        let unsafe_oracle_state = oracle_state_unchecked(
+            &OracleAccountInfos::from_reader(oracle_ref),
+            bank.mint_decimals,
+        )?;
+        let unsafe_oracle_price = unsafe_oracle_state.price;
+
+        // If increasing total deposits, check deposit limits
+        if indexed_position.is_positive() {
+            bank.check_deposit_and_oo_limit()?;
+        }
+
+        // Update the net deposits - adjust by price so different tokens are on the same basis (in USD terms)
+        let amount_usd = (amount_i80f48 * unsafe_oracle_price).to_num::<i64>();
+        account.fixed.net_deposits += amount_usd;
+
+        emit_stack(TokenBalanceLog {
+            peach_market: self.market.key(),
+            peach_account: self.account.key(),
+            token_index: token_index.0,
+            indexed_position: indexed_position.0,
+            deposit_index: bank.deposit_index.0,
+            borrow_index: bank.borrow_index.0,
+        });
+        drop(bank);
+
+        //
+        // Health computation
+        //
+        let (now_ts, now_slot) = clock_now();
+        let retriever = new_fixed_order_account_retriever_with_optional_banks(
+            remaining_accounts,
+            &account.borrow(),
+            (now_ts, now_slot),
+        )?;
+
+        // We only compute health to check if the account leaves the being_liquidated state.
+        // So it's ok to possibly skip nonnegative token positions and compute a health
+        // value that is too low.
+        let cache = new_health_cache_skipping_missing_banks_and_bad_oracles(
+            &account.borrow(),
+            &retriever,
+            now_ts,
+        )?;
+
+        // Since depositing can only increase health, we can skip the usual pre-health computation.
+        // Also, TokenDeposit is one of the rare instructions that is allowed even during being_liquidated.
+        // Being in a health region always means being_liquidated is false, so it's safe to gate the check.
+        let was_being_liquidated = account.being_liquidated();
+        if !account.fixed.is_in_health_region() && was_being_liquidated {
+            let health = cache.health(HealthType::LiquidationEnd);
+            msg!("health: {}", health);
+            // Only compute health and check for recovery if not already being liquidated
+
+            let recovered = account.fixed.maybe_recover_from_being_liquidated(health);
+            require!(recovered, PeachError::DepositsIntoLiquidatingMustRecover);
+        }
+
+        // Market level deposit limit on account
+        let market = self.market.load()?;
+        if market.deposit_limit_quote > 0 {
+            // Requires that all banks were provided and all oracles are healthy, otherwise we
+            // can't know how much this account has deposited
+            require_eq!(
+                cache.token_infos.len(),
+                account.active_token_positions().count()
+            );
+
+            let assets = cache
+                .health_assets_and_liabs_stable_assets(HealthType::Init)
+                .0
+                .round_to_zero()
+                .to_num::<u64>();
+            require_msg_typed!(
+                assets <= market.deposit_limit_quote,
+                PeachError::DepositLimit,
+                "assets ({}) can't cross deposit limit on the market ({})",
+                assets,
+                market.deposit_limit_quote
+            );
+        }
+
+        //
+        // Deactivate the position only after the health check because the user passed in
+        // remaining_accounts for all banks/oracles, including the account that will now be
+        // deactivated.
+        // Deposits can deactivate a position if they cancel out a previous borrow.
+        //
+        if allow_token_account_closure && !position_is_active {
+            account.deactivate_token_position_and_log(raw_token_index, self.account.key());
+        }
+
+        emit_stack(DepositLog {
+            peach_market: self.market.key(),
+            peach_account: self.account.key(),
+            signer: self.token_authority.key(),
+            token_index: token_index.0,
+            quantity: amount_i80f48.to_num::<u64>(),
+            price: unsafe_oracle_price.to_bits(),
+        });
+
+        Ok(())
+    }
+}
+
+pub fn token_deposit(ctx: Context<TokenDeposit>, amount: u64, reduce_only: bool) -> Result<()> {
+    {
+        let token_index = ctx.accounts.bank.load()?.token_index;
+        let mut account = ctx.accounts.account.load_full_mut()?;
+
+        let token_position_exists = account
+            .all_token_positions()
+            .any(|p| p.is_active_for_token(token_index));
+
+        // Activating a new token position requires that the oracle is in a good state.
+        // Otherwise users could abuse oracle staleness to delay liquidation.
+        if !token_position_exists {
+            let (now_ts, now_slot) =
+                Clock::get().map(|c| (c.unix_timestamp as u64, c.slot as u64))?;
+            let bank = ctx.accounts.bank.load()?;
+
+            let oracle_ref = &AccountInfoRef::borrow(ctx.accounts.oracle.as_ref())?;
+            let oracle_result = bank.oracle_price(
+                &OracleAccountInfos::from_reader(oracle_ref),
+                Some((now_ts, now_slot)),
+            );
+            if let Err(e) = oracle_result {
+                msg!("oracle must be valid when creating a new token position");
+                return Err(e);
+            }
+
+            account.ensure_token_position(token_index, 0)?;
+        }
+    }
+
+    DepositCommon {
+        market: &ctx.accounts.market,
+        account: &ctx.accounts.account,
+        mint: &ctx.accounts.mint,
+        bank: &ctx.accounts.bank,
+        vault: &ctx.accounts.vault,
+        oracle: &ctx.accounts.oracle,
+        token_account: &ctx.accounts.token_account,
+        token_authority: &ctx.accounts.token_authority,
+        token_program: &ctx.accounts.token_program,
+    }
+    .deposit_into_existing(ctx.remaining_accounts, amount, reduce_only, true, false)
+}
+
+pub fn token_deposit_into_existing(
+    ctx: Context<TokenDepositIntoExisting>,
+    amount: u64,
+    reduce_only: bool,
+) -> Result<()> {
+    DepositCommon {
+        market: &ctx.accounts.market,
+        account: &ctx.accounts.account,
+        mint: &ctx.accounts.mint,
+        bank: &ctx.accounts.bank,
+        vault: &ctx.accounts.vault,
+        oracle: &ctx.accounts.oracle,
+        token_account: &ctx.accounts.token_account,
+        token_authority: &ctx.accounts.token_authority,
+        token_program: &ctx.accounts.token_program,
+    }
+    .deposit_into_existing(ctx.remaining_accounts, amount, reduce_only, false, false) 
+}
+
+// Same as TokenDeposit, but without the owner signing
+#[derive(Accounts)]
+pub struct TokenDepositIntoExisting<'info> {
+    #[account(
+        constraint = market.load()?.is_ix_enabled(IxGate::TokenDeposit) @ PeachError::IxIsDisabled,
+    )]
+    pub market: AccountLoader<'info, Market>,
+
+    #[account(
+        mut,
+        has_one = market,
+        constraint = account.load()?.is_operational() @ PeachError::AccountIsFrozen
+    )]
+    pub account: AccountLoader<'info, PeachAccountFixed>,
+
+    #[account(
+        mint::token_program = token_program,
+    )]
+    pub mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
+        mut,
+        has_one = market,
+        has_one = vault,
+        has_one = oracle,
+        // the mints of bank/vault/token_account are implicitly the same because
+        // spl::token::transfer succeeds between token_account and vault
+    )]
+    pub bank: AccountLoader<'info, Bank>,
+
+    #[account(mut)]
+    pub vault: InterfaceAccount<'info, TokenAccount>,
+
+    /// CHECK: The oracle can be one of several different account types
+    pub oracle: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    pub token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub token_authority: Signer<'info>,
+
+    pub token_program: Interface<'info, TokenInterface>,
+}
+
+#[derive(Accounts)]
+pub struct TokenDeposit<'info> {
+    #[account(
+        constraint = market.load()?.is_ix_enabled(IxGate::TokenDeposit) @ PeachError::IxIsDisabled,
+    )]
+    pub market: AccountLoader<'info, Market>,
+
+    #[account(
+        mut,
+        has_one = market,
+        constraint = account.load()?.is_operational() @ PeachError::AccountIsFrozen,
+        // constraint = account.load()?.is_owner_or_delegate(owner.key()),
+    )]
+    pub account: AccountLoader<'info, PeachAccountFixed>,
+    pub owner: Signer<'info>,
+
+    #[account(
+        mint::token_program = token_program,
+    )]
+    pub mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
+        mut,
+        has_one = market,
+        has_one = vault,
+        has_one = oracle,
+        // the mints of bank/vault/token_account are implicitly the same because
+        // spl::token::transfer succeeds between token_account and vault
+    )]
+    pub bank: AccountLoader<'info, Bank>,
+
+    #[account(mut)]
+    pub vault: InterfaceAccount<'info, TokenAccount>,
+
+    /// CHECK: The oracle can be one of several different account types
+    pub oracle: UncheckedAccount<'info>,
+
+    #[account(mut)]
+    pub token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub token_authority: Signer<'info>,
+
+    pub token_program: Interface<'info, TokenInterface>,
+}
