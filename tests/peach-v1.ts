@@ -397,7 +397,7 @@ describe("peach-v1", () => {
       });
 
       // NOTE: Skip this test once passed. As Kamino will return error if the user metadata already exists
-      it.skip("Init User MetaData", async () => {
+      it("Init User MetaData", async () => {
         try {
           await kaminoInitUserMetadata(user1, market);
 
@@ -411,7 +411,7 @@ describe("peach-v1", () => {
       });
 
       // NOTE: Skip this test once passed. As Kamino will return error if the obligation already exists
-      it.skip("Init Obligation", async () => {
+      it("Init Obligation", async () => {
         try {
           await kaminoInitObligation(user1, market, args);
 
@@ -427,7 +427,7 @@ describe("peach-v1", () => {
       });
 
       // Note: Skip this test once passed. As Kamino will return error if obligation farms already exists
-      it.skip("Init User Obligation Farm for Reserve", async () => {
+      it("Init User Obligation Farm for Reserve", async () => {
         try {
           // Here we use usdc as collateral and pyusd as debt. 
           // Incase of any deposit initialize the collateral farm using mode 0

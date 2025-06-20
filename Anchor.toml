@@ -11,7 +11,7 @@ peach_v1 = "EYz3GPbE1qoXS3i4ziRmfyTQgVjZt3ymMxYKZZiEaEED"
 peach_v1 = "EYz3GPbE1qoXS3i4ziRmfyTQgVjZt3ymMxYKZZiEaEED"
 
 [programs.mainnet]
-peach_v1 = "EpQgoikyN55Tj5dZy4Ts1QLpfxjqWjPqfj9ibt68Pd2s"
+peach_v1 = "6tizQiu8Ht5LPFL7VKKjUC2D1UpAwevvzP6DNe7bhMki"
 
 [registry]
 url = "https://api.apr.dev"
