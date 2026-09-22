@@ -1,4 +1,4 @@
-# 🍑 Peach Markets
+# 🍑 Peach V1
 Peach V1 is a Solana-based decentralized finance (DeFi) protocol designed to provide efficient lending and borrowing operations.  
 
 
