@@ -132,7 +132,8 @@ export async function registerTokenWithPyth(
 ): Promise<string> {
   const payer = args.payer ?? args.admin.publicKey;
   const vaultIx = await (peach.methods as any)
-    .tokenVaultCreate(args.tokenIndex)
+    // TokenIndex is a transparent newtype: the coder expects { 0: n }.
+    .tokenVaultCreate({ 0: args.tokenIndex })
     .accounts({
       market: args.market,
       admin: args.admin.publicKey,
@@ -149,7 +150,7 @@ export async function registerTokenWithPyth(
   // both oracle and fallback, and a mainnet-sensible staleness window.
   const registerIx = await (peach.methods as any)
     .tokenRegister(
-      args.tokenIndex,
+      { 0: args.tokenIndex },
       args.name,
       { confFilter: 0.1, maxStalenessSlots: 60 },
       {

@@ -1,136 +1,136 @@
-// use fixed::types::I80F48;
+use fixed::types::I80F48;
 
-// pub trait ClampToInt {
-//     fn clamp_to_i64(&self) -> i64;
-//     fn clamp_to_u64(&self) -> u64;
-// }
+pub trait ClampToInt {
+    fn clamp_to_i64(&self) -> i64;
+    fn clamp_to_u64(&self) -> u64;
+}
 
-// impl ClampToInt for I80F48 {
-//     fn clamp_to_i64(&self) -> i64 {
-//         if *self <= i64::MIN {
-//             i64::MIN
-//         } else if *self >= i64::MAX {
-//             i64::MAX
-//         } else {
-//             self.to_num::<i64>()
-//         }
-//     }
+impl ClampToInt for I80F48 {
+    fn clamp_to_i64(&self) -> i64 {
+        if *self <= i64::MIN {
+            i64::MIN
+        } else if *self >= i64::MAX {
+            i64::MAX
+        } else {
+            self.to_num::<i64>()
+        }
+    }
 
-//     fn clamp_to_u64(&self) -> u64 {
-//         if *self <= 0 {
-//             0
-//         } else if *self >= u64::MAX {
-//             u64::MAX
-//         } else {
-//             self.to_num::<u64>()
-//         }
-//     }
-// }
+    fn clamp_to_u64(&self) -> u64 {
+        if *self <= 0 {
+            0
+        } else if *self >= u64::MAX {
+            u64::MAX
+        } else {
+            self.to_num::<u64>()
+        }
+    }
+}
 
-// impl ClampToInt for f64 {
-//     fn clamp_to_i64(&self) -> i64 {
-//         if *self <= i64::MIN as f64 {
-//             i64::MIN
-//         } else if *self >= i64::MAX as f64 {
-//             i64::MAX
-//         } else {
-//             *self as i64
-//         }
-//     }
+impl ClampToInt for f64 {
+    fn clamp_to_i64(&self) -> i64 {
+        if *self <= i64::MIN as f64 {
+            i64::MIN
+        } else if *self >= i64::MAX as f64 {
+            i64::MAX
+        } else {
+            *self as i64
+        }
+    }
 
-//     fn clamp_to_u64(&self) -> u64 {
-//         if *self <= 0.0 {
-//             0
-//         } else if *self >= u64::MAX as f64 {
-//             u64::MAX
-//         } else {
-//             *self as u64
-//         }
-//     }
-// }
+    fn clamp_to_u64(&self) -> u64 {
+        if *self <= 0.0 {
+            0
+        } else if *self >= u64::MAX as f64 {
+            u64::MAX
+        } else {
+            *self as u64
+        }
+    }
+}
 
-// impl ClampToInt for u64 {
-//     fn clamp_to_i64(&self) -> i64 {
-//         if *self >= i64::MAX as u64 {
-//             i64::MAX
-//         } else {
-//             *self as i64
-//         }
-//     }
+impl ClampToInt for u64 {
+    fn clamp_to_i64(&self) -> i64 {
+        if *self >= i64::MAX as u64 {
+            i64::MAX
+        } else {
+            *self as i64
+        }
+    }
 
-//     fn clamp_to_u64(&self) -> u64 {
-//         *self
-//     }
-// }
+    fn clamp_to_u64(&self) -> u64 {
+        *self
+    }
+}
 
-// pub trait LowPrecisionDivision {
-//     fn checked_div_30bit_precision(&self, rhs: I80F48) -> Option<I80F48>;
-//     fn checked_div_f64_precision(&self, rhs: I80F48) -> Option<I80F48>;
-// }
+pub trait LowPrecisionDivision {
+    fn checked_div_30bit_precision(&self, rhs: I80F48) -> Option<I80F48>;
+    fn checked_div_f64_precision(&self, rhs: I80F48) -> Option<I80F48>;
+}
 
-// impl LowPrecisionDivision for I80F48 {
-//     /// Divide by taking the top 64 bits of self, and top 32 bits of rhs. Then divide
-//     /// those as u64 and shift everything back. Leads to a division result that has the
-//     /// first 30 bits correct.
-//     fn checked_div_30bit_precision(&self, rhs: I80F48) -> Option<I80F48> {
-//         let a = self;
-//         let b = rhs;
+impl LowPrecisionDivision for I80F48 {
+    /// Divide by taking the top 64 bits of self, and top 32 bits of rhs. Then divide
+    /// those as u64 and shift everything back. Leads to a division result that has the
+    /// first 30 bits correct.
+    fn checked_div_30bit_precision(&self, rhs: I80F48) -> Option<I80F48> {
+        let a = self;
+        let b = rhs;
 
-//         if b.is_zero() {
-//             return None;
-//         }
+        if b.is_zero() {
+            return None;
+        }
 
-//         let a_neg = a.is_negative();
-//         let b_neg = b.is_negative();
-//         let r_neg = a_neg ^ b_neg;
+        let a_neg = a.is_negative();
+        let b_neg = b.is_negative();
+        let r_neg = a_neg ^ b_neg;
 
-//         let an_bits = if a_neg { -a.to_bits() } else { a.to_bits() } as u128;
-//         let bn_bits = if b_neg { -b.to_bits() } else { b.to_bits() } as u128;
+        let an_bits = if a_neg { -a.to_bits() } else { a.to_bits() } as u128;
+        let bn_bits = if b_neg { -b.to_bits() } else { b.to_bits() } as u128;
 
-//         let an_zeros = an_bits.leading_zeros();
-//         let bn_zeros = bn_bits.leading_zeros();
+        let an_zeros = an_bits.leading_zeros();
+        let bn_zeros = bn_bits.leading_zeros();
 
-//         // shift (positive means to the left) and
-//         // ar has the high bit be 1
-//         let (an_shift, ar) = if an_zeros >= 64 {
-//             let s = an_zeros - 64;
-//             (s as i32, (an_bits << s) as u64)
-//         } else {
-//             let s = 64 - an_zeros;
-//             (-(s as i32), (an_bits >> s) as u64)
-//         };
+        // shift (positive means to the left) and
+        // ar has the high bit be 1
+        let (an_shift, ar) = if an_zeros >= 64 {
+            let s = an_zeros - 64;
+            (s as i32, (an_bits << s) as u64)
+        } else {
+            let s = 64 - an_zeros;
+            (-(s as i32), (an_bits >> s) as u64)
+        };
 
-//         // br has the first u32 be zero
-//         let (bn_shift, br) = if bn_zeros >= 96 {
-//             (0, bn_bits as u64)
-//         } else {
-//             let s = 96 - bn_zeros;
-//             (-(s as i32), (bn_bits >> s) as u64)
-//         };
+        // br has the first u32 be zero
+        let (bn_shift, br) = if bn_zeros >= 96 {
+            (0, bn_bits as u64)
+        } else {
+            let s = 96 - bn_zeros;
+            (-(s as i32), (bn_bits >> s) as u64)
+        };
 
-//         let rr = ar / br;
-//         let s = 48 + bn_shift - an_shift;
-//         let rr_zeros = rr.leading_zeros() as i32;
-//         let r = if 63 + rr_zeros < s {
-//             return None; // overflow
-//         } else if s >= 0 {
-//             (rr as u128) << s
-//         } else {
-//             (rr as u128) >> (-s)
-//         };
+        let rr = ar / br;
+        let s = 48 + bn_shift - an_shift;
+        let rr_zeros = rr.leading_zeros() as i32;
+        let r = if 63 + rr_zeros < s {
+            return None; // overflow
+        } else if s >= 0 {
+            (rr as u128) << s
+        } else {
+            (rr as u128) >> (-s)
+        };
 
-//         Some(I80F48::from_bits(if r_neg {
-//             -(r as i128)
-//         } else {
-//             r as i128
-//         }))
-//     }
+        Some(I80F48::from_bits(if r_neg {
+            -(r as i128)
+        } else {
+            r as i128
+        }))
+    }
 
-//     /// Convert to f64 and divide those.
-//     fn checked_div_f64_precision(&self, rhs: I80F48) -> Option<I80F48> {
-//         I80F48::checked_from_num(self.to_num::<f64>() / rhs.to_num::<f64>())
-//     }
-// }
+    /// Convert to f64 and divide those.
+    fn checked_div_f64_precision(&self, rhs: I80F48) -> Option<I80F48> {
+        I80F48::checked_from_num(self.to_num::<f64>() / rhs.to_num::<f64>())
+    }
+}
 
 // #[cfg(test)]
 // mod tests {

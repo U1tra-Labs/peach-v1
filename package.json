@@ -6,7 +6,9 @@
         "keeper:example": "ts-node keeper/src/exampleMainnetDeposit.ts"
     },
     "dependencies": {
-        "@coral-xyz/anchor": "^0.29.0",
+        "@coral-xyz/anchor": "0.31.1",
+        "@kamino-finance/klend-sdk": "^5.13.23",
+        "@pythnetwork/client": "^2.22.1",
         "@pythnetwork/hermes-client": "^3.1.0",
         "@pythnetwork/pyth-solana-receiver": "^0.16.0",
         "@solana/spl-token": "^0.4.12",

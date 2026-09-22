@@ -1,16 +1,21 @@
-# Testing Peach V1
+# 🍑 Testing Peach V1
 
-## Running Tests
-Ensure your environment is set up before running tests.
+This guide walks you through running tests for the **Peach V1** Anchor program across local, devnet, and mainnet environments.
 
-```sh
+### 🧪 Running Tests Locally or on Devnet
+
+Ensure your environment is properly set up.
+
+To build, deploy, and run tests locally or on devnet:
+
+```bash
 anchor test
 ```
 
-## Mainnet Pyth Prices (keeper bot)
+### 🛰️ Mainnet Pyth Prices (keeper bot)
 
-User transactions (`token_deposit`, `token_withdraw`) read the oracle stored in
-`Bank.oracle`. For **real Pyth prices on mainnet-beta**:
+User transactions (`token_deposit`, `token_withdraw`, Kamino flows) read the
+oracle stored in `Bank.oracle`. For **real Pyth prices on mainnet-beta**:
 
 1. Register each token with `oracle` = the Pyth price-feed PDA for its mint
    (see `keeper/src/pythFeeds.ts` for feed IDs, `priceFeedPda()` in
@@ -29,4 +34,86 @@ User transactions (`token_deposit`, `token_withdraw`) read the oracle stored in
 
 Full runbook: [keeper/README.md](keeper/README.md). Test helper:
 `tests/helpers/pyth.ts`.
+
+### 🌐 Mainnet Testing
+
+#### 1. Set the Solana Cluster to Mainnet
+(Replace <MAINNET_RPC_URL> in double quotes)
+```bash
+solana config set --url <MAINNET_RPC_URL>
+```
+
+#### 2. Generate a Program Keypair for Mainnet
+
+```bash
+solana-keygen new -o ./target/deploy/peach_v1_mainnet-keypair.json
+```
+
+#### 3. Update Program ID
+
+Copy the new program ID into both:
+
+* `Anchor.toml`
+* `programs/peach-v1/src/lib.rs`
+
+Change cluster to mainnet (with api-key if using custom rpc) in Anchor.toml
+
+#### 4. Build the Program
+
+```bash
+anchor build
+```
+
+#### 5. Deploy to Mainnet
+
+```bash
+solana program deploy ./target/deploy/peach_v1.so --program-id ./target/deploy/peach_v1_mainnet-keypair.json
+```
+
+#### If Deployment Fails
+
+You can resume the deploy using the buffer:
+
+1. Recover the buffer keypair:
+
+   ```bash
+   solana-keygen recover --outfile keypair.json
+   ```
+
+   > You’ll be prompted to enter the seed phrase.
+
+2. Resume deployment:
+
+   ```bash
+   solana program deploy ./target/deploy/peach_v1.so --program-id ./target/deploy/peach_v1_mainnet-keypair.json --buffer keypair.json
+   ```
+
+### ✅ Running Mainnet Tests
+
+```bash
+anchor run test
+```
+
+#### Tip: Skipping Tests
+
+You can skip individual tests using `.skip` in your test file:
+
+```ts
+it.skip("skips this test", async () => { ... });
+```
+
+Or skip an entire block:
+
+```ts
+describe.skip("skips this block", () => { ... });
+```
+
+### 💸 Recovering SOL: Close Accounts
+
+After testing, close the program and buffer accounts to reclaim SOL:
+
+```bash
+solana program close <PROGRAM_ID> --bypass warnings
+solana program close --buffers
+```
 ```
