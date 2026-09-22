@@ -18,4 +18,5 @@ cd peach-v1
 
 ### 📜 Documentation
 - [Testing](TESTING.md) – Guide to running tests.
+- [Pyth Keeper Bot](keeper/README.md) – Keep live Pyth pull-oracle prices on Solana mainnet-beta for user transactions.
 
