@@ -4,10 +4,14 @@ import * as anchor from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 // Function to create a market
-export async function marketCreate(marketPDA: PublicKey, marketNum: number, owner: Keypair) {
+export async function marketCreate(
+  marketPDA: PublicKey,
+  marketNum: number,
+  owner: Keypair
+) {
   const tx = await program.methods
-    .marketCreate(marketNum, 1, 0) 
-    .accounts({
+    .marketCreate(marketNum, 1, 0)
+    .accountsPartial({
       market: marketPDA,
       creator: owner.publicKey,
       payer: owner.publicKey,
@@ -21,8 +25,9 @@ export async function marketCreate(marketPDA: PublicKey, marketNum: number, owne
 }
 
 export async function marketClose(market: PublicKey, admin: Keypair) {
-  const tx = await program.methods.marketClose()
-    .accounts({
+  const tx = await program.methods
+    .marketClose()
+    .accountsPartial({
       market,
       admin: admin.publicKey,
       solDestination: envProviderPayer.publicKey,

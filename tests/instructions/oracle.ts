@@ -4,10 +4,16 @@ import { I80F48 } from "../helpers/I80F48";
 import { BN } from "@coral-xyz/anchor";
 
 // Function to create a stub oracle
-export async function createStubOracle(stubOracle: Keypair, marketPDA: PublicKey, mint: PublicKey, price: BN, owner: Keypair) {  
+export async function createStubOracle(
+  stubOracle: Keypair,
+  marketPDA: PublicKey,
+  mint: PublicKey,
+  price: BN,
+  owner: Keypair
+) {
   const tx = await program.methods
     .stubOracleCreate(price)
-    .accounts({
+    .accountsPartial({
       market: marketPDA,
       oracle: stubOracle.publicKey,
       admin: owner.publicKey,

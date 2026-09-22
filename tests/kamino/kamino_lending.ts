@@ -1,5250 +1,4626 @@
 export type KaminoLending = {
-  "address": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
-  "metadata": {
-    "name": "kamino_lending",
-    "version": "1.11.0",
-    "spec": "0.1.0"
-  },
-  "instructions": [
+  address: "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD";
+  metadata: {
+    name: "kaminoLending";
+    version: "1.11.0";
+    spec: "0.1.0";
+  };
+  instructions: [
     {
-      "name": "init_lending_market",
-      "discriminator": [
-        34,
-        162,
-        116,
-        14,
-        101,
-        137,
-        94,
-        239
-      ],
-      "accounts": [
+      name: "initLendingMarket";
+      discriminator: [34, 162, 116, 14, 101, 137, 94, 239];
+      accounts: [
         {
-          "name": "lending_market_owner",
-          "writable": true,
-          "signer": true
+          name: "lendingMarketOwner";
+          writable: true;
+          signer: true;
         },
         {
-          "name": "lending_market",
-          "writable": true
+          name: "lendingMarket";
+          writable: true;
         },
         {
-          "name": "lending_market_authority"
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "system_program"
+          name: "systemProgram";
         },
         {
-          "name": "rent"
+          name: "rent";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "quote_currency",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
+          name: "quoteCurrency";
+          type: {
+            array: ["u8", 32];
+          };
         }
-      ]
+      ];
     },
     {
-      "name": "update_lending_market",
-      "discriminator": [
-        209,
-        157,
-        53,
-        210,
-        97,
-        180,
-        31,
-        45
-      ],
-      "accounts": [
+      name: "updateLendingMarket";
+      discriminator: [209, 157, 53, 210, 97, 180, 31, 45];
+      accounts: [
         {
-          "name": "lending_market_owner",
-          "signer": true
+          name: "lendingMarketOwner";
+          signer: true;
         },
         {
-          "name": "lending_market",
-          "writable": true
+          name: "lendingMarket";
+          writable: true;
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "mode",
-          "type": "u64"
+          name: "mode";
+          type: "u64";
         },
         {
-          "name": "value",
-          "type": {
-            "array": [
-              "u8",
-              72
-            ]
-          }
+          name: "value";
+          type: {
+            array: ["u8", 72];
+          };
         }
-      ]
+      ];
     },
     {
-      "name": "update_lending_market_owner",
-      "discriminator": [
-        118,
-        224,
-        10,
-        62,
-        196,
-        230,
-        184,
-        89
-      ],
-      "accounts": [
+      name: "updateLendingMarketOwner";
+      discriminator: [118, 224, 10, 62, 196, 230, 184, 89];
+      accounts: [
         {
-          "name": "lending_market_owner_cached",
-          "signer": true
+          name: "lendingMarketOwnerCached";
+          signer: true;
         },
         {
-          "name": "lending_market",
-          "writable": true
+          name: "lendingMarket";
+          writable: true;
         }
-      ],
-      "args": []
+      ];
+      args: [];
     },
     {
-      "name": "init_reserve",
-      "discriminator": [
-        138,
-        245,
-        71,
-        225,
-        153,
-        4,
-        3,
-        43
-      ],
-      "accounts": [
+      name: "initReserve";
+      discriminator: [138, 245, 71, 225, 153, 4, 3, 43];
+      accounts: [
         {
-          "name": "lending_market_owner",
-          "writable": true,
-          "signer": true
+          name: "lendingMarketOwner";
+          writable: true;
+          signer: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "lending_market_authority"
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "reserve",
-          "writable": true
+          name: "reserve";
+          writable: true;
         },
         {
-          "name": "reserve_liquidity_mint"
+          name: "reserveLiquidityMint";
         },
         {
-          "name": "reserve_liquidity_supply",
-          "writable": true
+          name: "reserveLiquiditySupply";
+          writable: true;
         },
         {
-          "name": "fee_receiver",
-          "writable": true
+          name: "feeReceiver";
+          writable: true;
         },
         {
-          "name": "reserve_collateral_mint",
-          "writable": true
+          name: "reserveCollateralMint";
+          writable: true;
         },
         {
-          "name": "reserve_collateral_supply",
-          "writable": true
+          name: "reserveCollateralSupply";
+          writable: true;
         },
         {
-          "name": "initial_liquidity_source",
-          "writable": true
+          name: "initialLiquiditySource";
+          writable: true;
         },
         {
-          "name": "rent"
+          name: "rent";
         },
         {
-          "name": "liquidity_token_program"
+          name: "liquidityTokenProgram";
         },
         {
-          "name": "collateral_token_program"
+          name: "collateralTokenProgram";
         },
         {
-          "name": "system_program"
+          name: "systemProgram";
         }
-      ],
-      "args": []
+      ];
+      args: [];
     },
     {
-      "name": "init_farms_for_reserve",
-      "discriminator": [
-        218,
-        6,
-        62,
-        233,
-        1,
-        33,
-        232,
-        82
-      ],
-      "accounts": [
+      name: "initFarmsForReserve";
+      discriminator: [218, 6, 62, 233, 1, 33, 232, 82];
+      accounts: [
         {
-          "name": "lending_market_owner",
-          "writable": true,
-          "signer": true
+          name: "lendingMarketOwner";
+          writable: true;
+          signer: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "lending_market_authority"
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "reserve",
-          "writable": true
+          name: "reserve";
+          writable: true;
         },
         {
-          "name": "farms_program"
+          name: "farmsProgram";
         },
         {
-          "name": "farms_global_config"
+          name: "farmsGlobalConfig";
         },
         {
-          "name": "farm_state",
-          "writable": true
+          name: "farmState";
+          writable: true;
         },
         {
-          "name": "farms_vault_authority"
+          name: "farmsVaultAuthority";
         },
         {
-          "name": "rent"
+          name: "rent";
         },
         {
-          "name": "system_program"
+          name: "systemProgram";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "mode",
-          "type": "u8"
+          name: "mode";
+          type: "u8";
         }
-      ]
+      ];
     },
     {
-      "name": "update_reserve_config",
-      "discriminator": [
-        61,
-        148,
-        100,
-        70,
-        143,
-        107,
-        17,
-        13
-      ],
-      "accounts": [
+      name: "updateReserveConfig";
+      discriminator: [61, 148, 100, 70, 143, 107, 17, 13];
+      accounts: [
         {
-          "name": "lending_market_owner",
-          "signer": true
+          name: "lendingMarketOwner";
+          signer: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "reserve",
-          "writable": true
+          name: "reserve";
+          writable: true;
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "mode",
-          "type": "u64"
+          name: "mode";
+          type: "u64";
         },
         {
-          "name": "value",
-          "type": "bytes"
+          name: "value";
+          type: "bytes";
         },
         {
-          "name": "skip_validation",
-          "type": "bool"
+          name: "skipValidation";
+          type: "bool";
         }
-      ]
+      ];
     },
     {
-      "name": "redeem_fees",
-      "discriminator": [
-        215,
-        39,
-        180,
-        41,
-        173,
-        46,
-        248,
-        220
-      ],
-      "accounts": [
+      name: "redeemFees";
+      discriminator: [215, 39, 180, 41, 173, 46, 248, 220];
+      accounts: [
         {
-          "name": "reserve",
-          "writable": true
+          name: "reserve";
+          writable: true;
         },
         {
-          "name": "reserve_liquidity_mint"
+          name: "reserveLiquidityMint";
         },
         {
-          "name": "reserve_liquidity_fee_receiver",
-          "writable": true
+          name: "reserveLiquidityFeeReceiver";
+          writable: true;
         },
         {
-          "name": "reserve_supply_liquidity",
-          "writable": true
+          name: "reserveSupplyLiquidity";
+          writable: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "lending_market_authority"
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "token_program"
+          name: "tokenProgram";
         }
-      ],
-      "args": []
+      ];
+      args: [];
     },
     {
-      "name": "withdraw_protocol_fee",
-      "discriminator": [
-        158,
-        201,
-        158,
-        189,
-        33,
-        93,
-        162,
-        103
-      ],
-      "accounts": [
+      name: "withdrawProtocolFee";
+      discriminator: [158, 201, 158, 189, 33, 93, 162, 103];
+      accounts: [
         {
-          "name": "lending_market_owner",
-          "signer": true
+          name: "lendingMarketOwner";
+          signer: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "reserve"
+          name: "reserve";
         },
         {
-          "name": "reserve_liquidity_mint"
+          name: "reserveLiquidityMint";
         },
         {
-          "name": "lending_market_authority"
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "fee_vault",
-          "writable": true
+          name: "feeVault";
+          writable: true;
         },
         {
-          "name": "lending_market_owner_ata",
-          "writable": true
+          name: "lendingMarketOwnerAta";
+          writable: true;
         },
         {
-          "name": "token_program"
+          name: "tokenProgram";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "amount",
-          "type": "u64"
+          name: "amount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "socialize_loss",
-      "discriminator": [
-        245,
-        75,
-        91,
-        0,
-        236,
-        97,
-        19,
-        3
-      ],
-      "accounts": [
+      name: "socializeLoss";
+      discriminator: [245, 75, 91, 0, 236, 97, 19, 3];
+      accounts: [
         {
-          "name": "risk_council",
-          "signer": true
+          name: "riskCouncil";
+          signer: true;
         },
         {
-          "name": "obligation",
-          "writable": true
+          name: "obligation";
+          writable: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "reserve",
-          "writable": true
+          name: "reserve";
+          writable: true;
         },
         {
-          "name": "instruction_sysvar_account"
+          name: "instructionSysvarAccount";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "liquidity_amount",
-          "type": "u64"
+          name: "liquidityAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "socialize_loss_v2",
-      "discriminator": [
-        238,
-        95,
-        98,
-        220,
-        187,
-        40,
-        204,
-        154
-      ],
-      "accounts": [
+      name: "socializeLossV2";
+      discriminator: [238, 95, 98, 220, 187, 40, 204, 154];
+      accounts: [
         {
-          "name": "socialize_loss_accounts",
-          "accounts": [
+          name: "socializeLossAccounts";
+          accounts: [
             {
-              "name": "risk_council",
-              "signer": true
+              name: "riskCouncil";
+              signer: true;
             },
             {
-              "name": "obligation",
-              "writable": true
+              name: "obligation";
+              writable: true;
             },
             {
-              "name": "lending_market"
+              name: "lendingMarket";
             },
             {
-              "name": "reserve",
-              "writable": true
+              name: "reserve";
+              writable: true;
             },
             {
-              "name": "instruction_sysvar_account"
+              name: "instructionSysvarAccount";
             }
-          ]
+          ];
         },
         {
-          "name": "farms_accounts",
-          "accounts": [
+          name: "farmsAccounts";
+          accounts: [
             {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
             },
             {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
             }
-          ]
+          ];
         },
         {
-          "name": "lending_market_authority"
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "farms_program"
+          name: "farmsProgram";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "liquidity_amount",
-          "type": "u64"
+          name: "liquidityAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "mark_obligation_for_deleveraging",
-      "discriminator": [
-        164,
-        35,
-        182,
-        19,
-        0,
-        116,
-        243,
-        127
-      ],
-      "accounts": [
+      name: "markObligationForDeleveraging";
+      discriminator: [164, 35, 182, 19, 0, 116, 243, 127];
+      accounts: [
         {
-          "name": "risk_council",
-          "signer": true
+          name: "riskCouncil";
+          signer: true;
         },
         {
-          "name": "obligation",
-          "writable": true
+          name: "obligation";
+          writable: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "autodeleverage_target_ltv_pct",
-          "type": "u8"
+          name: "autodeleverageTargetLtvPct";
+          type: "u8";
         }
-      ]
+      ];
     },
     {
-      "name": "refresh_reserve",
-      "discriminator": [
-        2,
-        218,
-        138,
-        235,
-        79,
-        201,
-        25,
-        102
-      ],
-      "accounts": [
+      name: "refreshReserve";
+      discriminator: [2, 218, 138, 235, 79, 201, 25, 102];
+      accounts: [
         {
-          "name": "reserve",
-          "writable": true
+          name: "reserve";
+          writable: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "pyth_oracle",
-          "optional": true
+          name: "pythOracle";
+          optional: true;
         },
         {
-          "name": "switchboard_price_oracle",
-          "optional": true
+          name: "switchboardPriceOracle";
+          optional: true;
         },
         {
-          "name": "switchboard_twap_oracle",
-          "optional": true
+          name: "switchboardTwapOracle";
+          optional: true;
         },
         {
-          "name": "scope_prices",
-          "optional": true
+          name: "scopePrices";
+          optional: true;
         }
-      ],
-      "args": []
+      ];
+      args: [];
     },
     {
-      "name": "refresh_reserves_batch",
-      "discriminator": [
-        144,
-        110,
-        26,
-        103,
-        162,
-        204,
-        252,
-        147
-      ],
-      "accounts": [],
-      "args": [
+      name: "refreshReservesBatch";
+      discriminator: [144, 110, 26, 103, 162, 204, 252, 147];
+      accounts: [];
+      args: [
         {
-          "name": "skip_price_updates",
-          "type": "bool"
+          name: "skipPriceUpdates";
+          type: "bool";
         }
-      ]
+      ];
     },
     {
-      "name": "deposit_reserve_liquidity",
-      "discriminator": [
-        169,
-        201,
-        30,
-        126,
-        6,
-        205,
-        102,
-        68
-      ],
-      "accounts": [
+      name: "depositReserveLiquidity";
+      discriminator: [169, 201, 30, 126, 6, 205, 102, 68];
+      accounts: [
         {
-          "name": "owner",
-          "signer": true
+          name: "owner";
+          signer: true;
         },
         {
-          "name": "reserve",
-          "writable": true
+          name: "reserve";
+          writable: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "lending_market_authority"
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "reserve_liquidity_mint"
+          name: "reserveLiquidityMint";
         },
         {
-          "name": "reserve_liquidity_supply",
-          "writable": true
+          name: "reserveLiquiditySupply";
+          writable: true;
         },
         {
-          "name": "reserve_collateral_mint",
-          "writable": true
+          name: "reserveCollateralMint";
+          writable: true;
         },
         {
-          "name": "user_source_liquidity",
-          "writable": true
+          name: "userSourceLiquidity";
+          writable: true;
         },
         {
-          "name": "user_destination_collateral",
-          "writable": true
+          name: "userDestinationCollateral";
+          writable: true;
         },
         {
-          "name": "collateral_token_program"
+          name: "collateralTokenProgram";
         },
         {
-          "name": "liquidity_token_program"
+          name: "liquidityTokenProgram";
         },
         {
-          "name": "instruction_sysvar_account"
+          name: "instructionSysvarAccount";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "liquidity_amount",
-          "type": "u64"
+          name: "liquidityAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "redeem_reserve_collateral",
-      "discriminator": [
-        234,
-        117,
-        181,
-        125,
-        185,
-        142,
-        220,
-        29
-      ],
-      "accounts": [
+      name: "redeemReserveCollateral";
+      discriminator: [234, 117, 181, 125, 185, 142, 220, 29];
+      accounts: [
         {
-          "name": "owner",
-          "signer": true
+          name: "owner";
+          signer: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "reserve",
-          "writable": true
+          name: "reserve";
+          writable: true;
         },
         {
-          "name": "lending_market_authority"
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "reserve_liquidity_mint"
+          name: "reserveLiquidityMint";
         },
         {
-          "name": "reserve_collateral_mint",
-          "writable": true
+          name: "reserveCollateralMint";
+          writable: true;
         },
         {
-          "name": "reserve_liquidity_supply",
-          "writable": true
+          name: "reserveLiquiditySupply";
+          writable: true;
         },
         {
-          "name": "user_source_collateral",
-          "writable": true
+          name: "userSourceCollateral";
+          writable: true;
         },
         {
-          "name": "user_destination_liquidity",
-          "writable": true
+          name: "userDestinationLiquidity";
+          writable: true;
         },
         {
-          "name": "collateral_token_program"
+          name: "collateralTokenProgram";
         },
         {
-          "name": "liquidity_token_program"
+          name: "liquidityTokenProgram";
         },
         {
-          "name": "instruction_sysvar_account"
+          name: "instructionSysvarAccount";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "collateral_amount",
-          "type": "u64"
+          name: "collateralAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "init_obligation",
-      "discriminator": [
-        251,
-        10,
-        231,
-        76,
-        27,
-        11,
-        159,
-        96
-      ],
-      "accounts": [
+      name: "initObligation";
+      discriminator: [251, 10, 231, 76, 27, 11, 159, 96];
+      accounts: [
         {
-          "name": "obligation_owner",
-          "signer": true
+          name: "obligationOwner";
+          signer: true;
         },
         {
-          "name": "fee_payer",
-          "writable": true,
-          "signer": true
+          name: "feePayer";
+          writable: true;
+          signer: true;
         },
         {
-          "name": "obligation",
-          "writable": true
+          name: "obligation";
+          writable: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "seed1_account"
+          name: "seed1Account";
         },
         {
-          "name": "seed2_account"
+          name: "seed2Account";
         },
         {
-          "name": "owner_user_metadata"
+          name: "ownerUserMetadata";
         },
         {
-          "name": "rent"
+          name: "rent";
         },
         {
-          "name": "system_program"
+          name: "systemProgram";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "args",
-          "type": {
-            "defined": {
-              "name": "InitObligationArgs"
+          name: "args";
+          type: {
+            defined: {
+              name: "InitObligationArgs";
+            };
+          };
+        }
+      ];
+    },
+    {
+      name: "initObligationFarmsForReserve";
+      discriminator: [136, 63, 15, 186, 211, 152, 168, 164];
+      accounts: [
+        {
+          name: "payer";
+          writable: true;
+          signer: true;
+        },
+        {
+          name: "owner";
+        },
+        {
+          name: "obligation";
+          writable: true;
+        },
+        {
+          name: "lendingMarketAuthority";
+        },
+        {
+          name: "reserve";
+          writable: true;
+        },
+        {
+          name: "reserveFarmState";
+          writable: true;
+        },
+        {
+          name: "obligationFarm";
+          writable: true;
+        },
+        {
+          name: "lendingMarket";
+        },
+        {
+          name: "farmsProgram";
+        },
+        {
+          name: "rent";
+        },
+        {
+          name: "systemProgram";
+        }
+      ];
+      args: [
+        {
+          name: "mode";
+          type: "u8";
+        }
+      ];
+    },
+    {
+      name: "refreshObligationFarmsForReserve";
+      discriminator: [140, 144, 253, 21, 10, 74, 248, 3];
+      accounts: [
+        {
+          name: "crank";
+          signer: true;
+        },
+        {
+          name: "baseAccounts";
+          accounts: [
+            {
+              name: "obligation";
+            },
+            {
+              name: "lendingMarketAuthority";
+            },
+            {
+              name: "reserve";
+            },
+            {
+              name: "reserveFarmState";
+              writable: true;
+            },
+            {
+              name: "obligationFarmUserState";
+              writable: true;
+            },
+            {
+              name: "lendingMarket";
             }
-          }
+          ];
+        },
+        {
+          name: "farmsProgram";
+        },
+        {
+          name: "rent";
+        },
+        {
+          name: "systemProgram";
         }
-      ]
+      ];
+      args: [
+        {
+          name: "mode";
+          type: "u8";
+        }
+      ];
     },
     {
-      "name": "init_obligation_farms_for_reserve",
-      "discriminator": [
-        136,
-        63,
-        15,
-        186,
-        211,
-        152,
-        168,
-        164
-      ],
-      "accounts": [
+      name: "refreshObligation";
+      discriminator: [33, 132, 147, 228, 151, 192, 72, 89];
+      accounts: [
         {
-          "name": "payer",
-          "writable": true,
-          "signer": true
+          name: "lendingMarket";
         },
         {
-          "name": "owner"
-        },
-        {
-          "name": "obligation",
-          "writable": true
-        },
-        {
-          "name": "lending_market_authority"
-        },
-        {
-          "name": "reserve",
-          "writable": true
-        },
-        {
-          "name": "reserve_farm_state",
-          "writable": true
-        },
-        {
-          "name": "obligation_farm",
-          "writable": true
-        },
-        {
-          "name": "lending_market"
-        },
-        {
-          "name": "farms_program"
-        },
-        {
-          "name": "rent"
-        },
-        {
-          "name": "system_program"
+          name: "obligation";
+          writable: true;
         }
-      ],
-      "args": [
-        {
-          "name": "mode",
-          "type": "u8"
-        }
-      ]
+      ];
+      args: [];
     },
     {
-      "name": "refresh_obligation_farms_for_reserve",
-      "discriminator": [
-        140,
-        144,
-        253,
-        21,
-        10,
-        74,
-        248,
-        3
-      ],
-      "accounts": [
+      name: "depositObligationCollateral";
+      discriminator: [108, 209, 4, 72, 21, 22, 118, 133];
+      accounts: [
         {
-          "name": "crank",
-          "signer": true
+          name: "owner";
+          signer: true;
         },
         {
-          "name": "base_accounts",
-          "accounts": [
-            {
-              "name": "obligation"
-            },
-            {
-              "name": "lending_market_authority"
-            },
-            {
-              "name": "reserve"
-            },
-            {
-              "name": "reserve_farm_state",
-              "writable": true
-            },
-            {
-              "name": "obligation_farm_user_state",
-              "writable": true
-            },
-            {
-              "name": "lending_market"
-            }
-          ]
+          name: "obligation";
+          writable: true;
         },
         {
-          "name": "farms_program"
+          name: "lendingMarket";
         },
         {
-          "name": "rent"
+          name: "depositReserve";
+          writable: true;
         },
         {
-          "name": "system_program"
+          name: "reserveDestinationCollateral";
+          writable: true;
+        },
+        {
+          name: "userSourceCollateral";
+          writable: true;
+        },
+        {
+          name: "tokenProgram";
+        },
+        {
+          name: "instructionSysvarAccount";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "mode",
-          "type": "u8"
+          name: "collateralAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "refresh_obligation",
-      "discriminator": [
-        33,
-        132,
-        147,
-        228,
-        151,
-        192,
-        72,
-        89
-      ],
-      "accounts": [
+      name: "depositObligationCollateralV2";
+      discriminator: [137, 145, 151, 94, 167, 113, 4, 145];
+      accounts: [
         {
-          "name": "lending_market"
+          name: "depositAccounts";
+          accounts: [
+            {
+              name: "owner";
+              signer: true;
+            },
+            {
+              name: "obligation";
+              writable: true;
+            },
+            {
+              name: "lendingMarket";
+            },
+            {
+              name: "depositReserve";
+              writable: true;
+            },
+            {
+              name: "reserveDestinationCollateral";
+              writable: true;
+            },
+            {
+              name: "userSourceCollateral";
+              writable: true;
+            },
+            {
+              name: "tokenProgram";
+            },
+            {
+              name: "instructionSysvarAccount";
+            }
+          ];
         },
         {
-          "name": "obligation",
-          "writable": true
+          name: "lendingMarketAuthority";
+        },
+        {
+          name: "farmsAccounts";
+          accounts: [
+            {
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
+            },
+            {
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
+            }
+          ];
+        },
+        {
+          name: "farmsProgram";
         }
-      ],
-      "args": []
+      ];
+      args: [
+        {
+          name: "collateralAmount";
+          type: "u64";
+        }
+      ];
     },
     {
-      "name": "deposit_obligation_collateral",
-      "discriminator": [
-        108,
-        209,
-        4,
-        72,
-        21,
-        22,
-        118,
-        133
-      ],
-      "accounts": [
+      name: "withdrawObligationCollateral";
+      discriminator: [37, 116, 205, 103, 243, 192, 92, 198];
+      accounts: [
         {
-          "name": "owner",
-          "signer": true
+          name: "owner";
+          signer: true;
         },
         {
-          "name": "obligation",
-          "writable": true
+          name: "obligation";
+          writable: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "deposit_reserve",
-          "writable": true
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "reserve_destination_collateral",
-          "writable": true
+          name: "withdrawReserve";
+          writable: true;
         },
         {
-          "name": "user_source_collateral",
-          "writable": true
+          name: "reserveSourceCollateral";
+          writable: true;
         },
         {
-          "name": "token_program"
+          name: "userDestinationCollateral";
+          writable: true;
         },
         {
-          "name": "instruction_sysvar_account"
+          name: "tokenProgram";
+        },
+        {
+          name: "instructionSysvarAccount";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "collateral_amount",
-          "type": "u64"
+          name: "collateralAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "deposit_obligation_collateral_v2",
-      "discriminator": [
-        137,
-        145,
-        151,
-        94,
-        167,
-        113,
-        4,
-        145
-      ],
-      "accounts": [
+      name: "withdrawObligationCollateralV2";
+      discriminator: [202, 249, 117, 114, 231, 192, 47, 138];
+      accounts: [
         {
-          "name": "deposit_accounts",
-          "accounts": [
+          name: "withdrawAccounts";
+          accounts: [
             {
-              "name": "owner",
-              "signer": true
+              name: "owner";
+              signer: true;
             },
             {
-              "name": "obligation",
-              "writable": true
+              name: "obligation";
+              writable: true;
             },
             {
-              "name": "lending_market"
+              name: "lendingMarket";
             },
             {
-              "name": "deposit_reserve",
-              "writable": true
+              name: "lendingMarketAuthority";
             },
             {
-              "name": "reserve_destination_collateral",
-              "writable": true
+              name: "withdrawReserve";
+              writable: true;
             },
             {
-              "name": "user_source_collateral",
-              "writable": true
+              name: "reserveSourceCollateral";
+              writable: true;
             },
             {
-              "name": "token_program"
+              name: "userDestinationCollateral";
+              writable: true;
             },
             {
-              "name": "instruction_sysvar_account"
+              name: "tokenProgram";
+            },
+            {
+              name: "instructionSysvarAccount";
             }
-          ]
+          ];
         },
         {
-          "name": "lending_market_authority"
-        },
-        {
-          "name": "farms_accounts",
-          "accounts": [
+          name: "farmsAccounts";
+          accounts: [
             {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
             },
             {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
             }
-          ]
+          ];
         },
         {
-          "name": "farms_program"
+          name: "farmsProgram";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "collateral_amount",
-          "type": "u64"
+          name: "collateralAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "withdraw_obligation_collateral",
-      "discriminator": [
-        37,
-        116,
-        205,
-        103,
-        243,
-        192,
-        92,
-        198
-      ],
-      "accounts": [
+      name: "borrowObligationLiquidity";
+      discriminator: [121, 127, 18, 204, 73, 245, 225, 65];
+      accounts: [
         {
-          "name": "owner",
-          "signer": true
+          name: "owner";
+          signer: true;
         },
         {
-          "name": "obligation",
-          "writable": true
+          name: "obligation";
+          writable: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "lending_market_authority"
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "withdraw_reserve",
-          "writable": true
+          name: "borrowReserve";
+          writable: true;
         },
         {
-          "name": "reserve_source_collateral",
-          "writable": true
+          name: "borrowReserveLiquidityMint";
         },
         {
-          "name": "user_destination_collateral",
-          "writable": true
+          name: "reserveSourceLiquidity";
+          writable: true;
         },
         {
-          "name": "token_program"
+          name: "borrowReserveLiquidityFeeReceiver";
+          writable: true;
         },
         {
-          "name": "instruction_sysvar_account"
+          name: "userDestinationLiquidity";
+          writable: true;
+        },
+        {
+          name: "referrerTokenState";
+          writable: true;
+          optional: true;
+        },
+        {
+          name: "tokenProgram";
+        },
+        {
+          name: "instructionSysvarAccount";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "collateral_amount",
-          "type": "u64"
+          name: "liquidityAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "withdraw_obligation_collateral_v2",
-      "discriminator": [
-        202,
-        249,
-        117,
-        114,
-        231,
-        192,
-        47,
-        138
-      ],
-      "accounts": [
+      name: "borrowObligationLiquidityV2";
+      discriminator: [161, 128, 143, 245, 171, 199, 194, 6];
+      accounts: [
         {
-          "name": "withdraw_accounts",
-          "accounts": [
+          name: "borrowAccounts";
+          accounts: [
             {
-              "name": "owner",
-              "signer": true
+              name: "owner";
+              signer: true;
             },
             {
-              "name": "obligation",
-              "writable": true
+              name: "obligation";
+              writable: true;
             },
             {
-              "name": "lending_market"
+              name: "lendingMarket";
             },
             {
-              "name": "lending_market_authority"
+              name: "lendingMarketAuthority";
             },
             {
-              "name": "withdraw_reserve",
-              "writable": true
+              name: "borrowReserve";
+              writable: true;
             },
             {
-              "name": "reserve_source_collateral",
-              "writable": true
+              name: "borrowReserveLiquidityMint";
             },
             {
-              "name": "user_destination_collateral",
-              "writable": true
+              name: "reserveSourceLiquidity";
+              writable: true;
             },
             {
-              "name": "token_program"
+              name: "borrowReserveLiquidityFeeReceiver";
+              writable: true;
             },
             {
-              "name": "instruction_sysvar_account"
+              name: "userDestinationLiquidity";
+              writable: true;
+            },
+            {
+              name: "referrerTokenState";
+              writable: true;
+              optional: true;
+            },
+            {
+              name: "tokenProgram";
+            },
+            {
+              name: "instructionSysvarAccount";
             }
-          ]
+          ];
         },
         {
-          "name": "farms_accounts",
-          "accounts": [
+          name: "farmsAccounts";
+          accounts: [
             {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
             },
             {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
             }
-          ]
+          ];
         },
         {
-          "name": "farms_program"
+          name: "farmsProgram";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "collateral_amount",
-          "type": "u64"
+          name: "liquidityAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "borrow_obligation_liquidity",
-      "discriminator": [
-        121,
-        127,
-        18,
-        204,
-        73,
-        245,
-        225,
-        65
-      ],
-      "accounts": [
+      name: "repayObligationLiquidity";
+      discriminator: [145, 178, 13, 225, 76, 240, 147, 72];
+      accounts: [
         {
-          "name": "owner",
-          "signer": true
+          name: "owner";
+          signer: true;
         },
         {
-          "name": "obligation",
-          "writable": true
+          name: "obligation";
+          writable: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "lending_market_authority"
+          name: "repayReserve";
+          writable: true;
         },
         {
-          "name": "borrow_reserve",
-          "writable": true
+          name: "reserveLiquidityMint";
         },
         {
-          "name": "borrow_reserve_liquidity_mint"
+          name: "reserveDestinationLiquidity";
+          writable: true;
         },
         {
-          "name": "reserve_source_liquidity",
-          "writable": true
+          name: "userSourceLiquidity";
+          writable: true;
         },
         {
-          "name": "borrow_reserve_liquidity_fee_receiver",
-          "writable": true
+          name: "tokenProgram";
         },
         {
-          "name": "user_destination_liquidity",
-          "writable": true
-        },
-        {
-          "name": "referrer_token_state",
-          "writable": true,
-          "optional": true
-        },
-        {
-          "name": "token_program"
-        },
-        {
-          "name": "instruction_sysvar_account"
+          name: "instructionSysvarAccount";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "liquidity_amount",
-          "type": "u64"
+          name: "liquidityAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "borrow_obligation_liquidity_v2",
-      "discriminator": [
-        161,
-        128,
-        143,
-        245,
-        171,
-        199,
-        194,
-        6
-      ],
-      "accounts": [
+      name: "repayObligationLiquidityV2";
+      discriminator: [116, 174, 213, 76, 180, 53, 210, 144];
+      accounts: [
         {
-          "name": "borrow_accounts",
-          "accounts": [
+          name: "repayAccounts";
+          accounts: [
             {
-              "name": "owner",
-              "signer": true
+              name: "owner";
+              signer: true;
             },
             {
-              "name": "obligation",
-              "writable": true
+              name: "obligation";
+              writable: true;
             },
             {
-              "name": "lending_market"
+              name: "lendingMarket";
             },
             {
-              "name": "lending_market_authority"
+              name: "repayReserve";
+              writable: true;
             },
             {
-              "name": "borrow_reserve",
-              "writable": true
+              name: "reserveLiquidityMint";
             },
             {
-              "name": "borrow_reserve_liquidity_mint"
+              name: "reserveDestinationLiquidity";
+              writable: true;
             },
             {
-              "name": "reserve_source_liquidity",
-              "writable": true
+              name: "userSourceLiquidity";
+              writable: true;
             },
             {
-              "name": "borrow_reserve_liquidity_fee_receiver",
-              "writable": true
+              name: "tokenProgram";
             },
             {
-              "name": "user_destination_liquidity",
-              "writable": true
-            },
-            {
-              "name": "referrer_token_state",
-              "writable": true,
-              "optional": true
-            },
-            {
-              "name": "token_program"
-            },
-            {
-              "name": "instruction_sysvar_account"
+              name: "instructionSysvarAccount";
             }
-          ]
+          ];
         },
         {
-          "name": "farms_accounts",
-          "accounts": [
+          name: "farmsAccounts";
+          accounts: [
             {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
             },
             {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
             }
-          ]
+          ];
         },
         {
-          "name": "farms_program"
-        }
-      ],
-      "args": [
+          name: "lendingMarketAuthority";
+        },
         {
-          "name": "liquidity_amount",
-          "type": "u64"
+          name: "farmsProgram";
         }
-      ]
+      ];
+      args: [
+        {
+          name: "liquidityAmount";
+          type: "u64";
+        }
+      ];
     },
     {
-      "name": "repay_obligation_liquidity",
-      "discriminator": [
-        145,
-        178,
-        13,
-        225,
-        76,
-        240,
-        147,
-        72
-      ],
-      "accounts": [
+      name: "repayAndWithdrawAndRedeem";
+      discriminator: [2, 54, 152, 3, 148, 96, 109, 218];
+      accounts: [
         {
-          "name": "owner",
-          "signer": true
+          name: "repayAccounts";
+          accounts: [
+            {
+              name: "owner";
+              signer: true;
+            },
+            {
+              name: "obligation";
+              writable: true;
+            },
+            {
+              name: "lendingMarket";
+            },
+            {
+              name: "repayReserve";
+              writable: true;
+            },
+            {
+              name: "reserveLiquidityMint";
+            },
+            {
+              name: "reserveDestinationLiquidity";
+              writable: true;
+            },
+            {
+              name: "userSourceLiquidity";
+              writable: true;
+            },
+            {
+              name: "tokenProgram";
+            },
+            {
+              name: "instructionSysvarAccount";
+            }
+          ];
         },
         {
-          "name": "obligation",
-          "writable": true
+          name: "withdrawAccounts";
+          accounts: [
+            {
+              name: "owner";
+              writable: true;
+              signer: true;
+            },
+            {
+              name: "obligation";
+              writable: true;
+            },
+            {
+              name: "lendingMarket";
+            },
+            {
+              name: "lendingMarketAuthority";
+            },
+            {
+              name: "withdrawReserve";
+              writable: true;
+            },
+            {
+              name: "reserveLiquidityMint";
+            },
+            {
+              name: "reserveSourceCollateral";
+              writable: true;
+            },
+            {
+              name: "reserveCollateralMint";
+              writable: true;
+            },
+            {
+              name: "reserveLiquiditySupply";
+              writable: true;
+            },
+            {
+              name: "userDestinationLiquidity";
+              writable: true;
+            },
+            {
+              name: "placeholderUserDestinationCollateral";
+              optional: true;
+            },
+            {
+              name: "collateralTokenProgram";
+            },
+            {
+              name: "liquidityTokenProgram";
+            },
+            {
+              name: "instructionSysvarAccount";
+            }
+          ];
         },
         {
-          "name": "lending_market"
+          name: "collateralFarmsAccounts";
+          accounts: [
+            {
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
+            },
+            {
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
+            }
+          ];
         },
         {
-          "name": "repay_reserve",
-          "writable": true
+          name: "debtFarmsAccounts";
+          accounts: [
+            {
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
+            },
+            {
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
+            }
+          ];
         },
         {
-          "name": "reserve_liquidity_mint"
-        },
-        {
-          "name": "reserve_destination_liquidity",
-          "writable": true
-        },
-        {
-          "name": "user_source_liquidity",
-          "writable": true
-        },
-        {
-          "name": "token_program"
-        },
-        {
-          "name": "instruction_sysvar_account"
+          name: "farmsProgram";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "liquidity_amount",
-          "type": "u64"
+          name: "repayAmount";
+          type: "u64";
+        },
+        {
+          name: "withdrawCollateralAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "repay_obligation_liquidity_v2",
-      "discriminator": [
-        116,
-        174,
-        213,
-        76,
-        180,
-        53,
-        210,
-        144
-      ],
-      "accounts": [
+      name: "depositAndWithdraw";
+      discriminator: [141, 153, 39, 15, 64, 61, 88, 84];
+      accounts: [
         {
-          "name": "repay_accounts",
-          "accounts": [
+          name: "depositAccounts";
+          accounts: [
             {
-              "name": "owner",
-              "signer": true
+              name: "owner";
+              writable: true;
+              signer: true;
             },
             {
-              "name": "obligation",
-              "writable": true
+              name: "obligation";
+              writable: true;
             },
             {
-              "name": "lending_market"
+              name: "lendingMarket";
             },
             {
-              "name": "repay_reserve",
-              "writable": true
+              name: "lendingMarketAuthority";
             },
             {
-              "name": "reserve_liquidity_mint"
+              name: "reserve";
+              writable: true;
             },
             {
-              "name": "reserve_destination_liquidity",
-              "writable": true
+              name: "reserveLiquidityMint";
             },
             {
-              "name": "user_source_liquidity",
-              "writable": true
+              name: "reserveLiquiditySupply";
+              writable: true;
             },
             {
-              "name": "token_program"
+              name: "reserveCollateralMint";
+              writable: true;
             },
             {
-              "name": "instruction_sysvar_account"
+              name: "reserveDestinationDepositCollateral";
+              writable: true;
+            },
+            {
+              name: "userSourceLiquidity";
+              writable: true;
+            },
+            {
+              name: "placeholderUserDestinationCollateral";
+              optional: true;
+            },
+            {
+              name: "collateralTokenProgram";
+            },
+            {
+              name: "liquidityTokenProgram";
+            },
+            {
+              name: "instructionSysvarAccount";
             }
-          ]
+          ];
         },
         {
-          "name": "farms_accounts",
-          "accounts": [
+          name: "withdrawAccounts";
+          accounts: [
             {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
+              name: "owner";
+              writable: true;
+              signer: true;
             },
             {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
+              name: "obligation";
+              writable: true;
+            },
+            {
+              name: "lendingMarket";
+            },
+            {
+              name: "lendingMarketAuthority";
+            },
+            {
+              name: "withdrawReserve";
+              writable: true;
+            },
+            {
+              name: "reserveLiquidityMint";
+            },
+            {
+              name: "reserveSourceCollateral";
+              writable: true;
+            },
+            {
+              name: "reserveCollateralMint";
+              writable: true;
+            },
+            {
+              name: "reserveLiquiditySupply";
+              writable: true;
+            },
+            {
+              name: "userDestinationLiquidity";
+              writable: true;
+            },
+            {
+              name: "placeholderUserDestinationCollateral";
+              optional: true;
+            },
+            {
+              name: "collateralTokenProgram";
+            },
+            {
+              name: "liquidityTokenProgram";
+            },
+            {
+              name: "instructionSysvarAccount";
             }
-          ]
+          ];
         },
         {
-          "name": "lending_market_authority"
+          name: "depositFarmsAccounts";
+          accounts: [
+            {
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
+            },
+            {
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
+            }
+          ];
         },
         {
-          "name": "farms_program"
-        }
-      ],
-      "args": [
+          name: "withdrawFarmsAccounts";
+          accounts: [
+            {
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
+            },
+            {
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
+            }
+          ];
+        },
         {
-          "name": "liquidity_amount",
-          "type": "u64"
+          name: "farmsProgram";
         }
-      ]
+      ];
+      args: [
+        {
+          name: "liquidityAmount";
+          type: "u64";
+        },
+        {
+          name: "withdrawCollateralAmount";
+          type: "u64";
+        }
+      ];
     },
     {
-      "name": "repay_and_withdraw_and_redeem",
-      "discriminator": [
-        2,
-        54,
-        152,
-        3,
-        148,
-        96,
-        109,
-        218
-      ],
-      "accounts": [
+      name: "depositReserveLiquidityAndObligationCollateral";
+      discriminator: [129, 199, 4, 2, 222, 39, 26, 46];
+      accounts: [
         {
-          "name": "repay_accounts",
-          "accounts": [
-            {
-              "name": "owner",
-              "signer": true
-            },
-            {
-              "name": "obligation",
-              "writable": true
-            },
-            {
-              "name": "lending_market"
-            },
-            {
-              "name": "repay_reserve",
-              "writable": true
-            },
-            {
-              "name": "reserve_liquidity_mint"
-            },
-            {
-              "name": "reserve_destination_liquidity",
-              "writable": true
-            },
-            {
-              "name": "user_source_liquidity",
-              "writable": true
-            },
-            {
-              "name": "token_program"
-            },
-            {
-              "name": "instruction_sysvar_account"
-            }
-          ]
+          name: "owner";
+          writable: true;
+          signer: true;
         },
         {
-          "name": "withdraw_accounts",
-          "accounts": [
-            {
-              "name": "owner",
-              "writable": true,
-              "signer": true
-            },
-            {
-              "name": "obligation",
-              "writable": true
-            },
-            {
-              "name": "lending_market"
-            },
-            {
-              "name": "lending_market_authority"
-            },
-            {
-              "name": "withdraw_reserve",
-              "writable": true
-            },
-            {
-              "name": "reserve_liquidity_mint"
-            },
-            {
-              "name": "reserve_source_collateral",
-              "writable": true
-            },
-            {
-              "name": "reserve_collateral_mint",
-              "writable": true
-            },
-            {
-              "name": "reserve_liquidity_supply",
-              "writable": true
-            },
-            {
-              "name": "user_destination_liquidity",
-              "writable": true
-            },
-            {
-              "name": "placeholder_user_destination_collateral",
-              "optional": true
-            },
-            {
-              "name": "collateral_token_program"
-            },
-            {
-              "name": "liquidity_token_program"
-            },
-            {
-              "name": "instruction_sysvar_account"
-            }
-          ]
+          name: "obligation";
+          writable: true;
         },
         {
-          "name": "collateral_farms_accounts",
-          "accounts": [
-            {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
-            },
-            {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
-            }
-          ]
+          name: "lendingMarket";
         },
         {
-          "name": "debt_farms_accounts",
-          "accounts": [
-            {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
-            },
-            {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
-            }
-          ]
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "farms_program"
+          name: "reserve";
+          writable: true;
+        },
+        {
+          name: "reserveLiquidityMint";
+        },
+        {
+          name: "reserveLiquiditySupply";
+          writable: true;
+        },
+        {
+          name: "reserveCollateralMint";
+          writable: true;
+        },
+        {
+          name: "reserveDestinationDepositCollateral";
+          writable: true;
+        },
+        {
+          name: "userSourceLiquidity";
+          writable: true;
+        },
+        {
+          name: "placeholderUserDestinationCollateral";
+          optional: true;
+        },
+        {
+          name: "collateralTokenProgram";
+        },
+        {
+          name: "liquidityTokenProgram";
+        },
+        {
+          name: "instructionSysvarAccount";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "repay_amount",
-          "type": "u64"
-        },
-        {
-          "name": "withdraw_collateral_amount",
-          "type": "u64"
+          name: "liquidityAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "deposit_and_withdraw",
-      "discriminator": [
-        141,
-        153,
-        39,
-        15,
-        64,
-        61,
-        88,
-        84
-      ],
-      "accounts": [
+      name: "depositReserveLiquidityAndObligationCollateralV2";
+      discriminator: [216, 224, 191, 27, 204, 151, 102, 175];
+      accounts: [
         {
-          "name": "deposit_accounts",
-          "accounts": [
+          name: "depositAccounts";
+          accounts: [
             {
-              "name": "owner",
-              "writable": true,
-              "signer": true
+              name: "owner";
+              writable: true;
+              signer: true;
             },
             {
-              "name": "obligation",
-              "writable": true
+              name: "obligation";
+              writable: true;
             },
             {
-              "name": "lending_market"
+              name: "lendingMarket";
             },
             {
-              "name": "lending_market_authority"
+              name: "lendingMarketAuthority";
             },
             {
-              "name": "reserve",
-              "writable": true
+              name: "reserve";
+              writable: true;
             },
             {
-              "name": "reserve_liquidity_mint"
+              name: "reserveLiquidityMint";
             },
             {
-              "name": "reserve_liquidity_supply",
-              "writable": true
+              name: "reserveLiquiditySupply";
+              writable: true;
             },
             {
-              "name": "reserve_collateral_mint",
-              "writable": true
+              name: "reserveCollateralMint";
+              writable: true;
             },
             {
-              "name": "reserve_destination_deposit_collateral",
-              "writable": true
+              name: "reserveDestinationDepositCollateral";
+              writable: true;
             },
             {
-              "name": "user_source_liquidity",
-              "writable": true
+              name: "userSourceLiquidity";
+              writable: true;
             },
             {
-              "name": "placeholder_user_destination_collateral",
-              "optional": true
+              name: "placeholderUserDestinationCollateral";
+              optional: true;
             },
             {
-              "name": "collateral_token_program"
+              name: "collateralTokenProgram";
             },
             {
-              "name": "liquidity_token_program"
+              name: "liquidityTokenProgram";
             },
             {
-              "name": "instruction_sysvar_account"
+              name: "instructionSysvarAccount";
             }
-          ]
+          ];
         },
         {
-          "name": "withdraw_accounts",
-          "accounts": [
+          name: "farmsAccounts";
+          accounts: [
             {
-              "name": "owner",
-              "writable": true,
-              "signer": true
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
             },
             {
-              "name": "obligation",
-              "writable": true
-            },
-            {
-              "name": "lending_market"
-            },
-            {
-              "name": "lending_market_authority"
-            },
-            {
-              "name": "withdraw_reserve",
-              "writable": true
-            },
-            {
-              "name": "reserve_liquidity_mint"
-            },
-            {
-              "name": "reserve_source_collateral",
-              "writable": true
-            },
-            {
-              "name": "reserve_collateral_mint",
-              "writable": true
-            },
-            {
-              "name": "reserve_liquidity_supply",
-              "writable": true
-            },
-            {
-              "name": "user_destination_liquidity",
-              "writable": true
-            },
-            {
-              "name": "placeholder_user_destination_collateral",
-              "optional": true
-            },
-            {
-              "name": "collateral_token_program"
-            },
-            {
-              "name": "liquidity_token_program"
-            },
-            {
-              "name": "instruction_sysvar_account"
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
             }
-          ]
+          ];
         },
         {
-          "name": "deposit_farms_accounts",
-          "accounts": [
-            {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
-            },
-            {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
-            }
-          ]
-        },
-        {
-          "name": "withdraw_farms_accounts",
-          "accounts": [
-            {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
-            },
-            {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
-            }
-          ]
-        },
-        {
-          "name": "farms_program"
+          name: "farmsProgram";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "liquidity_amount",
-          "type": "u64"
-        },
-        {
-          "name": "withdraw_collateral_amount",
-          "type": "u64"
+          name: "liquidityAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "deposit_reserve_liquidity_and_obligation_collateral",
-      "discriminator": [
-        129,
-        199,
-        4,
-        2,
-        222,
-        39,
-        26,
-        46
-      ],
-      "accounts": [
+      name: "withdrawObligationCollateralAndRedeemReserveCollateral";
+      discriminator: [75, 93, 93, 220, 34, 150, 218, 196];
+      accounts: [
         {
-          "name": "owner",
-          "writable": true,
-          "signer": true
+          name: "owner";
+          writable: true;
+          signer: true;
         },
         {
-          "name": "obligation",
-          "writable": true
+          name: "obligation";
+          writable: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "lending_market_authority"
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "reserve",
-          "writable": true
+          name: "withdrawReserve";
+          writable: true;
         },
         {
-          "name": "reserve_liquidity_mint"
+          name: "reserveLiquidityMint";
         },
         {
-          "name": "reserve_liquidity_supply",
-          "writable": true
+          name: "reserveSourceCollateral";
+          writable: true;
         },
         {
-          "name": "reserve_collateral_mint",
-          "writable": true
+          name: "reserveCollateralMint";
+          writable: true;
         },
         {
-          "name": "reserve_destination_deposit_collateral",
-          "writable": true
+          name: "reserveLiquiditySupply";
+          writable: true;
         },
         {
-          "name": "user_source_liquidity",
-          "writable": true
+          name: "userDestinationLiquidity";
+          writable: true;
         },
         {
-          "name": "placeholder_user_destination_collateral",
-          "optional": true
+          name: "placeholderUserDestinationCollateral";
+          optional: true;
         },
         {
-          "name": "collateral_token_program"
+          name: "collateralTokenProgram";
         },
         {
-          "name": "liquidity_token_program"
+          name: "liquidityTokenProgram";
         },
         {
-          "name": "instruction_sysvar_account"
+          name: "instructionSysvarAccount";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "liquidity_amount",
-          "type": "u64"
+          name: "collateralAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "deposit_reserve_liquidity_and_obligation_collateral_v2",
-      "discriminator": [
-        216,
-        224,
-        191,
-        27,
-        204,
-        151,
-        102,
-        175
-      ],
-      "accounts": [
+      name: "withdrawObligationCollateralAndRedeemReserveCollateralV2";
+      discriminator: [235, 52, 119, 152, 149, 197, 20, 7];
+      accounts: [
         {
-          "name": "deposit_accounts",
-          "accounts": [
+          name: "withdrawAccounts";
+          accounts: [
             {
-              "name": "owner",
-              "writable": true,
-              "signer": true
+              name: "owner";
+              writable: true;
+              signer: true;
             },
             {
-              "name": "obligation",
-              "writable": true
+              name: "obligation";
+              writable: true;
             },
             {
-              "name": "lending_market"
+              name: "lendingMarket";
             },
             {
-              "name": "lending_market_authority"
+              name: "lendingMarketAuthority";
             },
             {
-              "name": "reserve",
-              "writable": true
+              name: "withdrawReserve";
+              writable: true;
             },
             {
-              "name": "reserve_liquidity_mint"
+              name: "reserveLiquidityMint";
             },
             {
-              "name": "reserve_liquidity_supply",
-              "writable": true
+              name: "reserveSourceCollateral";
+              writable: true;
             },
             {
-              "name": "reserve_collateral_mint",
-              "writable": true
+              name: "reserveCollateralMint";
+              writable: true;
             },
             {
-              "name": "reserve_destination_deposit_collateral",
-              "writable": true
+              name: "reserveLiquiditySupply";
+              writable: true;
             },
             {
-              "name": "user_source_liquidity",
-              "writable": true
+              name: "userDestinationLiquidity";
+              writable: true;
             },
             {
-              "name": "placeholder_user_destination_collateral",
-              "optional": true
+              name: "placeholderUserDestinationCollateral";
+              optional: true;
             },
             {
-              "name": "collateral_token_program"
+              name: "collateralTokenProgram";
             },
             {
-              "name": "liquidity_token_program"
+              name: "liquidityTokenProgram";
             },
             {
-              "name": "instruction_sysvar_account"
+              name: "instructionSysvarAccount";
             }
-          ]
+          ];
         },
         {
-          "name": "farms_accounts",
-          "accounts": [
+          name: "farmsAccounts";
+          accounts: [
             {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
             },
             {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
             }
-          ]
+          ];
         },
         {
-          "name": "farms_program"
+          name: "farmsProgram";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "liquidity_amount",
-          "type": "u64"
+          name: "collateralAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "withdraw_obligation_collateral_and_redeem_reserve_collateral",
-      "discriminator": [
-        75,
-        93,
-        93,
-        220,
-        34,
-        150,
-        218,
-        196
-      ],
-      "accounts": [
+      name: "liquidateObligationAndRedeemReserveCollateral";
+      discriminator: [177, 71, 154, 188, 226, 133, 74, 55];
+      accounts: [
         {
-          "name": "owner",
-          "writable": true,
-          "signer": true
+          name: "liquidator";
+          signer: true;
         },
         {
-          "name": "obligation",
-          "writable": true
+          name: "obligation";
+          writable: true;
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "lending_market_authority"
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "withdraw_reserve",
-          "writable": true
+          name: "repayReserve";
+          writable: true;
         },
         {
-          "name": "reserve_liquidity_mint"
+          name: "repayReserveLiquidityMint";
         },
         {
-          "name": "reserve_source_collateral",
-          "writable": true
+          name: "repayReserveLiquiditySupply";
+          writable: true;
         },
         {
-          "name": "reserve_collateral_mint",
-          "writable": true
+          name: "withdrawReserve";
+          writable: true;
         },
         {
-          "name": "reserve_liquidity_supply",
-          "writable": true
+          name: "withdrawReserveLiquidityMint";
         },
         {
-          "name": "user_destination_liquidity",
-          "writable": true
+          name: "withdrawReserveCollateralMint";
+          writable: true;
         },
         {
-          "name": "placeholder_user_destination_collateral",
-          "optional": true
+          name: "withdrawReserveCollateralSupply";
+          writable: true;
         },
         {
-          "name": "collateral_token_program"
+          name: "withdrawReserveLiquiditySupply";
+          writable: true;
         },
         {
-          "name": "liquidity_token_program"
+          name: "withdrawReserveLiquidityFeeReceiver";
+          writable: true;
         },
         {
-          "name": "instruction_sysvar_account"
+          name: "userSourceLiquidity";
+          writable: true;
+        },
+        {
+          name: "userDestinationCollateral";
+          writable: true;
+        },
+        {
+          name: "userDestinationLiquidity";
+          writable: true;
+        },
+        {
+          name: "collateralTokenProgram";
+        },
+        {
+          name: "repayLiquidityTokenProgram";
+        },
+        {
+          name: "withdrawLiquidityTokenProgram";
+        },
+        {
+          name: "instructionSysvarAccount";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "collateral_amount",
-          "type": "u64"
+          name: "liquidityAmount";
+          type: "u64";
+        },
+        {
+          name: "minAcceptableReceivedLiquidityAmount";
+          type: "u64";
+        },
+        {
+          name: "maxAllowedLtvOverridePercent";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "withdraw_obligation_collateral_and_redeem_reserve_collateral_v2",
-      "discriminator": [
-        235,
-        52,
-        119,
-        152,
-        149,
-        197,
-        20,
-        7
-      ],
-      "accounts": [
+      name: "liquidateObligationAndRedeemReserveCollateralV2";
+      discriminator: [162, 161, 35, 143, 30, 187, 185, 103];
+      accounts: [
         {
-          "name": "withdraw_accounts",
-          "accounts": [
+          name: "liquidationAccounts";
+          accounts: [
             {
-              "name": "owner",
-              "writable": true,
-              "signer": true
+              name: "liquidator";
+              signer: true;
             },
             {
-              "name": "obligation",
-              "writable": true
+              name: "obligation";
+              writable: true;
             },
             {
-              "name": "lending_market"
+              name: "lendingMarket";
             },
             {
-              "name": "lending_market_authority"
+              name: "lendingMarketAuthority";
             },
             {
-              "name": "withdraw_reserve",
-              "writable": true
+              name: "repayReserve";
+              writable: true;
             },
             {
-              "name": "reserve_liquidity_mint"
+              name: "repayReserveLiquidityMint";
             },
             {
-              "name": "reserve_source_collateral",
-              "writable": true
+              name: "repayReserveLiquiditySupply";
+              writable: true;
             },
             {
-              "name": "reserve_collateral_mint",
-              "writable": true
+              name: "withdrawReserve";
+              writable: true;
             },
             {
-              "name": "reserve_liquidity_supply",
-              "writable": true
+              name: "withdrawReserveLiquidityMint";
             },
             {
-              "name": "user_destination_liquidity",
-              "writable": true
+              name: "withdrawReserveCollateralMint";
+              writable: true;
             },
             {
-              "name": "placeholder_user_destination_collateral",
-              "optional": true
+              name: "withdrawReserveCollateralSupply";
+              writable: true;
             },
             {
-              "name": "collateral_token_program"
+              name: "withdrawReserveLiquiditySupply";
+              writable: true;
             },
             {
-              "name": "liquidity_token_program"
+              name: "withdrawReserveLiquidityFeeReceiver";
+              writable: true;
             },
             {
-              "name": "instruction_sysvar_account"
+              name: "userSourceLiquidity";
+              writable: true;
+            },
+            {
+              name: "userDestinationCollateral";
+              writable: true;
+            },
+            {
+              name: "userDestinationLiquidity";
+              writable: true;
+            },
+            {
+              name: "collateralTokenProgram";
+            },
+            {
+              name: "repayLiquidityTokenProgram";
+            },
+            {
+              name: "withdrawLiquidityTokenProgram";
+            },
+            {
+              name: "instructionSysvarAccount";
             }
-          ]
+          ];
         },
         {
-          "name": "farms_accounts",
-          "accounts": [
+          name: "collateralFarmsAccounts";
+          accounts: [
             {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
             },
             {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
             }
-          ]
+          ];
         },
         {
-          "name": "farms_program"
-        }
-      ],
-      "args": [
+          name: "debtFarmsAccounts";
+          accounts: [
+            {
+              name: "obligationFarmUserState";
+              writable: true;
+              optional: true;
+            },
+            {
+              name: "reserveFarmState";
+              writable: true;
+              optional: true;
+            }
+          ];
+        },
         {
-          "name": "collateral_amount",
-          "type": "u64"
+          name: "farmsProgram";
         }
-      ]
+      ];
+      args: [
+        {
+          name: "liquidityAmount";
+          type: "u64";
+        },
+        {
+          name: "minAcceptableReceivedLiquidityAmount";
+          type: "u64";
+        },
+        {
+          name: "maxAllowedLtvOverridePercent";
+          type: "u64";
+        }
+      ];
     },
     {
-      "name": "liquidate_obligation_and_redeem_reserve_collateral",
-      "discriminator": [
-        177,
-        71,
-        154,
-        188,
-        226,
-        133,
-        74,
-        55
-      ],
-      "accounts": [
+      name: "flashRepayReserveLiquidity";
+      discriminator: [185, 117, 0, 203, 96, 245, 180, 186];
+      accounts: [
         {
-          "name": "liquidator",
-          "signer": true
+          name: "userTransferAuthority";
+          signer: true;
         },
         {
-          "name": "obligation",
-          "writable": true
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "lending_market"
+          name: "lendingMarket";
         },
         {
-          "name": "lending_market_authority"
+          name: "reserve";
+          writable: true;
         },
         {
-          "name": "repay_reserve",
-          "writable": true
+          name: "reserveLiquidityMint";
         },
         {
-          "name": "repay_reserve_liquidity_mint"
+          name: "reserveDestinationLiquidity";
+          writable: true;
         },
         {
-          "name": "repay_reserve_liquidity_supply",
-          "writable": true
+          name: "userSourceLiquidity";
+          writable: true;
         },
         {
-          "name": "withdraw_reserve",
-          "writable": true
+          name: "reserveLiquidityFeeReceiver";
+          writable: true;
         },
         {
-          "name": "withdraw_reserve_liquidity_mint"
+          name: "referrerTokenState";
+          writable: true;
+          optional: true;
         },
         {
-          "name": "withdraw_reserve_collateral_mint",
-          "writable": true
+          name: "referrerAccount";
+          writable: true;
+          optional: true;
         },
         {
-          "name": "withdraw_reserve_collateral_supply",
-          "writable": true
+          name: "sysvarInfo";
         },
         {
-          "name": "withdraw_reserve_liquidity_supply",
-          "writable": true
-        },
-        {
-          "name": "withdraw_reserve_liquidity_fee_receiver",
-          "writable": true
-        },
-        {
-          "name": "user_source_liquidity",
-          "writable": true
-        },
-        {
-          "name": "user_destination_collateral",
-          "writable": true
-        },
-        {
-          "name": "user_destination_liquidity",
-          "writable": true
-        },
-        {
-          "name": "collateral_token_program"
-        },
-        {
-          "name": "repay_liquidity_token_program"
-        },
-        {
-          "name": "withdraw_liquidity_token_program"
-        },
-        {
-          "name": "instruction_sysvar_account"
+          name: "tokenProgram";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "liquidity_amount",
-          "type": "u64"
+          name: "liquidityAmount";
+          type: "u64";
         },
         {
-          "name": "min_acceptable_received_liquidity_amount",
-          "type": "u64"
-        },
-        {
-          "name": "max_allowed_ltv_override_percent",
-          "type": "u64"
+          name: "borrowInstructionIndex";
+          type: "u8";
         }
-      ]
+      ];
     },
     {
-      "name": "liquidate_obligation_and_redeem_reserve_collateral_v2",
-      "discriminator": [
-        162,
-        161,
-        35,
-        143,
-        30,
-        187,
-        185,
-        103
-      ],
-      "accounts": [
+      name: "flashBorrowReserveLiquidity";
+      discriminator: [135, 231, 52, 167, 7, 52, 212, 193];
+      accounts: [
         {
-          "name": "liquidation_accounts",
-          "accounts": [
-            {
-              "name": "liquidator",
-              "signer": true
-            },
-            {
-              "name": "obligation",
-              "writable": true
-            },
-            {
-              "name": "lending_market"
-            },
-            {
-              "name": "lending_market_authority"
-            },
-            {
-              "name": "repay_reserve",
-              "writable": true
-            },
-            {
-              "name": "repay_reserve_liquidity_mint"
-            },
-            {
-              "name": "repay_reserve_liquidity_supply",
-              "writable": true
-            },
-            {
-              "name": "withdraw_reserve",
-              "writable": true
-            },
-            {
-              "name": "withdraw_reserve_liquidity_mint"
-            },
-            {
-              "name": "withdraw_reserve_collateral_mint",
-              "writable": true
-            },
-            {
-              "name": "withdraw_reserve_collateral_supply",
-              "writable": true
-            },
-            {
-              "name": "withdraw_reserve_liquidity_supply",
-              "writable": true
-            },
-            {
-              "name": "withdraw_reserve_liquidity_fee_receiver",
-              "writable": true
-            },
-            {
-              "name": "user_source_liquidity",
-              "writable": true
-            },
-            {
-              "name": "user_destination_collateral",
-              "writable": true
-            },
-            {
-              "name": "user_destination_liquidity",
-              "writable": true
-            },
-            {
-              "name": "collateral_token_program"
-            },
-            {
-              "name": "repay_liquidity_token_program"
-            },
-            {
-              "name": "withdraw_liquidity_token_program"
-            },
-            {
-              "name": "instruction_sysvar_account"
-            }
-          ]
+          name: "userTransferAuthority";
+          signer: true;
         },
         {
-          "name": "collateral_farms_accounts",
-          "accounts": [
-            {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
-            },
-            {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
-            }
-          ]
+          name: "lendingMarketAuthority";
         },
         {
-          "name": "debt_farms_accounts",
-          "accounts": [
-            {
-              "name": "obligation_farm_user_state",
-              "writable": true,
-              "optional": true
-            },
-            {
-              "name": "reserve_farm_state",
-              "writable": true,
-              "optional": true
-            }
-          ]
+          name: "lendingMarket";
         },
         {
-          "name": "farms_program"
+          name: "reserve";
+          writable: true;
+        },
+        {
+          name: "reserveLiquidityMint";
+        },
+        {
+          name: "reserveSourceLiquidity";
+          writable: true;
+        },
+        {
+          name: "userDestinationLiquidity";
+          writable: true;
+        },
+        {
+          name: "reserveLiquidityFeeReceiver";
+          writable: true;
+        },
+        {
+          name: "referrerTokenState";
+          writable: true;
+          optional: true;
+        },
+        {
+          name: "referrerAccount";
+          writable: true;
+          optional: true;
+        },
+        {
+          name: "sysvarInfo";
+        },
+        {
+          name: "tokenProgram";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "liquidity_amount",
-          "type": "u64"
-        },
-        {
-          "name": "min_acceptable_received_liquidity_amount",
-          "type": "u64"
-        },
-        {
-          "name": "max_allowed_ltv_override_percent",
-          "type": "u64"
+          name: "liquidityAmount";
+          type: "u64";
         }
-      ]
+      ];
     },
     {
-      "name": "flash_repay_reserve_liquidity",
-      "discriminator": [
-        185,
-        117,
-        0,
-        203,
-        96,
-        245,
-        180,
-        186
-      ],
-      "accounts": [
+      name: "requestElevationGroup";
+      discriminator: [36, 119, 251, 129, 34, 240, 7, 147];
+      accounts: [
         {
-          "name": "user_transfer_authority",
-          "signer": true
+          name: "owner";
+          signer: true;
         },
         {
-          "name": "lending_market_authority"
+          name: "obligation";
+          writable: true;
         },
         {
-          "name": "lending_market"
-        },
-        {
-          "name": "reserve",
-          "writable": true
-        },
-        {
-          "name": "reserve_liquidity_mint"
-        },
-        {
-          "name": "reserve_destination_liquidity",
-          "writable": true
-        },
-        {
-          "name": "user_source_liquidity",
-          "writable": true
-        },
-        {
-          "name": "reserve_liquidity_fee_receiver",
-          "writable": true
-        },
-        {
-          "name": "referrer_token_state",
-          "writable": true,
-          "optional": true
-        },
-        {
-          "name": "referrer_account",
-          "writable": true,
-          "optional": true
-        },
-        {
-          "name": "sysvar_info"
-        },
-        {
-          "name": "token_program"
+          name: "lendingMarket";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "liquidity_amount",
-          "type": "u64"
-        },
-        {
-          "name": "borrow_instruction_index",
-          "type": "u8"
+          name: "elevationGroup";
+          type: "u8";
         }
-      ]
+      ];
     },
     {
-      "name": "flash_borrow_reserve_liquidity",
-      "discriminator": [
-        135,
-        231,
-        52,
-        167,
-        7,
-        52,
-        212,
-        193
-      ],
-      "accounts": [
+      name: "initReferrerTokenState";
+      discriminator: [116, 45, 66, 148, 58, 13, 218, 115];
+      accounts: [
         {
-          "name": "user_transfer_authority",
-          "signer": true
+          name: "payer";
+          writable: true;
+          signer: true;
         },
         {
-          "name": "lending_market_authority"
+          name: "lendingMarket";
         },
         {
-          "name": "lending_market"
+          name: "reserve";
         },
         {
-          "name": "reserve",
-          "writable": true
+          name: "referrer";
         },
         {
-          "name": "reserve_liquidity_mint"
+          name: "referrerTokenState";
+          writable: true;
         },
         {
-          "name": "reserve_source_liquidity",
-          "writable": true
+          name: "rent";
         },
         {
-          "name": "user_destination_liquidity",
-          "writable": true
-        },
-        {
-          "name": "reserve_liquidity_fee_receiver",
-          "writable": true
-        },
-        {
-          "name": "referrer_token_state",
-          "writable": true,
-          "optional": true
-        },
-        {
-          "name": "referrer_account",
-          "writable": true,
-          "optional": true
-        },
-        {
-          "name": "sysvar_info"
-        },
-        {
-          "name": "token_program"
+          name: "systemProgram";
         }
-      ],
-      "args": [
-        {
-          "name": "liquidity_amount",
-          "type": "u64"
-        }
-      ]
+      ];
+      args: [];
     },
     {
-      "name": "request_elevation_group",
-      "discriminator": [
-        36,
-        119,
-        251,
-        129,
-        34,
-        240,
-        7,
-        147
-      ],
-      "accounts": [
+      name: "initUserMetadata";
+      discriminator: [117, 169, 176, 69, 197, 23, 15, 162];
+      accounts: [
         {
-          "name": "owner",
-          "signer": true
+          name: "owner";
+          signer: true;
         },
         {
-          "name": "obligation",
-          "writable": true
+          name: "feePayer";
+          writable: true;
+          signer: true;
         },
         {
-          "name": "lending_market"
-        }
-      ],
-      "args": [
+          name: "userMetadata";
+          writable: true;
+        },
         {
-          "name": "elevation_group",
-          "type": "u8"
+          name: "referrerUserMetadata";
+          optional: true;
+        },
+        {
+          name: "rent";
+        },
+        {
+          name: "systemProgram";
         }
-      ]
+      ];
+      args: [
+        {
+          name: "userLookupTable";
+          type: "pubkey";
+        }
+      ];
     },
     {
-      "name": "init_referrer_token_state",
-      "discriminator": [
-        116,
-        45,
-        66,
-        148,
-        58,
-        13,
-        218,
-        115
-      ],
-      "accounts": [
+      name: "withdrawReferrerFees";
+      discriminator: [171, 118, 121, 201, 233, 140, 23, 228];
+      accounts: [
         {
-          "name": "payer",
-          "writable": true,
-          "signer": true
+          name: "referrer";
+          writable: true;
+          signer: true;
         },
         {
-          "name": "lending_market"
+          name: "referrerTokenState";
+          writable: true;
         },
         {
-          "name": "reserve"
+          name: "reserve";
+          writable: true;
         },
         {
-          "name": "referrer"
+          name: "reserveLiquidityMint";
         },
         {
-          "name": "referrer_token_state",
-          "writable": true
+          name: "reserveSupplyLiquidity";
+          writable: true;
         },
         {
-          "name": "rent"
+          name: "referrerTokenAccount";
+          writable: true;
         },
         {
-          "name": "system_program"
+          name: "lendingMarket";
+        },
+        {
+          name: "lendingMarketAuthority";
+        },
+        {
+          name: "tokenProgram";
         }
-      ],
-      "args": []
+      ];
+      args: [];
     },
     {
-      "name": "init_user_metadata",
-      "discriminator": [
-        117,
-        169,
-        176,
-        69,
-        197,
-        23,
-        15,
-        162
-      ],
-      "accounts": [
+      name: "initReferrerStateAndShortUrl";
+      discriminator: [165, 19, 25, 127, 100, 55, 31, 90];
+      accounts: [
         {
-          "name": "owner",
-          "signer": true
+          name: "referrer";
+          writable: true;
+          signer: true;
         },
         {
-          "name": "fee_payer",
-          "writable": true,
-          "signer": true
+          name: "referrerState";
+          writable: true;
         },
         {
-          "name": "user_metadata",
-          "writable": true
+          name: "referrerShortUrl";
+          writable: true;
         },
         {
-          "name": "referrer_user_metadata",
-          "optional": true
+          name: "referrerUserMetadata";
         },
         {
-          "name": "rent"
+          name: "rent";
         },
         {
-          "name": "system_program"
+          name: "systemProgram";
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "user_lookup_table",
-          "type": "pubkey"
+          name: "shortUrl";
+          type: "string";
         }
-      ]
+      ];
     },
     {
-      "name": "withdraw_referrer_fees",
-      "discriminator": [
-        171,
-        118,
-        121,
-        201,
-        233,
-        140,
-        23,
-        228
-      ],
-      "accounts": [
+      name: "deleteReferrerStateAndShortUrl";
+      discriminator: [153, 185, 99, 28, 228, 179, 187, 150];
+      accounts: [
         {
-          "name": "referrer",
-          "writable": true,
-          "signer": true
+          name: "referrer";
+          writable: true;
+          signer: true;
         },
         {
-          "name": "referrer_token_state",
-          "writable": true
+          name: "referrerState";
+          writable: true;
         },
         {
-          "name": "reserve",
-          "writable": true
+          name: "shortUrl";
+          writable: true;
         },
         {
-          "name": "reserve_liquidity_mint"
+          name: "rent";
         },
         {
-          "name": "reserve_supply_liquidity",
-          "writable": true
-        },
-        {
-          "name": "referrer_token_account",
-          "writable": true
-        },
-        {
-          "name": "lending_market"
-        },
-        {
-          "name": "lending_market_authority"
-        },
-        {
-          "name": "token_program"
+          name: "systemProgram";
         }
-      ],
-      "args": []
+      ];
+      args: [];
     },
     {
-      "name": "init_referrer_state_and_short_url",
-      "discriminator": [
-        165,
-        19,
-        25,
-        127,
-        100,
-        55,
-        31,
-        90
-      ],
-      "accounts": [
+      name: "idlMissingTypes";
+      discriminator: [130, 80, 38, 153, 80, 212, 182, 253];
+      accounts: [
         {
-          "name": "referrer",
-          "writable": true,
-          "signer": true
+          name: "lendingMarketOwner";
+          signer: true;
         },
         {
-          "name": "referrer_state",
-          "writable": true
+          name: "lendingMarket";
         },
         {
-          "name": "referrer_short_url",
-          "writable": true
-        },
-        {
-          "name": "referrer_user_metadata"
-        },
-        {
-          "name": "rent"
-        },
-        {
-          "name": "system_program"
+          name: "reserve";
+          writable: true;
         }
-      ],
-      "args": [
+      ];
+      args: [
         {
-          "name": "short_url",
-          "type": "string"
+          name: "reserveFarmKind";
+          type: {
+            defined: {
+              name: "ReserveFarmKind";
+            };
+          };
+        },
+        {
+          name: "assetTier";
+          type: {
+            defined: {
+              name: "AssetTier";
+            };
+          };
+        },
+        {
+          name: "feeCalculation";
+          type: {
+            defined: {
+              name: "FeeCalculation";
+            };
+          };
+        },
+        {
+          name: "reserveStatus";
+          type: {
+            defined: {
+              name: "ReserveStatus";
+            };
+          };
+        },
+        {
+          name: "updateConfigMode";
+          type: {
+            defined: {
+              name: "UpdateConfigMode";
+            };
+          };
+        },
+        {
+          name: "updateLendingMarketConfigValue";
+          type: {
+            defined: {
+              name: "UpdateLendingMarketConfigValue";
+            };
+          };
+        },
+        {
+          name: "updateLendingMarketConfigMode";
+          type: {
+            defined: {
+              name: "UpdateLendingMarketMode";
+            };
+          };
         }
-      ]
-    },
-    {
-      "name": "delete_referrer_state_and_short_url",
-      "discriminator": [
-        153,
-        185,
-        99,
-        28,
-        228,
-        179,
-        187,
-        150
-      ],
-      "accounts": [
-        {
-          "name": "referrer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "referrer_state",
-          "writable": true
-        },
-        {
-          "name": "short_url",
-          "writable": true
-        },
-        {
-          "name": "rent"
-        },
-        {
-          "name": "system_program"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "idl_missing_types",
-      "discriminator": [
-        130,
-        80,
-        38,
-        153,
-        80,
-        212,
-        182,
-        253
-      ],
-      "accounts": [
-        {
-          "name": "lending_market_owner",
-          "signer": true
-        },
-        {
-          "name": "lending_market"
-        },
-        {
-          "name": "reserve",
-          "writable": true
-        }
-      ],
-      "args": [
-        {
-          "name": "reserve_farm_kind",
-          "type": {
-            "defined": {
-              "name": "ReserveFarmKind"
-            }
-          }
-        },
-        {
-          "name": "asset_tier",
-          "type": {
-            "defined": {
-              "name": "AssetTier"
-            }
-          }
-        },
-        {
-          "name": "fee_calculation",
-          "type": {
-            "defined": {
-              "name": "FeeCalculation"
-            }
-          }
-        },
-        {
-          "name": "reserve_status",
-          "type": {
-            "defined": {
-              "name": "ReserveStatus"
-            }
-          }
-        },
-        {
-          "name": "update_config_mode",
-          "type": {
-            "defined": {
-              "name": "UpdateConfigMode"
-            }
-          }
-        },
-        {
-          "name": "update_lending_market_config_value",
-          "type": {
-            "defined": {
-              "name": "UpdateLendingMarketConfigValue"
-            }
-          }
-        },
-        {
-          "name": "update_lending_market_config_mode",
-          "type": {
-            "defined": {
-              "name": "UpdateLendingMarketMode"
-            }
-          }
-        }
-      ]
+      ];
     }
-  ],
-  "accounts": [
+  ];
+  accounts: [
     {
-      "name": "UserState",
-      "discriminator": [
-        72,
-        177,
-        85,
-        249,
-        76,
-        167,
-        186,
-        126
-      ]
+      name: "UserState";
+      discriminator: [72, 177, 85, 249, 76, 167, 186, 126];
     },
     {
-      "name": "LendingMarket",
-      "discriminator": [
-        246,
-        114,
-        50,
-        98,
-        72,
-        157,
-        28,
-        120
-      ]
+      name: "LendingMarket";
+      discriminator: [246, 114, 50, 98, 72, 157, 28, 120];
     },
     {
-      "name": "Obligation",
-      "discriminator": [
-        168,
-        206,
-        141,
-        106,
-        88,
-        76,
-        172,
-        167
-      ]
+      name: "Obligation";
+      discriminator: [168, 206, 141, 106, 88, 76, 172, 167];
     },
     {
-      "name": "ReferrerState",
-      "discriminator": [
-        194,
-        81,
-        217,
-        103,
-        12,
-        19,
-        12,
-        66
-      ]
+      name: "ReferrerState";
+      discriminator: [194, 81, 217, 103, 12, 19, 12, 66];
     },
     {
-      "name": "ReferrerTokenState",
-      "discriminator": [
-        39,
-        15,
-        208,
-        77,
-        32,
-        195,
-        105,
-        56
-      ]
+      name: "ReferrerTokenState";
+      discriminator: [39, 15, 208, 77, 32, 195, 105, 56];
     },
     {
-      "name": "ShortUrl",
-      "discriminator": [
-        28,
-        89,
-        174,
-        25,
-        226,
-        124,
-        126,
-        212
-      ]
+      name: "ShortUrl";
+      discriminator: [28, 89, 174, 25, 226, 124, 126, 212];
     },
     {
-      "name": "UserMetadata",
-      "discriminator": [
-        157,
-        214,
-        220,
-        235,
-        98,
-        135,
-        171,
-        28
-      ]
+      name: "UserMetadata";
+      discriminator: [157, 214, 220, 235, 98, 135, 171, 28];
     },
     {
-      "name": "Reserve",
-      "discriminator": [
-        43,
-        242,
-        204,
-        202,
-        26,
-        247,
-        59,
-        127
-      ]
+      name: "Reserve";
+      discriminator: [43, 242, 204, 202, 26, 247, 59, 127];
     }
-  ],
-  "errors": [
+  ];
+  errors: [
     {
-      "code": 6000,
-      "name": "InvalidMarketAuthority",
-      "msg": "Market authority is invalid"
+      code: 6000;
+      name: "InvalidMarketAuthority";
+      msg: "Market authority is invalid";
     },
     {
-      "code": 6001,
-      "name": "InvalidMarketOwner",
-      "msg": "Market owner is invalid"
+      code: 6001;
+      name: "InvalidMarketOwner";
+      msg: "Market owner is invalid";
     },
     {
-      "code": 6002,
-      "name": "InvalidAccountOwner",
-      "msg": "Input account owner is not the program address"
+      code: 6002;
+      name: "InvalidAccountOwner";
+      msg: "Input account owner is not the program address";
     },
     {
-      "code": 6003,
-      "name": "InvalidAmount",
-      "msg": "Input amount is invalid"
+      code: 6003;
+      name: "InvalidAmount";
+      msg: "Input amount is invalid";
     },
     {
-      "code": 6004,
-      "name": "InvalidConfig",
-      "msg": "Input config value is invalid"
+      code: 6004;
+      name: "InvalidConfig";
+      msg: "Input config value is invalid";
     },
     {
-      "code": 6005,
-      "name": "InvalidSigner",
-      "msg": "Input account must be a signer"
+      code: 6005;
+      name: "InvalidSigner";
+      msg: "Input account must be a signer";
     },
     {
-      "code": 6006,
-      "name": "InvalidAccountInput",
-      "msg": "Invalid account input"
+      code: 6006;
+      name: "InvalidAccountInput";
+      msg: "Invalid account input";
     },
     {
-      "code": 6007,
-      "name": "MathOverflow",
-      "msg": "Math operation overflow"
+      code: 6007;
+      name: "MathOverflow";
+      msg: "Math operation overflow";
     },
     {
-      "code": 6008,
-      "name": "InsufficientLiquidity",
-      "msg": "Insufficient liquidity available"
+      code: 6008;
+      name: "InsufficientLiquidity";
+      msg: "Insufficient liquidity available";
     },
     {
-      "code": 6009,
-      "name": "ReserveStale",
-      "msg": "Reserve state needs to be refreshed"
+      code: 6009;
+      name: "ReserveStale";
+      msg: "Reserve state needs to be refreshed";
     },
     {
-      "code": 6010,
-      "name": "WithdrawTooSmall",
-      "msg": "Withdraw amount too small"
+      code: 6010;
+      name: "WithdrawTooSmall";
+      msg: "Withdraw amount too small";
     },
     {
-      "code": 6011,
-      "name": "WithdrawTooLarge",
-      "msg": "Withdraw amount too large"
+      code: 6011;
+      name: "WithdrawTooLarge";
+      msg: "Withdraw amount too large";
     },
     {
-      "code": 6012,
-      "name": "BorrowTooSmall",
-      "msg": "Borrow amount too small to receive liquidity after fees"
+      code: 6012;
+      name: "BorrowTooSmall";
+      msg: "Borrow amount too small to receive liquidity after fees";
     },
     {
-      "code": 6013,
-      "name": "BorrowTooLarge",
-      "msg": "Borrow amount too large for deposited collateral"
+      code: 6013;
+      name: "BorrowTooLarge";
+      msg: "Borrow amount too large for deposited collateral";
     },
     {
-      "code": 6014,
-      "name": "RepayTooSmall",
-      "msg": "Repay amount too small to transfer liquidity"
+      code: 6014;
+      name: "RepayTooSmall";
+      msg: "Repay amount too small to transfer liquidity";
     },
     {
-      "code": 6015,
-      "name": "LiquidationTooSmall",
-      "msg": "Liquidation amount too small to receive collateral"
+      code: 6015;
+      name: "LiquidationTooSmall";
+      msg: "Liquidation amount too small to receive collateral";
     },
     {
-      "code": 6016,
-      "name": "ObligationHealthy",
-      "msg": "Cannot liquidate healthy obligations"
+      code: 6016;
+      name: "ObligationHealthy";
+      msg: "Cannot liquidate healthy obligations";
     },
     {
-      "code": 6017,
-      "name": "ObligationStale",
-      "msg": "Obligation state needs to be refreshed"
+      code: 6017;
+      name: "ObligationStale";
+      msg: "Obligation state needs to be refreshed";
     },
     {
-      "code": 6018,
-      "name": "ObligationReserveLimit",
-      "msg": "Obligation reserve limit exceeded"
+      code: 6018;
+      name: "ObligationReserveLimit";
+      msg: "Obligation reserve limit exceeded";
     },
     {
-      "code": 6019,
-      "name": "InvalidObligationOwner",
-      "msg": "Obligation owner is invalid"
+      code: 6019;
+      name: "InvalidObligationOwner";
+      msg: "Obligation owner is invalid";
     },
     {
-      "code": 6020,
-      "name": "ObligationDepositsEmpty",
-      "msg": "Obligation deposits are empty"
+      code: 6020;
+      name: "ObligationDepositsEmpty";
+      msg: "Obligation deposits are empty";
     },
     {
-      "code": 6021,
-      "name": "ObligationBorrowsEmpty",
-      "msg": "Obligation borrows are empty"
+      code: 6021;
+      name: "ObligationBorrowsEmpty";
+      msg: "Obligation borrows are empty";
     },
     {
-      "code": 6022,
-      "name": "ObligationDepositsZero",
-      "msg": "Obligation deposits have zero value"
+      code: 6022;
+      name: "ObligationDepositsZero";
+      msg: "Obligation deposits have zero value";
     },
     {
-      "code": 6023,
-      "name": "ObligationBorrowsZero",
-      "msg": "Obligation borrows have zero value"
+      code: 6023;
+      name: "ObligationBorrowsZero";
+      msg: "Obligation borrows have zero value";
     },
     {
-      "code": 6024,
-      "name": "InvalidObligationCollateral",
-      "msg": "Invalid obligation collateral"
+      code: 6024;
+      name: "InvalidObligationCollateral";
+      msg: "Invalid obligation collateral";
     },
     {
-      "code": 6025,
-      "name": "InvalidObligationLiquidity",
-      "msg": "Invalid obligation liquidity"
+      code: 6025;
+      name: "InvalidObligationLiquidity";
+      msg: "Invalid obligation liquidity";
     },
     {
-      "code": 6026,
-      "name": "ObligationCollateralEmpty",
-      "msg": "Obligation collateral is empty"
+      code: 6026;
+      name: "ObligationCollateralEmpty";
+      msg: "Obligation collateral is empty";
     },
     {
-      "code": 6027,
-      "name": "ObligationLiquidityEmpty",
-      "msg": "Obligation liquidity is empty"
+      code: 6027;
+      name: "ObligationLiquidityEmpty";
+      msg: "Obligation liquidity is empty";
     },
     {
-      "code": 6028,
-      "name": "NegativeInterestRate",
-      "msg": "Interest rate is negative"
+      code: 6028;
+      name: "NegativeInterestRate";
+      msg: "Interest rate is negative";
     },
     {
-      "code": 6029,
-      "name": "InvalidOracleConfig",
-      "msg": "Input oracle config is invalid"
+      code: 6029;
+      name: "InvalidOracleConfig";
+      msg: "Input oracle config is invalid";
     },
     {
-      "code": 6030,
-      "name": "InsufficientProtocolFeesToRedeem",
-      "msg": "Insufficient protocol fees to claim or no liquidity available"
+      code: 6030;
+      name: "InsufficientProtocolFeesToRedeem";
+      msg: "Insufficient protocol fees to claim or no liquidity available";
     },
     {
-      "code": 6031,
-      "name": "FlashBorrowCpi",
-      "msg": "No cpi flash borrows allowed"
+      code: 6031;
+      name: "FlashBorrowCpi";
+      msg: "No cpi flash borrows allowed";
     },
     {
-      "code": 6032,
-      "name": "NoFlashRepayFound",
-      "msg": "No corresponding repay found for flash borrow"
+      code: 6032;
+      name: "NoFlashRepayFound";
+      msg: "No corresponding repay found for flash borrow";
     },
     {
-      "code": 6033,
-      "name": "InvalidFlashRepay",
-      "msg": "Invalid repay found"
+      code: 6033;
+      name: "InvalidFlashRepay";
+      msg: "Invalid repay found";
     },
     {
-      "code": 6034,
-      "name": "FlashRepayCpi",
-      "msg": "No cpi flash repays allowed"
+      code: 6034;
+      name: "FlashRepayCpi";
+      msg: "No cpi flash repays allowed";
     },
     {
-      "code": 6035,
-      "name": "MultipleFlashBorrows",
-      "msg": "Multiple flash borrows not allowed in the same transaction"
+      code: 6035;
+      name: "MultipleFlashBorrows";
+      msg: "Multiple flash borrows not allowed in the same transaction";
     },
     {
-      "code": 6036,
-      "name": "FlashLoansDisabled",
-      "msg": "Flash loans are disabled for this reserve"
+      code: 6036;
+      name: "FlashLoansDisabled";
+      msg: "Flash loans are disabled for this reserve";
     },
     {
-      "code": 6037,
-      "name": "SwitchboardV2Error",
-      "msg": "Switchboard error"
+      code: 6037;
+      name: "SwitchboardV2Error";
+      msg: "Switchboard error";
     },
     {
-      "code": 6038,
-      "name": "CouldNotDeserializeScope",
-      "msg": "Cannot deserialize the scope price account"
+      code: 6038;
+      name: "CouldNotDeserializeScope";
+      msg: "Cannot deserialize the scope price account";
     },
     {
-      "code": 6039,
-      "name": "PriceTooOld",
-      "msg": "Price too old"
+      code: 6039;
+      name: "PriceTooOld";
+      msg: "Price too old";
     },
     {
-      "code": 6040,
-      "name": "PriceTooDivergentFromTwap",
-      "msg": "Price too divergent from twap"
+      code: 6040;
+      name: "PriceTooDivergentFromTwap";
+      msg: "Price too divergent from twap";
     },
     {
-      "code": 6041,
-      "name": "InvalidTwapPrice",
-      "msg": "Invalid twap price"
+      code: 6041;
+      name: "InvalidTwapPrice";
+      msg: "Invalid twap price";
     },
     {
-      "code": 6042,
-      "name": "GlobalEmergencyMode",
-      "msg": "Emergency mode is enabled"
+      code: 6042;
+      name: "GlobalEmergencyMode";
+      msg: "Emergency mode is enabled";
     },
     {
-      "code": 6043,
-      "name": "InvalidFlag",
-      "msg": "Invalid lending market config"
+      code: 6043;
+      name: "InvalidFlag";
+      msg: "Invalid lending market config";
     },
     {
-      "code": 6044,
-      "name": "PriceNotValid",
-      "msg": "Price is not valid"
+      code: 6044;
+      name: "PriceNotValid";
+      msg: "Price is not valid";
     },
     {
-      "code": 6045,
-      "name": "PriceIsBiggerThanHeuristic",
-      "msg": "Price is bigger than allowed by heuristic"
+      code: 6045;
+      name: "PriceIsBiggerThanHeuristic";
+      msg: "Price is bigger than allowed by heuristic";
     },
     {
-      "code": 6046,
-      "name": "PriceIsLowerThanHeuristic",
-      "msg": "Price lower than allowed by heuristic"
+      code: 6046;
+      name: "PriceIsLowerThanHeuristic";
+      msg: "Price lower than allowed by heuristic";
     },
     {
-      "code": 6047,
-      "name": "PriceIsZero",
-      "msg": "Price is zero"
+      code: 6047;
+      name: "PriceIsZero";
+      msg: "Price is zero";
     },
     {
-      "code": 6048,
-      "name": "PriceConfidenceTooWide",
-      "msg": "Price confidence too wide"
+      code: 6048;
+      name: "PriceConfidenceTooWide";
+      msg: "Price confidence too wide";
     },
     {
-      "code": 6049,
-      "name": "IntegerOverflow",
-      "msg": "Conversion between integers failed"
+      code: 6049;
+      name: "IntegerOverflow";
+      msg: "Conversion between integers failed";
     },
     {
-      "code": 6050,
-      "name": "NoFarmForReserve",
-      "msg": "This reserve does not have a farm"
+      code: 6050;
+      name: "NoFarmForReserve";
+      msg: "This reserve does not have a farm";
     },
     {
-      "code": 6051,
-      "name": "IncorrectInstructionInPosition",
-      "msg": "Wrong instruction at expected position"
+      code: 6051;
+      name: "IncorrectInstructionInPosition";
+      msg: "Wrong instruction at expected position";
     },
     {
-      "code": 6052,
-      "name": "NoPriceFound",
-      "msg": "No price found"
+      code: 6052;
+      name: "NoPriceFound";
+      msg: "No price found";
     },
     {
-      "code": 6053,
-      "name": "InvalidTwapConfig",
-      "msg": "Invalid Twap configuration: Twap is enabled but one of the enabled price doesn't have a twap"
+      code: 6053;
+      name: "InvalidTwapConfig";
+      msg: "Invalid Twap configuration: Twap is enabled but one of the enabled price doesn't have a twap";
     },
     {
-      "code": 6054,
-      "name": "InvalidPythPriceAccount",
-      "msg": "Pyth price account does not match configuration"
+      code: 6054;
+      name: "InvalidPythPriceAccount";
+      msg: "Pyth price account does not match configuration";
     },
     {
-      "code": 6055,
-      "name": "InvalidSwitchboardAccount",
-      "msg": "Switchboard account(s) do not match configuration"
+      code: 6055;
+      name: "InvalidSwitchboardAccount";
+      msg: "Switchboard account(s) do not match configuration";
     },
     {
-      "code": 6056,
-      "name": "InvalidScopePriceAccount",
-      "msg": "Scope price account does not match configuration"
+      code: 6056;
+      name: "InvalidScopePriceAccount";
+      msg: "Scope price account does not match configuration";
     },
     {
-      "code": 6057,
-      "name": "ObligationCollateralLtvZero",
-      "msg": "The obligation has one collateral with an LTV set to 0. Withdraw it before withdrawing other collaterals"
+      code: 6057;
+      name: "ObligationCollateralLtvZero";
+      msg: "The obligation has one collateral with an LTV set to 0. Withdraw it before withdrawing other collaterals";
     },
     {
-      "code": 6058,
-      "name": "InvalidObligationSeedsValue",
-      "msg": "Seeds must be default pubkeys for tag 0, and mint addresses for tag 1 or 2"
+      code: 6058;
+      name: "InvalidObligationSeedsValue";
+      msg: "Seeds must be default pubkeys for tag 0, and mint addresses for tag 1 or 2";
     },
     {
-      "code": 6059,
-      "name": "DeprecatedInvalidObligationId",
-      "msg": "[DEPRECATED] Obligation id must be 0"
+      code: 6059;
+      name: "DeprecatedInvalidObligationId";
+      msg: "[DEPRECATED] Obligation id must be 0";
     },
     {
-      "code": 6060,
-      "name": "InvalidBorrowRateCurvePoint",
-      "msg": "Invalid borrow rate curve point"
+      code: 6060;
+      name: "InvalidBorrowRateCurvePoint";
+      msg: "Invalid borrow rate curve point";
     },
     {
-      "code": 6061,
-      "name": "InvalidUtilizationRate",
-      "msg": "Invalid utilization rate"
+      code: 6061;
+      name: "InvalidUtilizationRate";
+      msg: "Invalid utilization rate";
     },
     {
-      "code": 6062,
-      "name": "CannotSocializeObligationWithCollateral",
-      "msg": "Obligation hasn't been fully liquidated and debt cannot be socialized."
+      code: 6062;
+      name: "CannotSocializeObligationWithCollateral";
+      msg: "Obligation hasn't been fully liquidated and debt cannot be socialized.";
     },
     {
-      "code": 6063,
-      "name": "ObligationEmpty",
-      "msg": "Obligation has no borrows or deposits."
+      code: 6063;
+      name: "ObligationEmpty";
+      msg: "Obligation has no borrows or deposits.";
     },
     {
-      "code": 6064,
-      "name": "WithdrawalCapReached",
-      "msg": "Withdrawal cap is reached"
+      code: 6064;
+      name: "WithdrawalCapReached";
+      msg: "Withdrawal cap is reached";
     },
     {
-      "code": 6065,
-      "name": "LastTimestampGreaterThanCurrent",
-      "msg": "The last interval start timestamp is greater than the current timestamp"
+      code: 6065;
+      name: "LastTimestampGreaterThanCurrent";
+      msg: "The last interval start timestamp is greater than the current timestamp";
     },
     {
-      "code": 6066,
-      "name": "LiquidationRewardTooSmall",
-      "msg": "The reward amount is less than the minimum acceptable received liquidity"
+      code: 6066;
+      name: "LiquidationRewardTooSmall";
+      msg: "The reward amount is less than the minimum acceptable received liquidity";
     },
     {
-      "code": 6067,
-      "name": "IsolatedAssetTierViolation",
-      "msg": "Isolated Asset Tier Violation"
+      code: 6067;
+      name: "IsolatedAssetTierViolation";
+      msg: "Isolated Asset Tier Violation";
     },
     {
-      "code": 6068,
-      "name": "InconsistentElevationGroup",
-      "msg": "The obligation's elevation group and the reserve's are not the same"
+      code: 6068;
+      name: "InconsistentElevationGroup";
+      msg: "The obligation's elevation group and the reserve's are not the same";
     },
     {
-      "code": 6069,
-      "name": "InvalidElevationGroup",
-      "msg": "The elevation group chosen for the reserve does not exist in the lending market"
+      code: 6069;
+      name: "InvalidElevationGroup";
+      msg: "The elevation group chosen for the reserve does not exist in the lending market";
     },
     {
-      "code": 6070,
-      "name": "InvalidElevationGroupConfig",
-      "msg": "The elevation group updated has wrong parameters set"
+      code: 6070;
+      name: "InvalidElevationGroupConfig";
+      msg: "The elevation group updated has wrong parameters set";
     },
     {
-      "code": 6071,
-      "name": "UnhealthyElevationGroupLtv",
-      "msg": "The current obligation must have most or all its debt repaid before changing the elevation group"
+      code: 6071;
+      name: "UnhealthyElevationGroupLtv";
+      msg: "The current obligation must have most or all its debt repaid before changing the elevation group";
     },
     {
-      "code": 6072,
-      "name": "ElevationGroupNewLoansDisabled",
-      "msg": "Elevation group does not accept any new loans or any new borrows/withdrawals"
+      code: 6072;
+      name: "ElevationGroupNewLoansDisabled";
+      msg: "Elevation group does not accept any new loans or any new borrows/withdrawals";
     },
     {
-      "code": 6073,
-      "name": "ReserveDeprecated",
-      "msg": "Reserve was deprecated, no longer usable"
+      code: 6073;
+      name: "ReserveDeprecated";
+      msg: "Reserve was deprecated, no longer usable";
     },
     {
-      "code": 6074,
-      "name": "ReferrerAccountNotInitialized",
-      "msg": "Referrer account not initialized"
+      code: 6074;
+      name: "ReferrerAccountNotInitialized";
+      msg: "Referrer account not initialized";
     },
     {
-      "code": 6075,
-      "name": "ReferrerAccountMintMissmatch",
-      "msg": "Referrer account mint does not match the operation reserve mint"
+      code: 6075;
+      name: "ReferrerAccountMintMissmatch";
+      msg: "Referrer account mint does not match the operation reserve mint";
     },
     {
-      "code": 6076,
-      "name": "ReferrerAccountWrongAddress",
-      "msg": "Referrer account address is not a valid program address"
+      code: 6076;
+      name: "ReferrerAccountWrongAddress";
+      msg: "Referrer account address is not a valid program address";
     },
     {
-      "code": 6077,
-      "name": "ReferrerAccountReferrerMissmatch",
-      "msg": "Referrer account referrer does not match the owner referrer"
+      code: 6077;
+      name: "ReferrerAccountReferrerMissmatch";
+      msg: "Referrer account referrer does not match the owner referrer";
     },
     {
-      "code": 6078,
-      "name": "ReferrerAccountMissing",
-      "msg": "Referrer account missing for obligation with referrer"
+      code: 6078;
+      name: "ReferrerAccountMissing";
+      msg: "Referrer account missing for obligation with referrer";
     },
     {
-      "code": 6079,
-      "name": "InsufficientReferralFeesToRedeem",
-      "msg": "Insufficient referral fees to claim or no liquidity available"
+      code: 6079;
+      name: "InsufficientReferralFeesToRedeem";
+      msg: "Insufficient referral fees to claim or no liquidity available";
     },
     {
-      "code": 6080,
-      "name": "CpiDisabled",
-      "msg": "CPI disabled for this instruction"
+      code: 6080;
+      name: "CpiDisabled";
+      msg: "CPI disabled for this instruction";
     },
     {
-      "code": 6081,
-      "name": "ShortUrlNotAsciiAlphanumeric",
-      "msg": "Referrer short_url is not ascii alphanumeric"
+      code: 6081;
+      name: "ShortUrlNotAsciiAlphanumeric";
+      msg: "Referrer short_url is not ascii alphanumeric";
     },
     {
-      "code": 6082,
-      "name": "ReserveObsolete",
-      "msg": "Reserve is marked as obsolete"
+      code: 6082;
+      name: "ReserveObsolete";
+      msg: "Reserve is marked as obsolete";
     },
     {
-      "code": 6083,
-      "name": "ElevationGroupAlreadyActivated",
-      "msg": "Obligation already part of the same elevation group"
+      code: 6083;
+      name: "ElevationGroupAlreadyActivated";
+      msg: "Obligation already part of the same elevation group";
     },
     {
-      "code": 6084,
-      "name": "ObligationInDeprecatedReserve",
-      "msg": "Obligation has a deposit in a deprecated reserve"
+      code: 6084;
+      name: "ObligationInDeprecatedReserve";
+      msg: "Obligation has a deposit in a deprecated reserve";
     },
     {
-      "code": 6085,
-      "name": "ReferrerStateOwnerMismatch",
-      "msg": "Referrer state owner does not match the given signer"
+      code: 6085;
+      name: "ReferrerStateOwnerMismatch";
+      msg: "Referrer state owner does not match the given signer";
     },
     {
-      "code": 6086,
-      "name": "UserMetadataOwnerAlreadySet",
-      "msg": "User metadata owner is already set"
+      code: 6086;
+      name: "UserMetadataOwnerAlreadySet";
+      msg: "User metadata owner is already set";
     },
     {
-      "code": 6087,
-      "name": "CollateralNonLiquidatable",
-      "msg": "This collateral cannot be liquidated (LTV set to 0)"
+      code: 6087;
+      name: "CollateralNonLiquidatable";
+      msg: "This collateral cannot be liquidated (LTV set to 0)";
     },
     {
-      "code": 6088,
-      "name": "BorrowingDisabled",
-      "msg": "Borrowing is disabled"
+      code: 6088;
+      name: "BorrowingDisabled";
+      msg: "Borrowing is disabled";
     },
     {
-      "code": 6089,
-      "name": "BorrowLimitExceeded",
-      "msg": "Cannot borrow above borrow limit"
+      code: 6089;
+      name: "BorrowLimitExceeded";
+      msg: "Cannot borrow above borrow limit";
     },
     {
-      "code": 6090,
-      "name": "DepositLimitExceeded",
-      "msg": "Cannot deposit above deposit limit"
+      code: 6090;
+      name: "DepositLimitExceeded";
+      msg: "Cannot deposit above deposit limit";
     },
     {
-      "code": 6091,
-      "name": "BorrowingDisabledOutsideElevationGroup",
-      "msg": "Reserve does not accept any new borrows outside elevation group"
+      code: 6091;
+      name: "BorrowingDisabledOutsideElevationGroup";
+      msg: "Reserve does not accept any new borrows outside elevation group";
     },
     {
-      "code": 6092,
-      "name": "NetValueRemainingTooSmall",
-      "msg": "Net value remaining too small"
+      code: 6092;
+      name: "NetValueRemainingTooSmall";
+      msg: "Net value remaining too small";
     },
     {
-      "code": 6093,
-      "name": "WorseLTVBlocked",
-      "msg": "Cannot get the obligation in a worse position"
+      code: 6093;
+      name: "WorseLTVBlocked";
+      msg: "Cannot get the obligation in a worse position";
     },
     {
-      "code": 6094,
-      "name": "LiabilitiesBiggerThanAssets",
-      "msg": "Cannot have more liabilities than assets in a position"
+      code: 6094;
+      name: "LiabilitiesBiggerThanAssets";
+      msg: "Cannot have more liabilities than assets in a position";
     },
     {
-      "code": 6095,
-      "name": "ReserveTokenBalanceMismatch",
-      "msg": "Reserve state and token account cannot drift"
+      code: 6095;
+      name: "ReserveTokenBalanceMismatch";
+      msg: "Reserve state and token account cannot drift";
     },
     {
-      "code": 6096,
-      "name": "ReserveVaultBalanceMismatch",
-      "msg": "Reserve token account has been unexpectedly modified"
+      code: 6096;
+      name: "ReserveVaultBalanceMismatch";
+      msg: "Reserve token account has been unexpectedly modified";
     },
     {
-      "code": 6097,
-      "name": "ReserveAccountingMismatch",
-      "msg": "Reserve internal state accounting has been unexpectedly modified"
+      code: 6097;
+      name: "ReserveAccountingMismatch";
+      msg: "Reserve internal state accounting has been unexpectedly modified";
     },
     {
-      "code": 6098,
-      "name": "BorrowingAboveUtilizationRateDisabled",
-      "msg": "Borrowing above set utilization rate is disabled"
+      code: 6098;
+      name: "BorrowingAboveUtilizationRateDisabled";
+      msg: "Borrowing above set utilization rate is disabled";
     },
     {
-      "code": 6099,
-      "name": "LiquidationBorrowFactorPriority",
-      "msg": "Liquidation must prioritize the debt with the highest borrow factor"
+      code: 6099;
+      name: "LiquidationBorrowFactorPriority";
+      msg: "Liquidation must prioritize the debt with the highest borrow factor";
     },
     {
-      "code": 6100,
-      "name": "LiquidationLowestLTVPriority",
-      "msg": "Liquidation must prioritize the collateral with the lowest LTV"
+      code: 6100;
+      name: "LiquidationLowestLTVPriority";
+      msg: "Liquidation must prioritize the collateral with the lowest LTV";
     },
     {
-      "code": 6101,
-      "name": "ElevationGroupBorrowLimitExceeded",
-      "msg": "Elevation group borrow limit exceeded"
+      code: 6101;
+      name: "ElevationGroupBorrowLimitExceeded";
+      msg: "Elevation group borrow limit exceeded";
     },
     {
-      "code": 6102,
-      "name": "ElevationGroupWithoutDebtReserve",
-      "msg": "The elevation group does not have a debt reserve defined"
+      code: 6102;
+      name: "ElevationGroupWithoutDebtReserve";
+      msg: "The elevation group does not have a debt reserve defined";
     },
     {
-      "code": 6103,
-      "name": "ElevationGroupMaxCollateralReserveZero",
-      "msg": "The elevation group does not allow any collateral reserves"
+      code: 6103;
+      name: "ElevationGroupMaxCollateralReserveZero";
+      msg: "The elevation group does not allow any collateral reserves";
     },
     {
-      "code": 6104,
-      "name": "ElevationGroupHasAnotherDebtReserve",
-      "msg": "In elevation group attempt to borrow from a reserve that is not the debt reserve"
+      code: 6104;
+      name: "ElevationGroupHasAnotherDebtReserve";
+      msg: "In elevation group attempt to borrow from a reserve that is not the debt reserve";
     },
     {
-      "code": 6105,
-      "name": "ElevationGroupDebtReserveAsCollateral",
-      "msg": "The elevation group's debt reserve cannot be used as a collateral reserve"
+      code: 6105;
+      name: "ElevationGroupDebtReserveAsCollateral";
+      msg: "The elevation group's debt reserve cannot be used as a collateral reserve";
     },
     {
-      "code": 6106,
-      "name": "ObligationCollateralExceedsElevationGroupLimit",
-      "msg": "Obligation have more collateral than the maximum allowed by the elevation group"
+      code: 6106;
+      name: "ObligationCollateralExceedsElevationGroupLimit";
+      msg: "Obligation have more collateral than the maximum allowed by the elevation group";
     },
     {
-      "code": 6107,
-      "name": "ObligationElevationGroupMultipleDebtReserve",
-      "msg": "Obligation is an elevation group but have more than one debt reserve"
+      code: 6107;
+      name: "ObligationElevationGroupMultipleDebtReserve";
+      msg: "Obligation is an elevation group but have more than one debt reserve";
     },
     {
-      "code": 6108,
-      "name": "UnsupportedTokenExtension",
-      "msg": "Mint has a token (2022) extension that is not supported"
+      code: 6108;
+      name: "UnsupportedTokenExtension";
+      msg: "Mint has a token (2022) extension that is not supported";
     },
     {
-      "code": 6109,
-      "name": "InvalidTokenAccount",
-      "msg": "Can't have an spl token mint with a t22 account"
+      code: 6109;
+      name: "InvalidTokenAccount";
+      msg: "Can't have an spl token mint with a t22 account";
     },
     {
-      "code": 6110,
-      "name": "DepositDisabledOutsideElevationGroup",
-      "msg": "Can't deposit into this reserve outside elevation group"
+      code: 6110;
+      name: "DepositDisabledOutsideElevationGroup";
+      msg: "Can't deposit into this reserve outside elevation group";
     },
     {
-      "code": 6111,
-      "name": "CannotCalculateReferralAmountDueToSlotsMismatch",
-      "msg": "Cannot calculate referral amount due to slots mismatch"
+      code: 6111;
+      name: "CannotCalculateReferralAmountDueToSlotsMismatch";
+      msg: "Cannot calculate referral amount due to slots mismatch";
     },
     {
-      "code": 6112,
-      "name": "ObligationOwnersMustMatch",
-      "msg": "Obligation owners must match"
+      code: 6112;
+      name: "ObligationOwnersMustMatch";
+      msg: "Obligation owners must match";
     },
     {
-      "code": 6113,
-      "name": "ObligationsMustMatch",
-      "msg": "Obligations must match"
+      code: 6113;
+      name: "ObligationsMustMatch";
+      msg: "Obligations must match";
     },
     {
-      "code": 6114,
-      "name": "LendingMarketsMustMatch",
-      "msg": "Lending markets must match"
+      code: 6114;
+      name: "LendingMarketsMustMatch";
+      msg: "Lending markets must match";
     },
     {
-      "code": 6115,
-      "name": "ObligationCurrentlyMarkedForDeleveraging",
-      "msg": "Obligation is already marked for deleveraging"
+      code: 6115;
+      name: "ObligationCurrentlyMarkedForDeleveraging";
+      msg: "Obligation is already marked for deleveraging";
     },
     {
-      "code": 6116,
-      "name": "MaximumWithdrawValueZero",
-      "msg": "Maximum withdrawable value of this collateral is zero, LTV needs improved"
+      code: 6116;
+      name: "MaximumWithdrawValueZero";
+      msg: "Maximum withdrawable value of this collateral is zero, LTV needs improved";
     },
     {
-      "code": 6117,
-      "name": "ZeroMaxLtvAssetsInDeposits",
-      "msg": "No max LTV 0 assets allowed in deposits for repay and withdraw"
+      code: 6117;
+      name: "ZeroMaxLtvAssetsInDeposits";
+      msg: "No max LTV 0 assets allowed in deposits for repay and withdraw";
     },
     {
-      "code": 6118,
-      "name": "MinLtvAssetsPriority",
-      "msg": "The operation must prioritize the collateral with the lowest LTV"
+      code: 6118;
+      name: "MinLtvAssetsPriority";
+      msg: "The operation must prioritize the collateral with the lowest LTV";
     },
     {
-      "code": 6119,
-      "name": "WorseLTVThanUnhealthyLTV",
-      "msg": "Cannot get the obligation liquidatable"
+      code: 6119;
+      name: "WorseLTVThanUnhealthyLTV";
+      msg: "Cannot get the obligation liquidatable";
     },
     {
-      "code": 6120,
-      "name": "FarmAccountsMissing",
-      "msg": "Farm accounts to refresh are missing"
+      code: 6120;
+      name: "FarmAccountsMissing";
+      msg: "Farm accounts to refresh are missing";
     },
     {
-      "code": 6121,
-      "name": "RepayTooSmallForFullLiquidation",
-      "msg": "Repay amount is too small to satisfy the mandatory full liquidation"
+      code: 6121;
+      name: "RepayTooSmallForFullLiquidation";
+      msg: "Repay amount is too small to satisfy the mandatory full liquidation";
     },
     {
-      "code": 6122,
-      "name": "InsufficientRepayAmount",
-      "msg": "Liquidator provided repay amount lower than required by liquidation rules"
+      code: 6122;
+      name: "InsufficientRepayAmount";
+      msg: "Liquidator provided repay amount lower than required by liquidation rules";
     }
-  ],
-  "types": [
+  ];
+  types: [
     {
-      "name": "UpdateConfigMode",
-      "type": {
-        "kind": "enum",
-        "variants": [
+      name: "UpdateConfigMode";
+      type: {
+        kind: "enum";
+        variants: [
           {
-            "name": "UpdateLoanToValuePct"
+            name: "UpdateLoanToValuePct";
           },
           {
-            "name": "UpdateMaxLiquidationBonusBps"
+            name: "UpdateMaxLiquidationBonusBps";
           },
           {
-            "name": "UpdateLiquidationThresholdPct"
+            name: "UpdateLiquidationThresholdPct";
           },
           {
-            "name": "UpdateProtocolLiquidationFee"
+            name: "UpdateProtocolLiquidationFee";
           },
           {
-            "name": "UpdateProtocolTakeRate"
+            name: "UpdateProtocolTakeRate";
           },
           {
-            "name": "UpdateFeesBorrowFee"
+            name: "UpdateFeesBorrowFee";
           },
           {
-            "name": "UpdateFeesFlashLoanFee"
+            name: "UpdateFeesFlashLoanFee";
           },
           {
-            "name": "UpdateFeesReferralFeeBps"
+            name: "UpdateFeesReferralFeeBps";
           },
           {
-            "name": "UpdateDepositLimit"
+            name: "UpdateDepositLimit";
           },
           {
-            "name": "UpdateBorrowLimit"
+            name: "UpdateBorrowLimit";
           },
           {
-            "name": "UpdateTokenInfoLowerHeuristic"
+            name: "UpdateTokenInfoLowerHeuristic";
           },
           {
-            "name": "UpdateTokenInfoUpperHeuristic"
+            name: "UpdateTokenInfoUpperHeuristic";
           },
           {
-            "name": "UpdateTokenInfoExpHeuristic"
+            name: "UpdateTokenInfoExpHeuristic";
           },
           {
-            "name": "UpdateTokenInfoTwapDivergence"
+            name: "UpdateTokenInfoTwapDivergence";
           },
           {
-            "name": "UpdateTokenInfoScopeTwap"
+            name: "UpdateTokenInfoScopeTwap";
           },
           {
-            "name": "UpdateTokenInfoScopeChain"
+            name: "UpdateTokenInfoScopeChain";
           },
           {
-            "name": "UpdateTokenInfoName"
+            name: "UpdateTokenInfoName";
           },
           {
-            "name": "UpdateTokenInfoPriceMaxAge"
+            name: "UpdateTokenInfoPriceMaxAge";
           },
           {
-            "name": "UpdateTokenInfoTwapMaxAge"
+            name: "UpdateTokenInfoTwapMaxAge";
           },
           {
-            "name": "UpdateScopePriceFeed"
+            name: "UpdateScopePriceFeed";
           },
           {
-            "name": "UpdatePythPrice"
+            name: "UpdatePythPrice";
           },
           {
-            "name": "UpdateSwitchboardFeed"
+            name: "UpdateSwitchboardFeed";
           },
           {
-            "name": "UpdateSwitchboardTwapFeed"
+            name: "UpdateSwitchboardTwapFeed";
           },
           {
-            "name": "UpdateBorrowRateCurve"
+            name: "UpdateBorrowRateCurve";
           },
           {
-            "name": "UpdateEntireReserveConfig"
+            name: "UpdateEntireReserveConfig";
           },
           {
-            "name": "UpdateDebtWithdrawalCap"
+            name: "UpdateDebtWithdrawalCap";
           },
           {
-            "name": "UpdateDepositWithdrawalCap"
+            name: "UpdateDepositWithdrawalCap";
           },
           {
-            "name": "UpdateDebtWithdrawalCapCurrentTotal"
+            name: "UpdateDebtWithdrawalCapCurrentTotal";
           },
           {
-            "name": "UpdateDepositWithdrawalCapCurrentTotal"
+            name: "UpdateDepositWithdrawalCapCurrentTotal";
           },
           {
-            "name": "UpdateBadDebtLiquidationBonusBps"
+            name: "UpdateBadDebtLiquidationBonusBps";
           },
           {
-            "name": "UpdateMinLiquidationBonusBps"
+            name: "UpdateMinLiquidationBonusBps";
           },
           {
-            "name": "UpdateDeleveragingMarginCallPeriod"
+            name: "UpdateDeleveragingMarginCallPeriod";
           },
           {
-            "name": "UpdateBorrowFactor"
+            name: "UpdateBorrowFactor";
           },
           {
-            "name": "UpdateAssetTier"
+            name: "UpdateAssetTier";
           },
           {
-            "name": "UpdateElevationGroup"
+            name: "UpdateElevationGroup";
           },
           {
-            "name": "UpdateDeleveragingThresholdDecreaseBpsPerDay"
+            name: "UpdateDeleveragingThresholdDecreaseBpsPerDay";
           },
           {
-            "name": "DeprecatedUpdateMultiplierSideBoost"
+            name: "DeprecatedUpdateMultiplierSideBoost";
           },
           {
-            "name": "DeprecatedUpdateMultiplierTagBoost"
+            name: "DeprecatedUpdateMultiplierTagBoost";
           },
           {
-            "name": "UpdateReserveStatus"
+            name: "UpdateReserveStatus";
           },
           {
-            "name": "UpdateFarmCollateral"
+            name: "UpdateFarmCollateral";
           },
           {
-            "name": "UpdateFarmDebt"
+            name: "UpdateFarmDebt";
           },
           {
-            "name": "UpdateDisableUsageAsCollateralOutsideEmode"
+            name: "UpdateDisableUsageAsCollateralOutsideEmode";
           },
           {
-            "name": "UpdateBlockBorrowingAboveUtilizationPct"
+            name: "UpdateBlockBorrowingAboveUtilizationPct";
           },
           {
-            "name": "UpdateBlockPriceUsage"
+            name: "UpdateBlockPriceUsage";
           },
           {
-            "name": "UpdateBorrowLimitOutsideElevationGroup"
+            name: "UpdateBorrowLimitOutsideElevationGroup";
           },
           {
-            "name": "UpdateBorrowLimitsInElevationGroupAgainstThisReserve"
+            name: "UpdateBorrowLimitsInElevationGroupAgainstThisReserve";
           },
           {
-            "name": "UpdateHostFixedInterestRateBps"
+            name: "UpdateHostFixedInterestRateBps";
           },
           {
-            "name": "UpdateAutodeleverageEnabled"
+            name: "UpdateAutodeleverageEnabled";
           },
           {
-            "name": "UpdateDeleveragingBonusIncreaseBpsPerDay"
+            name: "UpdateDeleveragingBonusIncreaseBpsPerDay";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "UpdateLendingMarketConfigValue",
-      "type": {
-        "kind": "enum",
-        "variants": [
+      name: "UpdateLendingMarketConfigValue";
+      type: {
+        kind: "enum";
+        variants: [
           {
-            "name": "Bool",
-            "fields": [
-              "bool"
-            ]
+            name: "Bool";
+            fields: ["bool"];
           },
           {
-            "name": "U8",
-            "fields": [
-              "u8"
-            ]
+            name: "U8";
+            fields: ["u8"];
           },
           {
-            "name": "U8Array",
-            "fields": [
+            name: "U8Array";
+            fields: [
               {
-                "array": [
-                  "u8",
-                  8
-                ]
+                array: ["u8", 8];
               }
-            ]
+            ];
           },
           {
-            "name": "U16",
-            "fields": [
-              "u16"
-            ]
+            name: "U16";
+            fields: ["u16"];
           },
           {
-            "name": "U64",
-            "fields": [
-              "u64"
-            ]
+            name: "U64";
+            fields: ["u64"];
           },
           {
-            "name": "U128",
-            "fields": [
-              "u128"
-            ]
+            name: "U128";
+            fields: ["u128"];
           },
           {
-            "name": "Pubkey",
-            "fields": [
-              "pubkey"
-            ]
+            name: "Pubkey";
+            fields: ["pubkey"];
           },
           {
-            "name": "ElevationGroup",
-            "fields": [
+            name: "ElevationGroup";
+            fields: [
               {
-                "defined": {
-                  "name": "ElevationGroup"
-                }
+                defined: {
+                  name: "ElevationGroup";
+                };
               }
-            ]
+            ];
           },
           {
-            "name": "Name",
-            "fields": [
+            name: "Name";
+            fields: [
               {
-                "array": [
-                  "u8",
-                  32
-                ]
+                array: ["u8", 32];
               }
-            ]
+            ];
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "UpdateLendingMarketMode",
-      "type": {
-        "kind": "enum",
-        "variants": [
+      name: "UpdateLendingMarketMode";
+      type: {
+        kind: "enum";
+        variants: [
           {
-            "name": "UpdateOwner"
+            name: "UpdateOwner";
           },
           {
-            "name": "UpdateEmergencyMode"
+            name: "UpdateEmergencyMode";
           },
           {
-            "name": "UpdateLiquidationCloseFactor"
+            name: "UpdateLiquidationCloseFactor";
           },
           {
-            "name": "UpdateLiquidationMaxValue"
+            name: "UpdateLiquidationMaxValue";
           },
           {
-            "name": "DeprecatedUpdateGlobalUnhealthyBorrow"
+            name: "DeprecatedUpdateGlobalUnhealthyBorrow";
           },
           {
-            "name": "UpdateGlobalAllowedBorrow"
+            name: "UpdateGlobalAllowedBorrow";
           },
           {
-            "name": "UpdateRiskCouncil"
+            name: "UpdateRiskCouncil";
           },
           {
-            "name": "UpdateMinFullLiquidationThreshold"
+            name: "UpdateMinFullLiquidationThreshold";
           },
           {
-            "name": "UpdateInsolvencyRiskLtv"
+            name: "UpdateInsolvencyRiskLtv";
           },
           {
-            "name": "UpdateElevationGroup"
+            name: "UpdateElevationGroup";
           },
           {
-            "name": "UpdateReferralFeeBps"
+            name: "UpdateReferralFeeBps";
           },
           {
-            "name": "DeprecatedUpdateMultiplierPoints"
+            name: "DeprecatedUpdateMultiplierPoints";
           },
           {
-            "name": "UpdatePriceRefreshTriggerToMaxAgePct"
+            name: "UpdatePriceRefreshTriggerToMaxAgePct";
           },
           {
-            "name": "UpdateAutodeleverageEnabled"
+            name: "UpdateAutodeleverageEnabled";
           },
           {
-            "name": "UpdateBorrowingDisabled"
+            name: "UpdateBorrowingDisabled";
           },
           {
-            "name": "UpdateMinNetValueObligationPostAction"
+            name: "UpdateMinNetValueObligationPostAction";
           },
           {
-            "name": "UpdateMinValueLtvSkipPriorityLiqCheck"
+            name: "UpdateMinValueLtvSkipPriorityLiqCheck";
           },
           {
-            "name": "UpdateMinValueBfSkipPriorityLiqCheck"
+            name: "UpdateMinValueBfSkipPriorityLiqCheck";
           },
           {
-            "name": "UpdatePaddingFields"
+            name: "UpdatePaddingFields";
           },
           {
-            "name": "UpdateName"
+            name: "UpdateName";
           },
           {
-            "name": "UpdateIndividualAutodeleverageMarginCallPeriodSecs"
+            name: "UpdateIndividualAutodeleverageMarginCallPeriodSecs";
           },
           {
-            "name": "UpdateInitialDepositAmount"
+            name: "UpdateInitialDepositAmount";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "LastUpdate",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "LastUpdate";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "slot",
-            "type": "u64"
+            name: "slot";
+            type: "u64";
           },
           {
-            "name": "stale",
-            "type": "u8"
+            name: "stale";
+            type: "u8";
           },
           {
-            "name": "price_status",
-            "type": "u8"
+            name: "priceStatus";
+            type: "u8";
           },
           {
-            "name": "placeholder",
-            "type": {
-              "array": [
-                "u8",
-                6
-              ]
-            }
+            name: "placeholder";
+            type: {
+              array: ["u8", 6];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ElevationGroup",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "ElevationGroup";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "max_liquidation_bonus_bps",
-            "type": "u16"
+            name: "maxLiquidationBonusBps";
+            type: "u16";
           },
           {
-            "name": "id",
-            "type": "u8"
+            name: "id";
+            type: "u8";
           },
           {
-            "name": "ltv_pct",
-            "type": "u8"
+            name: "ltvPct";
+            type: "u8";
           },
           {
-            "name": "liquidation_threshold_pct",
-            "type": "u8"
+            name: "liquidationThresholdPct";
+            type: "u8";
           },
           {
-            "name": "allow_new_loans",
-            "type": "u8"
+            name: "allowNewLoans";
+            type: "u8";
           },
           {
-            "name": "max_reserves_as_collateral",
-            "type": "u8"
+            name: "maxReservesAsCollateral";
+            type: "u8";
           },
           {
-            "name": "padding0",
-            "type": "u8"
+            name: "padding0";
+            type: "u8";
           },
           {
-            "name": "debt_reserve",
-            "type": "pubkey"
+            name: "debtReserve";
+            type: "pubkey";
           },
           {
-            "name": "padding1",
-            "type": {
-              "array": [
-                "u64",
-                4
-              ]
-            }
+            name: "padding1";
+            type: {
+              array: ["u64", 4];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "InitObligationArgs",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "InitObligationArgs";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "tag",
-            "type": "u8"
+            name: "tag";
+            type: "u8";
           },
           {
-            "name": "id",
-            "type": "u8"
+            name: "id";
+            type: "u8";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ObligationCollateral",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "ObligationCollateral";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "deposit_reserve",
-            "type": "pubkey"
+            name: "depositReserve";
+            type: "pubkey";
           },
           {
-            "name": "deposited_amount",
-            "type": "u64"
+            name: "depositedAmount";
+            type: "u64";
           },
           {
-            "name": "market_value_sf",
-            "type": "u128"
+            name: "marketValueSf";
+            type: "u128";
           },
           {
-            "name": "borrowed_amount_against_this_collateral_in_elevation_group",
-            "type": "u64"
+            name: "borrowedAmountAgainstThisCollateralInElevationGroup";
+            type: "u64";
           },
           {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u64",
-                9
-              ]
-            }
+            name: "padding";
+            type: {
+              array: ["u64", 9];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ObligationLiquidity",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "ObligationLiquidity";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "borrow_reserve",
-            "type": "pubkey"
+            name: "borrowReserve";
+            type: "pubkey";
           },
           {
-            "name": "cumulative_borrow_rate_bsf",
-            "type": {
-              "defined": {
-                "name": "BigFractionBytes"
-              }
-            }
+            name: "cumulativeBorrowRateBsf";
+            type: {
+              defined: {
+                name: "BigFractionBytes";
+              };
+            };
           },
           {
-            "name": "padding",
-            "type": "u64"
+            name: "padding";
+            type: "u64";
           },
           {
-            "name": "borrowed_amount_sf",
-            "type": "u128"
+            name: "borrowedAmountSf";
+            type: "u128";
           },
           {
-            "name": "market_value_sf",
-            "type": "u128"
+            name: "marketValueSf";
+            type: "u128";
           },
           {
-            "name": "borrow_factor_adjusted_market_value_sf",
-            "type": "u128"
+            name: "borrowFactorAdjustedMarketValueSf";
+            type: "u128";
           },
           {
-            "name": "borrowed_amount_outside_elevation_groups",
-            "type": "u64"
+            name: "borrowedAmountOutsideElevationGroups";
+            type: "u64";
           },
           {
-            "name": "padding2",
-            "type": {
-              "array": [
-                "u64",
-                7
-              ]
-            }
+            name: "padding2";
+            type: {
+              array: ["u64", 7];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "AssetTier",
-      "type": {
-        "kind": "enum",
-        "variants": [
+      name: "AssetTier";
+      type: {
+        kind: "enum";
+        variants: [
           {
-            "name": "Regular"
+            name: "Regular";
           },
           {
-            "name": "IsolatedCollateral"
+            name: "IsolatedCollateral";
           },
           {
-            "name": "IsolatedDebt"
+            name: "IsolatedDebt";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "BigFractionBytes",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "BigFractionBytes";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "value",
-            "type": {
-              "array": [
-                "u64",
-                4
-              ]
-            }
+            name: "value";
+            type: {
+              array: ["u64", 4];
+            };
           },
           {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u64",
-                2
-              ]
-            }
+            name: "padding";
+            type: {
+              array: ["u64", 2];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "FeeCalculation",
-      "type": {
-        "kind": "enum",
-        "variants": [
+      name: "FeeCalculation";
+      type: {
+        kind: "enum";
+        variants: [
           {
-            "name": "Exclusive"
+            name: "Exclusive";
           },
           {
-            "name": "Inclusive"
+            name: "Inclusive";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ReserveCollateral",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "ReserveCollateral";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "mint_pubkey",
-            "type": "pubkey"
+            name: "mintPubkey";
+            type: "pubkey";
           },
           {
-            "name": "mint_total_supply",
-            "type": "u64"
+            name: "mintTotalSupply";
+            type: "u64";
           },
           {
-            "name": "supply_vault",
-            "type": "pubkey"
+            name: "supplyVault";
+            type: "pubkey";
           },
           {
-            "name": "padding1",
-            "type": {
-              "array": [
-                "u128",
-                32
-              ]
-            }
+            name: "padding1";
+            type: {
+              array: ["u128", 32];
+            };
           },
           {
-            "name": "padding2",
-            "type": {
-              "array": [
-                "u128",
-                32
-              ]
-            }
+            name: "padding2";
+            type: {
+              array: ["u128", 32];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ReserveConfig",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "ReserveConfig";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "status",
-            "type": "u8"
+            name: "status";
+            type: "u8";
           },
           {
-            "name": "asset_tier",
-            "type": "u8"
+            name: "assetTier";
+            type: "u8";
           },
           {
-            "name": "host_fixed_interest_rate_bps",
-            "type": "u16"
+            name: "hostFixedInterestRateBps";
+            type: "u16";
           },
           {
-            "name": "reserved2",
-            "type": {
-              "array": [
-                "u8",
-                2
-              ]
-            }
+            name: "reserved2";
+            type: {
+              array: ["u8", 2];
+            };
           },
           {
-            "name": "reserved3",
-            "type": {
-              "array": [
-                "u8",
-                8
-              ]
-            }
+            name: "reserved3";
+            type: {
+              array: ["u8", 8];
+            };
           },
           {
-            "name": "protocol_take_rate_pct",
-            "type": "u8"
+            name: "protocolTakeRatePct";
+            type: "u8";
           },
           {
-            "name": "protocol_liquidation_fee_pct",
-            "type": "u8"
+            name: "protocolLiquidationFeePct";
+            type: "u8";
           },
           {
-            "name": "loan_to_value_pct",
-            "type": "u8"
+            name: "loanToValuePct";
+            type: "u8";
           },
           {
-            "name": "liquidation_threshold_pct",
-            "type": "u8"
+            name: "liquidationThresholdPct";
+            type: "u8";
           },
           {
-            "name": "min_liquidation_bonus_bps",
-            "type": "u16"
+            name: "minLiquidationBonusBps";
+            type: "u16";
           },
           {
-            "name": "max_liquidation_bonus_bps",
-            "type": "u16"
+            name: "maxLiquidationBonusBps";
+            type: "u16";
           },
           {
-            "name": "bad_debt_liquidation_bonus_bps",
-            "type": "u16"
+            name: "badDebtLiquidationBonusBps";
+            type: "u16";
           },
           {
-            "name": "deleveraging_margin_call_period_secs",
-            "type": "u64"
+            name: "deleveragingMarginCallPeriodSecs";
+            type: "u64";
           },
           {
-            "name": "deleveraging_threshold_decrease_bps_per_day",
-            "type": "u64"
+            name: "deleveragingThresholdDecreaseBpsPerDay";
+            type: "u64";
           },
           {
-            "name": "fees",
-            "type": {
-              "defined": {
-                "name": "ReserveFees"
-              }
-            }
+            name: "fees";
+            type: {
+              defined: {
+                name: "ReserveFees";
+              };
+            };
           },
           {
-            "name": "borrow_rate_curve",
-            "type": {
-              "defined": {
-                "name": "BorrowRateCurve"
-              }
-            }
+            name: "borrowRateCurve";
+            type: {
+              defined: {
+                name: "BorrowRateCurve";
+              };
+            };
           },
           {
-            "name": "borrow_factor_pct",
-            "type": "u64"
+            name: "borrowFactorPct";
+            type: "u64";
           },
           {
-            "name": "deposit_limit",
-            "type": "u64"
+            name: "depositLimit";
+            type: "u64";
           },
           {
-            "name": "borrow_limit",
-            "type": "u64"
+            name: "borrowLimit";
+            type: "u64";
           },
           {
-            "name": "token_info",
-            "type": {
-              "defined": {
-                "name": "TokenInfo"
-              }
-            }
+            name: "tokenInfo";
+            type: {
+              defined: {
+                name: "TokenInfo";
+              };
+            };
           },
           {
-            "name": "deposit_withdrawal_cap",
-            "type": {
-              "defined": {
-                "name": "WithdrawalCaps"
-              }
-            }
+            name: "depositWithdrawalCap";
+            type: {
+              defined: {
+                name: "WithdrawalCaps";
+              };
+            };
           },
           {
-            "name": "debt_withdrawal_cap",
-            "type": {
-              "defined": {
-                "name": "WithdrawalCaps"
-              }
-            }
+            name: "debtWithdrawalCap";
+            type: {
+              defined: {
+                name: "WithdrawalCaps";
+              };
+            };
           },
           {
-            "name": "elevation_groups",
-            "type": {
-              "array": [
-                "u8",
-                20
-              ]
-            }
+            name: "elevationGroups";
+            type: {
+              array: ["u8", 20];
+            };
           },
           {
-            "name": "disable_usage_as_coll_outside_emode",
-            "type": "u8"
+            name: "disableUsageAsCollOutsideEmode";
+            type: "u8";
           },
           {
-            "name": "utilization_limit_block_borrowing_above_pct",
-            "type": "u8"
+            name: "utilizationLimitBlockBorrowingAbovePct";
+            type: "u8";
           },
           {
-            "name": "autodeleverage_enabled",
-            "type": "u8"
+            name: "autodeleverageEnabled";
+            type: "u8";
           },
           {
-            "name": "reserved1",
-            "type": {
-              "array": [
-                "u8",
-                1
-              ]
-            }
+            name: "reserved1";
+            type: {
+              array: ["u8", 1];
+            };
           },
           {
-            "name": "borrow_limit_outside_elevation_group",
-            "type": "u64"
+            name: "borrowLimitOutsideElevationGroup";
+            type: "u64";
           },
           {
-            "name": "borrow_limit_against_this_collateral_in_elevation_group",
-            "type": {
-              "array": [
-                "u64",
-                32
-              ]
-            }
+            name: "borrowLimitAgainstThisCollateralInElevationGroup";
+            type: {
+              array: ["u64", 32];
+            };
           },
           {
-            "name": "deleveraging_bonus_increase_bps_per_day",
-            "type": "u64"
+            name: "deleveragingBonusIncreaseBpsPerDay";
+            type: "u64";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ReserveFarmKind",
-      "type": {
-        "kind": "enum",
-        "variants": [
+      name: "ReserveFarmKind";
+      type: {
+        kind: "enum";
+        variants: [
           {
-            "name": "Collateral"
+            name: "Collateral";
           },
           {
-            "name": "Debt"
+            name: "Debt";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ReserveFees",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "ReserveFees";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "borrow_fee_sf",
-            "type": "u64"
+            name: "borrowFeeSf";
+            type: "u64";
           },
           {
-            "name": "flash_loan_fee_sf",
-            "type": "u64"
+            name: "flashLoanFeeSf";
+            type: "u64";
           },
           {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u8",
-                8
-              ]
-            }
+            name: "padding";
+            type: {
+              array: ["u8", 8];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ReserveLiquidity",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "ReserveLiquidity";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "mint_pubkey",
-            "type": "pubkey"
+            name: "mintPubkey";
+            type: "pubkey";
           },
           {
-            "name": "supply_vault",
-            "type": "pubkey"
+            name: "supplyVault";
+            type: "pubkey";
           },
           {
-            "name": "fee_vault",
-            "type": "pubkey"
+            name: "feeVault";
+            type: "pubkey";
           },
           {
-            "name": "available_amount",
-            "type": "u64"
+            name: "availableAmount";
+            type: "u64";
           },
           {
-            "name": "borrowed_amount_sf",
-            "type": "u128"
+            name: "borrowedAmountSf";
+            type: "u128";
           },
           {
-            "name": "market_price_sf",
-            "type": "u128"
+            name: "marketPriceSf";
+            type: "u128";
           },
           {
-            "name": "market_price_last_updated_ts",
-            "type": "u64"
+            name: "marketPriceLastUpdatedTs";
+            type: "u64";
           },
           {
-            "name": "mint_decimals",
-            "type": "u64"
+            name: "mintDecimals";
+            type: "u64";
           },
           {
-            "name": "deposit_limit_crossed_timestamp",
-            "type": "u64"
+            name: "depositLimitCrossedTimestamp";
+            type: "u64";
           },
           {
-            "name": "borrow_limit_crossed_timestamp",
-            "type": "u64"
+            name: "borrowLimitCrossedTimestamp";
+            type: "u64";
           },
           {
-            "name": "cumulative_borrow_rate_bsf",
-            "type": {
-              "defined": {
-                "name": "BigFractionBytes"
-              }
-            }
+            name: "cumulativeBorrowRateBsf";
+            type: {
+              defined: {
+                name: "BigFractionBytes";
+              };
+            };
           },
           {
-            "name": "accumulated_protocol_fees_sf",
-            "type": "u128"
+            name: "accumulatedProtocolFeesSf";
+            type: "u128";
           },
           {
-            "name": "accumulated_referrer_fees_sf",
-            "type": "u128"
+            name: "accumulatedReferrerFeesSf";
+            type: "u128";
           },
           {
-            "name": "pending_referrer_fees_sf",
-            "type": "u128"
+            name: "pendingReferrerFeesSf";
+            type: "u128";
           },
           {
-            "name": "absolute_referral_rate_sf",
-            "type": "u128"
+            name: "absoluteReferralRateSf";
+            type: "u128";
           },
           {
-            "name": "token_program",
-            "type": "pubkey"
+            name: "tokenProgram";
+            type: "pubkey";
           },
           {
-            "name": "padding2",
-            "type": {
-              "array": [
-                "u64",
-                51
-              ]
-            }
+            name: "padding2";
+            type: {
+              array: ["u64", 51];
+            };
           },
           {
-            "name": "padding3",
-            "type": {
-              "array": [
-                "u128",
-                32
-              ]
-            }
+            name: "padding3";
+            type: {
+              array: ["u128", 32];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ReserveStatus",
-      "type": {
-        "kind": "enum",
-        "variants": [
+      name: "ReserveStatus";
+      type: {
+        kind: "enum";
+        variants: [
           {
-            "name": "Active"
+            name: "Active";
           },
           {
-            "name": "Obsolete"
+            name: "Obsolete";
           },
           {
-            "name": "Hidden"
+            name: "Hidden";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "WithdrawalCaps",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "WithdrawalCaps";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "config_capacity",
-            "type": "i64"
+            name: "configCapacity";
+            type: "i64";
           },
           {
-            "name": "current_total",
-            "type": "i64"
+            name: "currentTotal";
+            type: "i64";
           },
           {
-            "name": "last_interval_start_timestamp",
-            "type": "u64"
+            name: "lastIntervalStartTimestamp";
+            type: "u64";
           },
           {
-            "name": "config_interval_length_seconds",
-            "type": "u64"
+            name: "configIntervalLengthSeconds";
+            type: "u64";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "PriceHeuristic",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "PriceHeuristic";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "lower",
-            "type": "u64"
+            name: "lower";
+            type: "u64";
           },
           {
-            "name": "upper",
-            "type": "u64"
+            name: "upper";
+            type: "u64";
           },
           {
-            "name": "exp",
-            "type": "u64"
+            name: "exp";
+            type: "u64";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "PythConfiguration",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "PythConfiguration";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "price",
-            "type": "pubkey"
+            name: "price";
+            type: "pubkey";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ScopeConfiguration",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "ScopeConfiguration";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "price_feed",
-            "type": "pubkey"
+            name: "priceFeed";
+            type: "pubkey";
           },
           {
-            "name": "price_chain",
-            "type": {
-              "array": [
-                "u16",
-                4
-              ]
-            }
+            name: "priceChain";
+            type: {
+              array: ["u16", 4];
+            };
           },
           {
-            "name": "twap_chain",
-            "type": {
-              "array": [
-                "u16",
-                4
-              ]
-            }
+            name: "twapChain";
+            type: {
+              array: ["u16", 4];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "SwitchboardConfiguration",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "SwitchboardConfiguration";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "price_aggregator",
-            "type": "pubkey"
+            name: "priceAggregator";
+            type: "pubkey";
           },
           {
-            "name": "twap_aggregator",
-            "type": "pubkey"
+            name: "twapAggregator";
+            type: "pubkey";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "TokenInfo",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "TokenInfo";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "name",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
+            name: "name";
+            type: {
+              array: ["u8", 32];
+            };
           },
           {
-            "name": "heuristic",
-            "type": {
-              "defined": {
-                "name": "PriceHeuristic"
-              }
-            }
+            name: "heuristic";
+            type: {
+              defined: {
+                name: "PriceHeuristic";
+              };
+            };
           },
           {
-            "name": "max_twap_divergence_bps",
-            "type": "u64"
+            name: "maxTwapDivergenceBps";
+            type: "u64";
           },
           {
-            "name": "max_age_price_seconds",
-            "type": "u64"
+            name: "maxAgePriceSeconds";
+            type: "u64";
           },
           {
-            "name": "max_age_twap_seconds",
-            "type": "u64"
+            name: "maxAgeTwapSeconds";
+            type: "u64";
           },
           {
-            "name": "scope_configuration",
-            "type": {
-              "defined": {
-                "name": "ScopeConfiguration"
-              }
-            }
+            name: "scopeConfiguration";
+            type: {
+              defined: {
+                name: "ScopeConfiguration";
+              };
+            };
           },
           {
-            "name": "switchboard_configuration",
-            "type": {
-              "defined": {
-                "name": "SwitchboardConfiguration"
-              }
-            }
+            name: "switchboardConfiguration";
+            type: {
+              defined: {
+                name: "SwitchboardConfiguration";
+              };
+            };
           },
           {
-            "name": "pyth_configuration",
-            "type": {
-              "defined": {
-                "name": "PythConfiguration"
-              }
-            }
+            name: "pythConfiguration";
+            type: {
+              defined: {
+                name: "PythConfiguration";
+              };
+            };
           },
           {
-            "name": "block_price_usage",
-            "type": "u8"
+            name: "blockPriceUsage";
+            type: "u8";
           },
           {
-            "name": "reserved",
-            "type": {
-              "array": [
-                "u8",
-                7
-              ]
-            }
+            name: "reserved";
+            type: {
+              array: ["u8", 7];
+            };
           },
           {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u64",
-                19
-              ]
-            }
+            name: "padding";
+            type: {
+              array: ["u64", 19];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "BorrowRateCurve",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "BorrowRateCurve";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "points",
-            "type": {
-              "array": [
+            name: "points";
+            type: {
+              array: [
                 {
-                  "defined": {
-                    "name": "CurvePoint"
-                  }
+                  defined: {
+                    name: "CurvePoint";
+                  };
                 },
                 11
-              ]
-            }
+              ];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "CurvePoint",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "CurvePoint";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "utilization_rate_bps",
-            "type": "u32"
+            name: "utilizationRateBps";
+            type: "u32";
           },
           {
-            "name": "borrow_rate_bps",
-            "type": "u32"
+            name: "borrowRateBps";
+            type: "u32";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "UserState",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "UserState";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "user_id",
-            "type": "u64"
+            name: "userId";
+            type: "u64";
           },
           {
-            "name": "farm_state",
-            "type": "pubkey"
+            name: "farmState";
+            type: "pubkey";
           },
           {
-            "name": "owner",
-            "type": "pubkey"
+            name: "owner";
+            type: "pubkey";
           },
           {
-            "name": "is_farm_delegated",
-            "type": "u8"
+            name: "isFarmDelegated";
+            type: "u8";
           },
           {
-            "name": "padding0",
-            "type": {
-              "array": [
-                "u8",
-                7
-              ]
-            }
+            name: "padding0";
+            type: {
+              array: ["u8", 7];
+            };
           },
           {
-            "name": "rewards_tally_scaled",
-            "type": {
-              "array": [
-                "u128",
-                10
-              ]
-            }
+            name: "rewardsTallyScaled";
+            type: {
+              array: ["u128", 10];
+            };
           },
           {
-            "name": "rewards_issued_unclaimed",
-            "type": {
-              "array": [
-                "u64",
-                10
-              ]
-            }
+            name: "rewardsIssuedUnclaimed";
+            type: {
+              array: ["u64", 10];
+            };
           },
           {
-            "name": "last_claim_ts",
-            "type": {
-              "array": [
-                "u64",
-                10
-              ]
-            }
+            name: "lastClaimTs";
+            type: {
+              array: ["u64", 10];
+            };
           },
           {
-            "name": "active_stake_scaled",
-            "type": "u128"
+            name: "activeStakeScaled";
+            type: "u128";
           },
           {
-            "name": "pending_deposit_stake_scaled",
-            "type": "u128"
+            name: "pendingDepositStakeScaled";
+            type: "u128";
           },
           {
-            "name": "pending_deposit_stake_ts",
-            "type": "u64"
+            name: "pendingDepositStakeTs";
+            type: "u64";
           },
           {
-            "name": "pending_withdrawal_unstake_scaled",
-            "type": "u128"
+            name: "pendingWithdrawalUnstakeScaled";
+            type: "u128";
           },
           {
-            "name": "pending_withdrawal_unstake_ts",
-            "type": "u64"
+            name: "pendingWithdrawalUnstakeTs";
+            type: "u64";
           },
           {
-            "name": "bump",
-            "type": "u64"
+            name: "bump";
+            type: "u64";
           },
           {
-            "name": "delegatee",
-            "type": "pubkey"
+            name: "delegatee";
+            type: "pubkey";
           },
           {
-            "name": "last_stake_ts",
-            "type": "u64"
+            name: "lastStakeTs";
+            type: "u64";
           },
           {
-            "name": "padding1",
-            "type": {
-              "array": [
-                "u64",
-                50
-              ]
-            }
+            name: "padding1";
+            type: {
+              array: ["u64", 50];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "LendingMarket",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "LendingMarket";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "version",
-            "type": "u64"
+            name: "version";
+            type: "u64";
           },
           {
-            "name": "bump_seed",
-            "type": "u64"
+            name: "bumpSeed";
+            type: "u64";
           },
           {
-            "name": "lending_market_owner",
-            "type": "pubkey"
+            name: "lendingMarketOwner";
+            type: "pubkey";
           },
           {
-            "name": "lending_market_owner_cached",
-            "type": "pubkey"
+            name: "lendingMarketOwnerCached";
+            type: "pubkey";
           },
           {
-            "name": "quote_currency",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
+            name: "quoteCurrency";
+            type: {
+              array: ["u8", 32];
+            };
           },
           {
-            "name": "referral_fee_bps",
-            "type": "u16"
+            name: "referralFeeBps";
+            type: "u16";
           },
           {
-            "name": "emergency_mode",
-            "type": "u8"
+            name: "emergencyMode";
+            type: "u8";
           },
           {
-            "name": "autodeleverage_enabled",
-            "type": "u8"
+            name: "autodeleverageEnabled";
+            type: "u8";
           },
           {
-            "name": "borrow_disabled",
-            "type": "u8"
+            name: "borrowDisabled";
+            type: "u8";
           },
           {
-            "name": "price_refresh_trigger_to_max_age_pct",
-            "type": "u8"
+            name: "priceRefreshTriggerToMaxAgePct";
+            type: "u8";
           },
           {
-            "name": "liquidation_max_debt_close_factor_pct",
-            "type": "u8"
+            name: "liquidationMaxDebtCloseFactorPct";
+            type: "u8";
           },
           {
-            "name": "insolvency_risk_unhealthy_ltv_pct",
-            "type": "u8"
+            name: "insolvencyRiskUnhealthyLtvPct";
+            type: "u8";
           },
           {
-            "name": "min_full_liquidation_value_threshold",
-            "type": "u64"
+            name: "minFullLiquidationValueThreshold";
+            type: "u64";
           },
           {
-            "name": "max_liquidatable_debt_market_value_at_once",
-            "type": "u64"
+            name: "maxLiquidatableDebtMarketValueAtOnce";
+            type: "u64";
           },
           {
-            "name": "reserved0",
-            "type": {
-              "array": [
-                "u8",
-                8
-              ]
-            }
+            name: "reserved0";
+            type: {
+              array: ["u8", 8];
+            };
           },
           {
-            "name": "global_allowed_borrow_value",
-            "type": "u64"
+            name: "globalAllowedBorrowValue";
+            type: "u64";
           },
           {
-            "name": "risk_council",
-            "type": "pubkey"
+            name: "riskCouncil";
+            type: "pubkey";
           },
           {
-            "name": "reserved1",
-            "type": {
-              "array": [
-                "u8",
-                8
-              ]
-            }
+            name: "reserved1";
+            type: {
+              array: ["u8", 8];
+            };
           },
           {
-            "name": "elevation_groups",
-            "type": {
-              "array": [
+            name: "elevationGroups";
+            type: {
+              array: [
                 {
-                  "defined": {
-                    "name": "ElevationGroup"
-                  }
+                  defined: {
+                    name: "ElevationGroup";
+                  };
                 },
                 32
-              ]
-            }
+              ];
+            };
           },
           {
-            "name": "elevation_group_padding",
-            "type": {
-              "array": [
-                "u64",
-                90
-              ]
-            }
+            name: "elevationGroupPadding";
+            type: {
+              array: ["u64", 90];
+            };
           },
           {
-            "name": "min_net_value_in_obligation_sf",
-            "type": "u128"
+            name: "minNetValueInObligationSf";
+            type: "u128";
           },
           {
-            "name": "min_value_skip_liquidation_ltv_checks",
-            "type": "u64"
+            name: "minValueSkipLiquidationLtvChecks";
+            type: "u64";
           },
           {
-            "name": "name",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
+            name: "name";
+            type: {
+              array: ["u8", 32];
+            };
           },
           {
-            "name": "min_value_skip_liquidation_bf_checks",
-            "type": "u64"
+            name: "minValueSkipLiquidationBfChecks";
+            type: "u64";
           },
           {
-            "name": "individual_autodeleverage_margin_call_period_secs",
-            "type": "u64"
+            name: "individualAutodeleverageMarginCallPeriodSecs";
+            type: "u64";
           },
           {
-            "name": "min_initial_deposit_amount",
-            "type": "u64"
+            name: "minInitialDepositAmount";
+            type: "u64";
           },
           {
-            "name": "padding1",
-            "type": {
-              "array": [
-                "u64",
-                170
-              ]
-            }
+            name: "padding1";
+            type: {
+              array: ["u64", 170];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "Obligation",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "Obligation";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "tag",
-            "type": "u64"
+            name: "tag";
+            type: "u64";
           },
           {
-            "name": "last_update",
-            "type": {
-              "defined": {
-                "name": "LastUpdate"
-              }
-            }
+            name: "lastUpdate";
+            type: {
+              defined: {
+                name: "LastUpdate";
+              };
+            };
           },
           {
-            "name": "lending_market",
-            "type": "pubkey"
+            name: "lendingMarket";
+            type: "pubkey";
           },
           {
-            "name": "owner",
-            "type": "pubkey"
+            name: "owner";
+            type: "pubkey";
           },
           {
-            "name": "deposits",
-            "type": {
-              "array": [
+            name: "deposits";
+            type: {
+              array: [
                 {
-                  "defined": {
-                    "name": "ObligationCollateral"
-                  }
+                  defined: {
+                    name: "ObligationCollateral";
+                  };
                 },
                 8
-              ]
-            }
+              ];
+            };
           },
           {
-            "name": "lowest_reserve_deposit_liquidation_ltv",
-            "type": "u64"
+            name: "lowestReserveDepositLiquidationLtv";
+            type: "u64";
           },
           {
-            "name": "deposited_value_sf",
-            "type": "u128"
+            name: "depositedValueSf";
+            type: "u128";
           },
           {
-            "name": "borrows",
-            "type": {
-              "array": [
+            name: "borrows";
+            type: {
+              array: [
                 {
-                  "defined": {
-                    "name": "ObligationLiquidity"
-                  }
+                  defined: {
+                    name: "ObligationLiquidity";
+                  };
                 },
                 5
-              ]
-            }
+              ];
+            };
           },
           {
-            "name": "borrow_factor_adjusted_debt_value_sf",
-            "type": "u128"
+            name: "borrowFactorAdjustedDebtValueSf";
+            type: "u128";
           },
           {
-            "name": "borrowed_assets_market_value_sf",
-            "type": "u128"
+            name: "borrowedAssetsMarketValueSf";
+            type: "u128";
           },
           {
-            "name": "allowed_borrow_value_sf",
-            "type": "u128"
+            name: "allowedBorrowValueSf";
+            type: "u128";
           },
           {
-            "name": "unhealthy_borrow_value_sf",
-            "type": "u128"
+            name: "unhealthyBorrowValueSf";
+            type: "u128";
           },
           {
-            "name": "deposits_asset_tiers",
-            "type": {
-              "array": [
-                "u8",
-                8
-              ]
-            }
+            name: "depositsAssetTiers";
+            type: {
+              array: ["u8", 8];
+            };
           },
           {
-            "name": "borrows_asset_tiers",
-            "type": {
-              "array": [
-                "u8",
-                5
-              ]
-            }
+            name: "borrowsAssetTiers";
+            type: {
+              array: ["u8", 5];
+            };
           },
           {
-            "name": "elevation_group",
-            "type": "u8"
+            name: "elevationGroup";
+            type: "u8";
           },
           {
-            "name": "num_of_obsolete_reserves",
-            "type": "u8"
+            name: "numOfObsoleteReserves";
+            type: "u8";
           },
           {
-            "name": "has_debt",
-            "type": "u8"
+            name: "hasDebt";
+            type: "u8";
           },
           {
-            "name": "referrer",
-            "type": "pubkey"
+            name: "referrer";
+            type: "pubkey";
           },
           {
-            "name": "borrowing_disabled",
-            "type": "u8"
+            name: "borrowingDisabled";
+            type: "u8";
           },
           {
-            "name": "autodeleverage_target_ltv_pct",
-            "type": "u8"
+            name: "autodeleverageTargetLtvPct";
+            type: "u8";
           },
           {
-            "name": "lowest_reserve_deposit_max_ltv_pct",
-            "type": "u8"
+            name: "lowestReserveDepositMaxLtvPct";
+            type: "u8";
           },
           {
-            "name": "reserved",
-            "type": {
-              "array": [
-                "u8",
-                5
-              ]
-            }
+            name: "reserved";
+            type: {
+              array: ["u8", 5];
+            };
           },
           {
-            "name": "highest_borrow_factor_pct",
-            "type": "u64"
+            name: "highestBorrowFactorPct";
+            type: "u64";
           },
           {
-            "name": "autodeleverage_margin_call_started_timestamp",
-            "type": "u64"
+            name: "autodeleverageMarginCallStartedTimestamp";
+            type: "u64";
           },
           {
-            "name": "padding3",
-            "type": {
-              "array": [
-                "u64",
-                125
-              ]
-            }
+            name: "padding3";
+            type: {
+              array: ["u64", 125];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ReferrerState",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "ReferrerState";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "short_url",
-            "type": "pubkey"
+            name: "shortUrl";
+            type: "pubkey";
           },
           {
-            "name": "owner",
-            "type": "pubkey"
+            name: "owner";
+            type: "pubkey";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ReferrerTokenState",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "ReferrerTokenState";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "referrer",
-            "type": "pubkey"
+            name: "referrer";
+            type: "pubkey";
           },
           {
-            "name": "mint",
-            "type": "pubkey"
+            name: "mint";
+            type: "pubkey";
           },
           {
-            "name": "amount_unclaimed_sf",
-            "type": "u128"
+            name: "amountUnclaimedSf";
+            type: "u128";
           },
           {
-            "name": "amount_cumulative_sf",
-            "type": "u128"
+            name: "amountCumulativeSf";
+            type: "u128";
           },
           {
-            "name": "bump",
-            "type": "u64"
+            name: "bump";
+            type: "u64";
           },
           {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u64",
-                31
-              ]
-            }
+            name: "padding";
+            type: {
+              array: ["u64", 31];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "ShortUrl",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "ShortUrl";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "referrer",
-            "type": "pubkey"
+            name: "referrer";
+            type: "pubkey";
           },
           {
-            "name": "short_url",
-            "type": "string"
+            name: "shortUrl";
+            type: "string";
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "UserMetadata",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "UserMetadata";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "referrer",
-            "type": "pubkey"
+            name: "referrer";
+            type: "pubkey";
           },
           {
-            "name": "bump",
-            "type": "u64"
+            name: "bump";
+            type: "u64";
           },
           {
-            "name": "user_lookup_table",
-            "type": "pubkey"
+            name: "userLookupTable";
+            type: "pubkey";
           },
           {
-            "name": "owner",
-            "type": "pubkey"
+            name: "owner";
+            type: "pubkey";
           },
           {
-            "name": "padding1",
-            "type": {
-              "array": [
-                "u64",
-                51
-              ]
-            }
+            name: "padding1";
+            type: {
+              array: ["u64", 51];
+            };
           },
           {
-            "name": "padding2",
-            "type": {
-              "array": [
-                "u64",
-                64
-              ]
-            }
+            name: "padding2";
+            type: {
+              array: ["u64", 64];
+            };
           }
-        ]
-      }
+        ];
+      };
     },
     {
-      "name": "Reserve",
-      "type": {
-        "kind": "struct",
-        "fields": [
+      name: "Reserve";
+      type: {
+        kind: "struct";
+        fields: [
           {
-            "name": "version",
-            "type": "u64"
+            name: "version";
+            type: "u64";
           },
           {
-            "name": "last_update",
-            "type": {
-              "defined": {
-                "name": "LastUpdate"
-              }
-            }
+            name: "lastUpdate";
+            type: {
+              defined: {
+                name: "LastUpdate";
+              };
+            };
           },
           {
-            "name": "lending_market",
-            "type": "pubkey"
+            name: "lendingMarket";
+            type: "pubkey";
           },
           {
-            "name": "farm_collateral",
-            "type": "pubkey"
+            name: "farmCollateral";
+            type: "pubkey";
           },
           {
-            "name": "farm_debt",
-            "type": "pubkey"
+            name: "farmDebt";
+            type: "pubkey";
           },
           {
-            "name": "liquidity",
-            "type": {
-              "defined": {
-                "name": "ReserveLiquidity"
-              }
-            }
+            name: "liquidity";
+            type: {
+              defined: {
+                name: "ReserveLiquidity";
+              };
+            };
           },
           {
-            "name": "reserve_liquidity_padding",
-            "type": {
-              "array": [
-                "u64",
-                150
-              ]
-            }
+            name: "reserveLiquidityPadding";
+            type: {
+              array: ["u64", 150];
+            };
           },
           {
-            "name": "collateral",
-            "type": {
-              "defined": {
-                "name": "ReserveCollateral"
-              }
-            }
+            name: "collateral";
+            type: {
+              defined: {
+                name: "ReserveCollateral";
+              };
+            };
           },
           {
-            "name": "reserve_collateral_padding",
-            "type": {
-              "array": [
-                "u64",
-                150
-              ]
-            }
+            name: "reserveCollateralPadding";
+            type: {
+              array: ["u64", 150];
+            };
           },
           {
-            "name": "config",
-            "type": {
-              "defined": {
-                "name": "ReserveConfig"
-              }
-            }
+            name: "config";
+            type: {
+              defined: {
+                name: "ReserveConfig";
+              };
+            };
           },
           {
-            "name": "config_padding",
-            "type": {
-              "array": [
-                "u64",
-                116
-              ]
-            }
+            name: "configPadding";
+            type: {
+              array: ["u64", 116];
+            };
           },
           {
-            "name": "borrowed_amount_outside_elevation_group",
-            "type": "u64"
+            name: "borrowedAmountOutsideElevationGroup";
+            type: "u64";
           },
           {
-            "name": "borrowed_amounts_against_this_reserve_in_elevation_groups",
-            "type": {
-              "array": [
-                "u64",
-                32
-              ]
-            }
+            name: "borrowedAmountsAgainstThisReserveInElevationGroups";
+            type: {
+              array: ["u64", 32];
+            };
           },
           {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u64",
-                207
-              ]
-            }
+            name: "padding";
+            type: {
+              array: ["u64", 207];
+            };
           }
-        ]
-      }
+        ];
+      };
     }
-  ]
+  ];
 };
